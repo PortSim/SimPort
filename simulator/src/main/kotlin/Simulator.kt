@@ -5,10 +5,11 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-interface Simulator {
-    // Some priority queue of events
-    // Print to file event log by order of event processed by simulator
+fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> =
+    ChannelImpl<T>().let { it to it }
 
+interface Simulator {
+    // Schedules an event to occur after some known time delay
     fun <EventT> scheduleEvent(target: Node<EventT, *, *>, delay: Duration, event: EventT)
 
     // Schedules an Emit event after some specified time delay
@@ -16,8 +17,6 @@ interface Simulator {
 
     // schedules an emit that will trigger at the first moment that any of the waitingFor channels are open
     fun <OutputT> emitWhenOpen(target: Node<*, *, OutputT>, vararg waitingFor: OutputChannel<OutputT>)
-
-    fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>>
 
     companion object {
         operator fun invoke(log: EventLog, port: Port): Simulator = SimulatorImpl(log, port)
@@ -69,9 +68,6 @@ internal class SimulatorImpl(private val log: EventLog, private val port: Port) 
                 .add(token)
         }
     }
-
-    override fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> =
-        ChannelImpl<T>().let { it to it }
 
     fun <T> sendTo(node: Node<*, T, *>, data: T) {
         node.onArrive(this, data)
