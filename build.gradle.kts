@@ -18,8 +18,9 @@ dependencies {
     // Mocking
     testImplementation("io.mockk:mockk:1.13.10")
 
-    // Coroutines (if needed)
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    // Kotest
+    testImplementation("io.kotest:kotest-runner-junit5:5.8.1")
+    testImplementation("io.kotest:kotest-assertions-core:5.8.1")
 }
 
 kotlin {

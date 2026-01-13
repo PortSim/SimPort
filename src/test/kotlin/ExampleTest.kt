@@ -1,14 +1,10 @@
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 
-class ExampleTest {
+class ExampleTest : FunSpec({
 
-    @Test
-    fun `example test that always succeeds`() {
-
-        val x = 1
-        val y = 2
-
-        assertEquals(x + y, 3)
+    test("1 + 2 should equal 3") {
+        val result = 1 + 2
+        result shouldBe 3
     }
-}
+})
