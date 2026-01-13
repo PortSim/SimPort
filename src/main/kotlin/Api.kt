@@ -50,7 +50,7 @@ class Simulator {
 
     fun scheduleEmit(target: Node<*, *, *>, delay: Duration) {}
 
-    fun <InputT, OutputT> nodeById(id: NodeId<InputT, OutputT>): Node<*, InputT, OutputT> {}
+    fun <InputT, OutputT> nodeById(id: NodeId<InputT, OutputT>): Node<*, InputT, OutputT>? { return null }
 }
 
 class RoadNode<T: RoadObject>(
@@ -80,7 +80,7 @@ class RoadNode<T: RoadObject>(
 
     override fun onEmit() {
         val destinationNode = simulator.nodeById(outgoing.single())
-        if (destinationNode.onArrive()) {
+        if (destinationNode?.onArrive() ?: false) {
             currentLoad--
         } else {
             simulator.scheduleEmit(this, Duration.ofSeconds(1))
