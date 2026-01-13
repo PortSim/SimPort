@@ -2,15 +2,17 @@ package com.group7
 
 interface InputChannel<out T> {
     fun open(simulator: Simulator)
+
     fun close()
 }
 
 interface OutputChannel<in T> {
     fun isOpen(): Boolean
+
     fun send(simulator: Simulator, data: T)
 }
 
-internal class ChannelImpl<T>() : InputChannel<T>, OutputChannel<T> {
+internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
     private var openness: Boolean = false
     private var receivingNode: Node<*, T, *>? = null
 

@@ -1,10 +1,7 @@
 package com.group7
 
-open class Source<OutputT>(
-    label: String,
-    val destination: OutputChannel<OutputT>,
-    val generator: Generator<OutputT>
-) : Node<Nothing, Nothing, OutputT>(label, emptyList(), listOf(destination)) {
+open class Source<OutputT>(label: String, val destination: OutputChannel<OutputT>, val generator: Generator<OutputT>) :
+    Node<Nothing, Nothing, OutputT>(label, emptyList(), listOf(destination)) {
 
     override fun onArrive(simulator: Simulator, obj: Nothing) {
         error("Can't arrive at a source! What are you doing?!")

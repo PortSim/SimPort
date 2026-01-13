@@ -6,11 +6,10 @@ plugins {
 }
 
 group = "com.group7"
+
 version = "1.0-SNAPSHOT"
 
-repositories {
-    mavenCentral()
-}
+repositories { mavenCentral() }
 
 val kotestVersion = "6.0.7"
 
@@ -39,14 +38,11 @@ kotlin {
     }
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
+tasks.test { useJUnitPlatform() }
 
-powerAssert {
-    functions = listOf("io.kotest.matchers.shouldBe")
-}
+powerAssert { functions = listOf("io.kotest.matchers.shouldBe") }
 
 ktfmt {
     kotlinLangStyle()
+    maxWidth = 120
 }

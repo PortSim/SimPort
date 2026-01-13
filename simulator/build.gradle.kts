@@ -1,3 +1,1 @@
-plugins {
-    id("convention")
-}
+plugins { id("convention") }

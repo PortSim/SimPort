@@ -5,8 +5,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> =
-    ChannelImpl<T>().let { it to it }
+fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> = ChannelImpl<T>().let { it to it }
 
 interface Simulator {
     // Schedules an event to occur after some known time delay
@@ -15,7 +14,8 @@ interface Simulator {
     // Schedules an Emit event after some specified time delay
     fun scheduleEmit(target: Node<*, *, *>, delay: Duration)
 
-    // schedules an emit that will trigger at the first moment that any of the waitingFor channels are open
+    // schedules an emit that will trigger at the first moment that any of the waitingFor channels
+    // are open
     fun <OutputT> emitWhenOpen(target: Node<*, *, OutputT>, vararg waitingFor: OutputChannel<OutputT>)
 
     companion object {
@@ -33,11 +33,7 @@ internal class SimulatorImpl(private val log: EventLog, private val port: Port) 
         port.nodes.forEach { it.onStart(this) }
     }
 
-    override fun <EventT> scheduleEvent(
-        target: Node<EventT, *, *>,
-        delay: Duration,
-        event: EventT
-    ) {
+    override fun <EventT> scheduleEvent(target: Node<EventT, *, *>, delay: Duration, event: EventT) {
         diary.add(
             Event(currentTime + delay) {
                 log.log(currentTime, "Event $event on $target")
@@ -47,25 +43,17 @@ internal class SimulatorImpl(private val log: EventLog, private val port: Port) 
     }
 
     override fun scheduleEmit(target: Node<*, *, *>, delay: Duration) {
-        diary.add(
-            Event(currentTime + delay) {
-                this.emitNode(target)
-            }
-        )
+        diary.add(Event(currentTime + delay) { this.emitNode(target) })
     }
 
-    override fun <OutputT> emitWhenOpen(
-        target: Node<*, *, OutputT>,
-        vararg waitingFor: OutputChannel<OutputT>
-    ) {
+    override fun <OutputT> emitWhenOpen(target: Node<*, *, OutputT>, vararg waitingFor: OutputChannel<OutputT>) {
         if (waitingFor.any { it.isOpen() }) {
             scheduleEmit(target, Duration.ZERO)
             return
         }
         val token = WaitToken(target, waitingFor)
         for (channel in waitingFor) {
-            waiters.getOrPut(channel, ::LinkedHashSet)
-                .add(token)
+            waiters.getOrPut(channel, ::LinkedHashSet).add(token)
         }
     }
 
@@ -73,9 +61,7 @@ internal class SimulatorImpl(private val log: EventLog, private val port: Port) 
         node.onArrive(this, data)
     }
 
-    /**
-     * Channel notifies the simulator that it is now open.
-     */
+    /** Channel notifies the simulator that it is now open. */
     fun notifyOpen(channel: OutputChannel<*>) {
         newlyOpenedChannels.add(channel)
     }
@@ -99,21 +85,21 @@ internal class SimulatorImpl(private val log: EventLog, private val port: Port) 
             while (channel.isOpen()) {
                 val selectedToken = tokens.removeFirst() ?: break
                 // Wake up node in token
-                // If token causes the channel to be saturated, then the loop will break after this iteration
+                // If token causes the channel to be saturated, then the loop will break after this
+                // iteration
                 emitNode(selectedToken.node)
                 retireWaitToken(selectedToken)
             }
 
-            // Retire channel from the waiters map if there are no more waitTokens associated with the channel
+            // Retire channel from the waiters map if there are no more waitTokens associated with
+            // the channel
             if (tokens.isEmpty()) {
                 waiters.remove(channel)
             }
         }
     }
 
-    /**
-     * Removes waitToken from all OutputChannels' waiter sets
-     */
+    /** Removes waitToken from all OutputChannels' waiter sets */
     private fun retireWaitToken(waitToken: WaitToken) {
         for (waitingChannel in waitToken.waitingFor) {
             waiters.compute(waitingChannel) { _, tokens ->
@@ -124,10 +110,7 @@ internal class SimulatorImpl(private val log: EventLog, private val port: Port) 
     }
 }
 
-private data class Event(
-    val time: Instant,
-    val action: () -> Unit,
-) : Comparable<Event> {
+private data class Event(val time: Instant, val action: () -> Unit) : Comparable<Event> {
     override fun compareTo(other: Event): Int = time.compareTo(other.time)
 }
 

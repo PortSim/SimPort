@@ -1,12 +1,7 @@
 package com.group7
 
-import com.group7.InputChannel
-import com.group7.Node
-
-open class Sink<InputT>(
-    label: String,
-    incoming: List<InputChannel<InputT>>,
-) : Node<Nothing, InputT, Nothing>(label, incoming, emptyList()) {
+open class Sink<InputT>(label: String, incoming: List<InputChannel<InputT>>) :
+    Node<Nothing, InputT, Nothing>(label, incoming, emptyList()) {
     // Could be memory intensive, can keep a map of objects to counts
     var load: MutableList<InputT> = mutableListOf()
 

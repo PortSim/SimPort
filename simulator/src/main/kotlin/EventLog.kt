@@ -1,4 +1,5 @@
 package com.group7
+
 import kotlin.time.Instant
 
 interface EventLog {

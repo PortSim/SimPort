@@ -2,7 +2,7 @@ package com.group7
 
 import kotlin.time.Duration
 
-class RoadNode<T: RoadObject>(
+class RoadNode<T : RoadObject>(
     label: String,
     private val source: InputChannel<T>,
     private val destination: OutputChannel<T>,
@@ -16,7 +16,11 @@ class RoadNode<T: RoadObject>(
         if (contents.size == capacity) {
             source.close()
         }
-        simulator.scheduleEmit(this, timeToTraverse /** plus some randomised time **/)
+        simulator.scheduleEmit(
+            this,
+            timeToTraverse,
+            /** plus some randomised time * */
+        )
     }
 
     override fun onEmit(simulator: Simulator) {
@@ -29,10 +33,10 @@ class RoadNode<T: RoadObject>(
     }
 }
 
-//fun main() {
+// fun main() {
 //    val sim = Simulator()
 //    val (sourceOutput, roadInput) = sim.newChannel<RoadObject>()
 //    val (roadOutput, sinkInput) = sim.newChannel<RoadObject>()
 //
 //    val road = RoadNode("", roadInput, roadOutput, 100, 5.seconds)
-//}
+// }

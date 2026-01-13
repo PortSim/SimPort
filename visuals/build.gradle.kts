@@ -1,7 +1,3 @@
-plugins {
-    id("convention")
-}
+plugins { id("convention") }
 
-dependencies {
-    api(project(":ports"))
-}
+dependencies { api(project(":ports")) }

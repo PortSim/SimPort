@@ -29,7 +29,4 @@ abstract class Node<in EventT, InputT, OutputT>(
     override fun toString() = label
 }
 
-data class Metrics(
-    val percentageFull: Float? = null,
-    val occupants: Int? = null,
-)
+data class Metrics(val percentageFull: Float? = null, val occupants: Int? = null)
