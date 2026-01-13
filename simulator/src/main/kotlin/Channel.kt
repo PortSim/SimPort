@@ -1,16 +1,16 @@
 package com.group7
 
 interface InputChannel<out T> {
-    fun open()
+    fun open(simulator: Simulator)
     fun close()
 }
 
 interface OutputChannel<in T> {
     fun isOpen(): Boolean
-    fun send(data: T)
+    fun send(simulator: Simulator, data: T)
 }
 
-internal class ChannelImpl<T>(private val simulator: SimulatorImpl) : InputChannel<T>, OutputChannel<T> {
+internal class ChannelImpl<T>() : InputChannel<T>, OutputChannel<T> {
     private var openness: Boolean = false
     private var receivingNode: Node<*, T, *>? = null
 
@@ -19,7 +19,7 @@ internal class ChannelImpl<T>(private val simulator: SimulatorImpl) : InputChann
         this.receivingNode = node
     }
 
-    override fun open() {
+    override fun open(simulator: Simulator) {
         openness = true
         simulator.notifyOpen(this)
     }
@@ -32,7 +32,7 @@ internal class ChannelImpl<T>(private val simulator: SimulatorImpl) : InputChann
         return openness
     }
 
-    override fun send(data: T) {
+    override fun send(simulator: Simulator, data: T) {
         // forward to the simulator
         check(openness) { "Channel is closed" }
         simulator.sendTo(receivingNode!!, data)
