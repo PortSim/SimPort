@@ -20,15 +20,19 @@ interface Simulator {
     fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>>
 
     companion object {
-        operator fun invoke(log: EventLog): Simulator = SimulatorImpl(log)
+        operator fun invoke(log: EventLog, port: Port): Simulator = SimulatorImpl(log, port)
     }
 }
 
-internal class SimulatorImpl(private val log: EventLog) : Simulator {
+internal class SimulatorImpl(private val log: EventLog, private val port: Port) : Simulator {
     private val diary = PriorityQueue<Event>()
     private var currentTime = Clock.System.now()
     private val waiters = mutableMapOf<OutputChannel<*>, SequencedSet<WaitToken>>()
     private val newlyOpenedChannels: SequencedSet<OutputChannel<*>> = LinkedHashSet<OutputChannel<*>>()
+
+    init {
+        port.nodes.forEach { it.onStart(this) }
+    }
 
     override fun <EventT> scheduleEvent(
         target: Node<EventT, *, *>,
