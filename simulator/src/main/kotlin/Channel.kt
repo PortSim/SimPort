@@ -21,6 +21,7 @@ internal class ChannelImpl<T>(private val simulator: SimulatorImpl) : InputChann
 
     override fun open() {
         openness = true
+        simulator.notifyOpen(this)
     }
 
     override fun close() {

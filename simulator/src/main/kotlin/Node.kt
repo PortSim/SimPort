@@ -22,9 +22,14 @@ abstract class Node<in EventT, InputT, OutputT>(
     // Handles failures to emit
     abstract fun onEmit(simulator: Simulator)
 
-    open fun reportMetrics(): Metrics = Metrics()
+    open fun onStart(simulator: Simulator) {}
+
+    open fun reportMetrics() = Metrics()
+
+    override fun toString() = label
 }
 
 data class Metrics(
-    val currentLoad: Float? = null,
+    val percentageFull: Float? = null,
+    val occupants: Int? = null,
 )
