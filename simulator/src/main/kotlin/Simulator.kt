@@ -5,10 +5,11 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-interface Simulator {
-    // Some priority queue of events
-    // Print to file event log by order of event processed by simulator
+fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> =
+    ChannelImpl<T>().let { it to it }
 
+interface Simulator {
+    // Schedules an event to occur after some known time delay
     fun <EventT> scheduleEvent(target: Node<EventT, *, *>, delay: Duration, event: EventT)
 
     // Schedules an Emit event after some specified time delay
@@ -17,22 +18,20 @@ interface Simulator {
     // schedules an emit that will trigger at the first moment that any of the waitingFor channels are open
     fun <OutputT> emitWhenOpen(target: Node<*, *, OutputT>, vararg waitingFor: OutputChannel<OutputT>)
 
-    fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>>
-
-    // New functions in the interface
-    fun notifyOpen(channel: OutputChannel<*>)
-    fun <T> sendTo(node: Node<*, T, *>, data: T)
-
     companion object {
-        operator fun invoke(log: EventLog): Simulator = SimulatorImpl(log)
+        operator fun invoke(log: EventLog, port: Port): Simulator = SimulatorImpl(log, port)
     }
 }
 
-internal class SimulatorImpl(private val log: EventLog) : Simulator {
+internal class SimulatorImpl(private val log: EventLog, private val port: Port) : Simulator {
     private val diary = PriorityQueue<Event>()
     private var currentTime = Clock.System.now()
     private val waiters = mutableMapOf<OutputChannel<*>, SequencedSet<WaitToken>>()
     private val newlyOpenedChannels: SequencedSet<OutputChannel<*>> = LinkedHashSet<OutputChannel<*>>()
+
+    init {
+        port.nodes.forEach { it.onStart(this) }
+    }
 
     override fun <EventT> scheduleEvent(
         target: Node<EventT, *, *>,
@@ -70,17 +69,14 @@ internal class SimulatorImpl(private val log: EventLog) : Simulator {
         }
     }
 
-    override fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> =
-        ChannelImpl<T>().let { it to it }
-
-    override fun <T> sendTo(node: Node<*, T, *>, data: T) {
+    fun <T> sendTo(node: Node<*, T, *>, data: T) {
         node.onArrive(this, data)
     }
 
     /**
      * Channel notifies the simulator that it is now open.
      */
-    override fun notifyOpen(channel: OutputChannel<*>) {
+    fun notifyOpen(channel: OutputChannel<*>) {
         newlyOpenedChannels.add(channel)
     }
 
