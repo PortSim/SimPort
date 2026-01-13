@@ -1,9 +1,5 @@
 package com.group7
 
-import com.group7.InputChannel
-import com.group7.Node
-import com.group7.OutputChannel
-import com.group7.Simulator
 import kotlin.time.Duration
 
 class RoadNode<T: RoadObject>(
@@ -25,8 +21,8 @@ class RoadNode<T: RoadObject>(
 
     override fun onEmit(simulator: Simulator) {
         if (destination.isOpen()) {
-            destination.send(contents.removeLast())
-            source.open()
+            destination.send(simulator, contents.removeLast())
+            source.open(simulator)
         } else {
             simulator.emitWhenOpen(this, destination)
         }

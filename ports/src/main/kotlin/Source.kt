@@ -1,8 +1,5 @@
 package com.group7
 
-import com.group7.OutputChannel
-import com.group7.Node
-
 open class Source<OutputT>(
     label: String,
     val destination: OutputChannel<OutputT>,
@@ -16,7 +13,7 @@ open class Source<OutputT>(
     override fun onEmit(simulator: Simulator) {
         if (!generator.empty) {
             // Send the next new object from the generator
-            destination.send(generator.nextObject())
+            destination.send(simulator, generator.nextObject())
             // Schedule the next emission
             simulator.scheduleEmit(this, generator.nextDelay())
         }
