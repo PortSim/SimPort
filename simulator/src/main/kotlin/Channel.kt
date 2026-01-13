@@ -10,7 +10,7 @@ interface OutputChannel<in T> {
     fun send(simulator: Simulator, data: T)
 }
 
-internal class ChannelImpl<T>() : InputChannel<T>, OutputChannel<T> {
+class ChannelImpl<T>() : InputChannel<T>, OutputChannel<T> {
     private var openness: Boolean = false
     private var receivingNode: Node<*, T, *>? = null
 
