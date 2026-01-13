@@ -10,7 +10,7 @@
 # https://gradle.org/
 # https://github.com/gradle/gradle
 
-image: gradle:alpine
+image: eclipse-temurin:21-jdk
 
 before_script:
   - GRADLE_USER_HOME="$(pwd)/.gradle"
@@ -18,7 +18,7 @@ before_script:
 
 build:
   stage: build
-  script: gradle --build-cache assemble
+  script: ./gradlew --build-cache assemble
   cache:
     key: "$CI_COMMIT_REF_NAME"
     policy: push
@@ -28,7 +28,7 @@ build:
 
 test:
   stage: test
-  script: gradle check
+  script: ./gradlew check
   cache:
     key: "$CI_COMMIT_REF_NAME"
     policy: pull
