@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm")
     kotlin("plugin.power-assert")
     id("io.kotest")
+    id("com.ncorti.ktfmt.gradle")
 }
 
 group = "com.group7"
@@ -44,4 +45,8 @@ tasks.test {
 
 powerAssert {
     functions = listOf("io.kotest.matchers.shouldBe")
+}
+
+ktfmt {
+    kotlinLangStyle()
 }
