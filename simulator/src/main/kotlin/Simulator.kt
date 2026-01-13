@@ -19,10 +19,6 @@ interface Simulator {
 
     fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>>
 
-    // New functions in the interface
-    fun notifyOpen(channel: OutputChannel<*>)
-    fun <T> sendTo(node: Node<*, T, *>, data: T)
-
     companion object {
         operator fun invoke(log: EventLog): Simulator = SimulatorImpl(log)
     }
@@ -73,14 +69,14 @@ internal class SimulatorImpl(private val log: EventLog) : Simulator {
     override fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> =
         ChannelImpl<T>().let { it to it }
 
-    override fun <T> sendTo(node: Node<*, T, *>, data: T) {
+    fun <T> sendTo(node: Node<*, T, *>, data: T) {
         node.onArrive(this, data)
     }
 
     /**
      * Channel notifies the simulator that it is now open.
      */
-    override fun notifyOpen(channel: OutputChannel<*>) {
+    fun notifyOpen(channel: OutputChannel<*>) {
         newlyOpenedChannels.add(channel)
     }
 

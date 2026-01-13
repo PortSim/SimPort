@@ -21,7 +21,7 @@ class ChannelImpl<T>() : InputChannel<T>, OutputChannel<T> {
 
     override fun open(simulator: Simulator) {
         openness = true
-        simulator.notifyOpen(this)
+        (simulator as SimulatorImpl).notifyOpen(this)
     }
 
     override fun close() {
@@ -35,6 +35,6 @@ class ChannelImpl<T>() : InputChannel<T>, OutputChannel<T> {
     override fun send(simulator: Simulator, data: T) {
         // forward to the simulator
         check(openness) { "Channel is closed" }
-        simulator.sendTo(receivingNode!!, data)
+        (simulator as SimulatorImpl).sendTo(receivingNode!!, data)
     }
 }
