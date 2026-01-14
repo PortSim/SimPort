@@ -37,14 +37,20 @@ internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
 
     context(sim: Simulator)
     override fun open() {
-        isOpen = true
+        if (isOpen) {
+            return
+        }
         (sim as SimulatorImpl).notifyOpened(this)
+        isOpen = true
     }
 
     context(sim: Simulator)
     override fun close() {
-        isOpen = false
+        if (!isOpen) {
+            return
+        }
         (sim as SimulatorImpl).notifyClosed(this)
+        isOpen = false
     }
 
     override fun isOpen(): Boolean {
