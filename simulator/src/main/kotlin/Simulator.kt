@@ -33,33 +33,23 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
         reactToChannelOpens()
     }
 
-    fun <EventT> scheduleEvent(target: Node<EventT, *, *>, delay: Duration, event: EventT) {
-        diary.add(
-            Event(currentTime + delay) {
-                log.log(currentTime, "Event $event on $target")
-                target.onEvent(event)
-            }
-        )
+    fun scheduleDelayed(delay: Duration, callback: () -> Unit) {
+        diary.add(Event(currentTime + delay, callback))
     }
 
-    fun scheduleEmit(target: Node<*, *, *>, delay: Duration) {
-        diary.add(Event(currentTime + delay) { this.emitNode(target) })
-    }
-
-    fun <OutputT> emitWhenOpen(target: Node<*, *, OutputT>, vararg waitingFor: OutputChannel<OutputT>) {
+    fun scheduleWhenOpened(waitingFor: Array<out OutputChannel<*>>, callback: () -> Unit) {
         if (waitingFor.any { it.isOpen() }) {
-            scheduleEmit(target, Duration.ZERO)
+            scheduleDelayed(Duration.ZERO, callback)
             return
         }
-        val token = WaitToken(target, waitingFor)
+        val token = WaitToken(waitingFor, callback)
         for (channel in waitingFor) {
             waiters.getOrPut(channel, ::LinkedHashSet).add(token)
         }
     }
 
-    fun <T> send(from: Node<*, *, T>, to: Node<*, T, *>, data: T) {
+    fun <T> notifySend(from: Node, to: Node, data: T) {
         log.log(currentTime, "Sending $data from $from to $to")
-        to.onArrive(data)
     }
 
     /** Channel notifies the simulator that it is now open. */
@@ -72,10 +62,6 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
         log.log(currentTime, "Channel closed: $channel")
     }
 
-    private fun emitNode(node: Node<*, *, *>) {
-        node.onEmit()
-    }
-
     private fun reactToChannelOpens() {
         while (newlyOpenedChannels.isNotEmpty()) {
             val channel = newlyOpenedChannels.removeFirst()
@@ -85,7 +71,7 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
                 // Wake up node in token
                 // If token causes the channel to be saturated, then the loop will break after this
                 // iteration
-                emitNode(selectedToken.node)
+                selectedToken.callback()
                 retireWaitToken(selectedToken)
             }
 
@@ -112,4 +98,4 @@ private data class Event(val time: Instant, val action: () -> Unit) : Comparable
     override fun compareTo(other: Event): Int = time.compareTo(other.time)
 }
 
-private class WaitToken(val node: Node<*, *, *>, val waitingFor: Array<out OutputChannel<*>>)
+private class WaitToken(val waitingFor: Array<out OutputChannel<*>>, val callback: () -> Unit)

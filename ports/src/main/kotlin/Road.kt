@@ -8,27 +8,31 @@ class RoadNode<T : RoadObject>(
     private val destination: OutputChannel<T>,
     private val capacity: Int = 100,
     private val timeToTraverse: Duration,
-) : Node<Nothing, T, T>(label, listOf(source), listOf(destination)) {
-    private val contents = mutableListOf<T>()
+) : Node(label, destination) {
+    private val contents = ArrayDeque<T>()
 
-    context(_: Simulator)
-    override fun onArrive(obj: T) {
-        contents.add(obj)
-        if (contents.size == capacity) {
-            source.close()
-        }
-        scheduleEmit(timeToTraverse /* plus some randomised time */)
-    }
-
-    context(_: Simulator)
-    override fun onEmit() {
-        if (destination.isOpen()) {
-            destination.send(contents.removeLast())
-            source.open()
-        } else {
-            emitWhenOpen(destination)
-        }
+    init {
+        source.onReceive { onArrive(it) }
     }
 
     override fun reportMetrics() = Metrics(contents.size.toFloat() / capacity, contents.size)
+
+    context(_: Simulator)
+    private fun onArrive(obj: T) {
+        contents.addLast(obj)
+        if (contents.size == capacity) {
+            source.close()
+        }
+        scheduleDelayed(timeToTraverse) { tryEmit() }
+    }
+
+    context(_: Simulator)
+    private fun tryEmit() {
+        if (destination.isOpen()) {
+            destination.send(contents.removeFirst())
+            source.open()
+        } else {
+            scheduleWhenOpened(destination) { tryEmit() }
+        }
+    }
 }

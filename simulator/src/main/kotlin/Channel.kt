@@ -19,20 +19,26 @@ interface OutputChannel<in T> {
 
 internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
     private var isOpen: Boolean = true
-    lateinit var upstreamNode: Node<*, *, T>
-        private set
+    private lateinit var upstreamNode: Node
+    private lateinit var downstreamNode: Node
+    private lateinit var callback:
+        context(Simulator)
+        (T) -> Unit
 
-    lateinit var downstreamNode: Node<*, T, *>
-        private set
-
-    fun setUpstreamNode(node: Node<*, *, T>) {
+    fun setUpstreamNode(node: Node) {
         check(!::upstreamNode.isInitialized) { "Channel already has a different upstream node" }
         this.upstreamNode = node
     }
 
-    fun setDownstreamNode(node: Node<*, T, *>) {
+    fun setDownstreamNode(
+        node: Node,
+        callback:
+            context(Simulator)
+            (T) -> Unit,
+    ) {
         check(!::downstreamNode.isInitialized) { "Channel already has a downstream node" }
         this.downstreamNode = node
+        this.callback = callback
     }
 
     context(sim: Simulator)
@@ -61,7 +67,8 @@ internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
     override fun send(data: T) {
         // forward to the simulator
         check(isOpen) { "Channel is closed" }
-        (sim as SimulatorImpl).send(upstreamNode, downstreamNode, data)
+        (sim as SimulatorImpl).notifySend(upstreamNode, downstreamNode, data)
+        callback(data)
     }
 
     override fun toString(): String =
