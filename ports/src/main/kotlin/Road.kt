@@ -29,4 +29,6 @@ class RoadNode<T : RoadObject>(
             emitWhenOpen(destination)
         }
     }
+
+    override fun reportMetrics() = Metrics(contents.size.toFloat() / capacity, contents.size)
 }
