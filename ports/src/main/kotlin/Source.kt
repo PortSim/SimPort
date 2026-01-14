@@ -1,12 +1,15 @@
 package com.group7
 
+sealed interface SourceEvent
+
+private data object NewArrival : SourceEvent
+
 open class Source<OutputT>(
     label: String,
     private val destination: OutputChannel<OutputT>,
     private val generator: Generator<OutputT>,
-) : Node<Nothing, Nothing, OutputT>(label, emptyList(), listOf(destination)) {
-    private var hasNext = false
-    private var nextObject: OutputT? = null
+) : Node<SourceEvent, Nothing, OutputT>(label, emptyList(), listOf(destination)) {
+    private val queue = ArrayDeque<OutputT>()
 
     context(_: Simulator)
     override fun onArrive(obj: Nothing) {
@@ -14,18 +17,24 @@ open class Source<OutputT>(
     }
 
     context(_: Simulator)
-    override fun onEmit() {
-        if (!hasNext) {
-            // TODO: Possibly log that you've run out of objects to emit?
-            return
+    override fun onEvent(event: SourceEvent) {
+        when (event) {
+            NewArrival -> {
+                scheduleNext()
+                onEmit()
+            }
         }
-        if (!destination.isOpen()) {
-            emitWhenOpen(destination)
-            return
-        }
+    }
 
-        @Suppress("UNCHECKED_CAST") destination.send(nextObject as OutputT)
-        scheduleNext()
+    context(_: Simulator)
+    override fun onEmit() {
+        assert(queue.isNotEmpty())
+
+        if (destination.isOpen()) {
+            destination.send(queue.removeFirst())
+        } else {
+            emitWhenOpen(destination)
+        }
     }
 
     context(_: Simulator)
@@ -34,16 +43,15 @@ open class Source<OutputT>(
     }
 
     override fun reportMetrics(): Metrics {
-        return Metrics(0f, 0)
+        return Metrics(0f, queue.size)
     }
 
     context(_: Simulator)
     private fun scheduleNext() {
-        hasNext = generator.hasNext()
-        if (hasNext) {
+        if (generator.hasNext()) {
             val (obj, delay) = generator.next()
-            nextObject = obj
-            scheduleEmit(delay)
+            queue.addLast(obj)
+            scheduleEvent(delay, NewArrival)
         }
     }
 }
