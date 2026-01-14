@@ -2,3 +2,4 @@
 /.idea/**
 !/.idea/ktfmt.xml
 build/
+/.kotlin/

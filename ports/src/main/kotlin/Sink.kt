@@ -3,13 +3,15 @@ package com.group7
 open class Sink<InputT>(label: String, incoming: List<InputChannel<InputT>>) :
     Node<Nothing, InputT, Nothing>(label, incoming, emptyList()) {
     // Could be memory intensive, can keep a map of objects to counts
-    var load: MutableList<InputT> = mutableListOf()
+    private val load: MutableList<InputT> = mutableListOf()
 
-    override fun onArrive(simulator: Simulator, obj: InputT) {
+    context(_: Simulator)
+    override fun onArrive(obj: InputT) {
         load.add(obj)
     }
 
-    override fun onEmit(simulator: Simulator) {
+    context(_: Simulator)
+    override fun onEmit() {
         error("Can't emit from a sink! What are you doing?!")
     }
 

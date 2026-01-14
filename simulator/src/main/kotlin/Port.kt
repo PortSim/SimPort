@@ -1,7 +1,5 @@
 package com.group7
 
-data class Port(
-    val nodes: List<Node<*, *, *>>,
-    val inputChannels: List<InputChannel<*>>,
-    val outputChannels: List<OutputChannel<*>>,
-)
+class Port(val nodes: List<Node<*, *, *>>) {
+    constructor(vararg nodes: Node<*, *, *>) : this(nodes.toList())
+}

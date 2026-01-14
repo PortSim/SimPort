@@ -4,56 +4,21 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import umontreal.ssj.randvar.ExponentialGen
 import umontreal.ssj.rng.MRG32k3a
-import umontreal.ssj.rng.RandomStream
 
 // A generator interface used only by Source nodes
-interface Generator<OutputT> {
-    // A function the source can call to get a delay when scheduling the next emit event
-    fun nextDelay(): Duration
+interface Generator<out T> : Iterator<Pair<T, Duration>>
 
-    // A function the source can call to get the next object to emit
-    fun nextObject(): OutputT
+object Generators {
+    fun <T> constantDelay(obj: T, delay: Duration): Generator<T> = generateSequence { obj to delay }.asGenerator()
 
-    // If there are any objects left for the generator to generate
-    val empty: Boolean
-}
-
-// A generator that generates `count` objects with a delay of `delay` between each
-class RepetitiveGenerator<OutputT>(
-    private val obj: OutputT,
-    private val delay: Duration,
-    private var count: UInt?, // null means emit forever
-) : Generator<OutputT> {
-    override fun nextDelay() = delay
-
-    override fun nextObject(): OutputT {
-        if (count != null) {
-            check(count!! >= 0u)
-            count = count!! - 1u
-        }
-        return obj
+    fun <T> exponentialDelay(obj: T, lambda: Double): Generator<T> {
+        val stream = MRG32k3a() // random number stream
+        val expGen = ExponentialGen(stream, lambda) // exponential distribution
+        return generateSequence { obj to expGen.nextDouble().seconds }.asGenerator()
     }
-
-    override var empty = count != null && count!! <= 0u
 }
 
-class ExponentialGenerator<OutputT>(
-    private val obj: OutputT, // object to always output
-    lambda: Double, // parameter for the exp distribution
-    private var count: UInt?, // null means emit forever
-) : Generator<OutputT> {
-    private val stream: RandomStream = MRG32k3a() // random number stream
-    private val expGen = ExponentialGen(stream, lambda) // exponential distribution
+fun <T> Generator<T>.take(n: Int) = asSequence().take(n).asGenerator()
 
-    override fun nextDelay() = expGen.nextDouble().seconds
-
-    override fun nextObject(): OutputT {
-        if (count != null) {
-            check(count!! >= 0u)
-            count = count!! - 1u
-        }
-        return obj
-    }
-
-    override var empty = false
-}
+private fun <T> Sequence<Pair<T, Duration>>.asGenerator(): Generator<T> =
+    object : Generator<T>, Iterator<Pair<T, Duration>> by iterator() {}

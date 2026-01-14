@@ -1,30 +1,52 @@
 package com.group7
 
+import kotlin.time.Duration
+
 abstract class Node<in EventT, InputT, OutputT>(
     val label: String,
     val incoming: List<InputChannel<InputT>>,
     val outgoing: List<OutputChannel<OutputT>>,
 ) {
     init {
-        incoming.forEach { (it as ChannelImpl).setReceivingNode(this) }
+        outgoing.forEach { (it as ChannelImpl).setUpstreamNode(this) }
+        incoming.forEach { (it as ChannelImpl).setDownstreamNode(this) }
     }
 
     // What to do when something arrives,
     // call onEvent with some customisation? (instantaneous)
     // Never fail
-    abstract fun onArrive(simulator: Simulator, obj: InputT)
+    context(_: Simulator)
+    abstract fun onArrive(obj: InputT)
 
     // Processing of a thing, essentially a fancy delay (takes take)
-    open fun onEvent(simulator: Simulator, event: EventT) {}
+    context(_: Simulator)
+    open fun onEvent(event: EventT) {}
 
     // What to do when something is ready to leave,
     // Tells the simulator what node to emit to? (instantaneous)
     // Handles failures to emit
-    abstract fun onEmit(simulator: Simulator)
+    context(_: Simulator)
+    abstract fun onEmit()
 
-    open fun onStart(simulator: Simulator) {}
+    context(_: Simulator)
+    open fun onStart() {}
 
     open fun reportMetrics() = Metrics()
+
+    context(sim: Simulator)
+    protected fun scheduleEvent(delay: Duration, event: EventT) {
+        (sim as SimulatorImpl).scheduleEvent(this, delay, event)
+    }
+
+    context(sim: Simulator)
+    protected fun scheduleEmit(delay: Duration) {
+        (sim as SimulatorImpl).scheduleEmit(this, delay)
+    }
+
+    context(sim: Simulator)
+    protected fun emitWhenOpen(vararg waitingFor: OutputChannel<OutputT>) {
+        (sim as SimulatorImpl).emitWhenOpen(this, *waitingFor)
+    }
 
     override fun toString() = label
 }

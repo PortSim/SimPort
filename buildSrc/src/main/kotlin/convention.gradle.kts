@@ -36,6 +36,7 @@ kotlin {
         languageVersion.set(JavaLanguageVersion.of(21))
         vendor.set(JvmVendorSpec.ADOPTIUM)
     }
+    compilerOptions { freeCompilerArgs.add("-Xcontext-parameters") }
 }
 
 tasks.test { useJUnitPlatform() }

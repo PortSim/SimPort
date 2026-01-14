@@ -5,23 +5,13 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> = ChannelImpl<T>().let { it to it }
+sealed interface Simulator {
+    val isFinished: Boolean
 
-interface Simulator {
-    // Schedules an event to occur after some known time delay
-    fun <EventT> scheduleEvent(target: Node<EventT, *, *>, delay: Duration, event: EventT)
-
-    // Schedules an Emit event after some specified time delay
-    fun scheduleEmit(target: Node<*, *, *>, delay: Duration)
-
-    // schedules an emit that will trigger at the first moment that any of the waitingFor channels
-    // are open
-    fun <OutputT> emitWhenOpen(target: Node<*, *, OutputT>, vararg waitingFor: OutputChannel<OutputT>)
-
-    companion object {
-        operator fun invoke(log: EventLog, port: Port): Simulator = SimulatorImpl(log, port)
-    }
+    fun nextStep()
 }
+
+fun Simulator(log: EventLog, port: Port): Simulator = SimulatorImpl(log, port)
 
 internal class SimulatorImpl(private val log: EventLog, private val port: Port) : Simulator {
     private val diary = PriorityQueue<Event>()
@@ -30,23 +20,33 @@ internal class SimulatorImpl(private val log: EventLog, private val port: Port) 
     private val newlyOpenedChannels: SequencedSet<OutputChannel<*>> = LinkedHashSet<OutputChannel<*>>()
 
     init {
-        port.nodes.forEach { it.onStart(this) }
+        port.nodes.forEach { it.onStart() }
     }
 
-    override fun <EventT> scheduleEvent(target: Node<EventT, *, *>, delay: Duration, event: EventT) {
+    override val isFinished
+        get() = diary.isEmpty()
+
+    override fun nextStep() {
+        val nextEvent = diary.poll() ?: return
+        currentTime = nextEvent.time
+        nextEvent.action()
+        reactToChannelOpens()
+    }
+
+    fun <EventT> scheduleEvent(target: Node<EventT, *, *>, delay: Duration, event: EventT) {
         diary.add(
             Event(currentTime + delay) {
                 log.log(currentTime, "Event $event on $target")
-                target.onEvent(this, event)
+                target.onEvent(event)
             }
         )
     }
 
-    override fun scheduleEmit(target: Node<*, *, *>, delay: Duration) {
+    fun scheduleEmit(target: Node<*, *, *>, delay: Duration) {
         diary.add(Event(currentTime + delay) { this.emitNode(target) })
     }
 
-    override fun <OutputT> emitWhenOpen(target: Node<*, *, OutputT>, vararg waitingFor: OutputChannel<OutputT>) {
+    fun <OutputT> emitWhenOpen(target: Node<*, *, OutputT>, vararg waitingFor: OutputChannel<OutputT>) {
         if (waitingFor.any { it.isOpen() }) {
             scheduleEmit(target, Duration.ZERO)
             return
@@ -57,33 +57,31 @@ internal class SimulatorImpl(private val log: EventLog, private val port: Port) 
         }
     }
 
-    fun <T> sendTo(node: Node<*, T, *>, data: T) {
-        node.onArrive(this, data)
+    fun <T> send(from: Node<*, *, T>, to: Node<*, T, *>, data: T) {
+        log.log(currentTime, "Sending $data from $from to $to")
+        to.onArrive(data)
     }
 
     /** Channel notifies the simulator that it is now open. */
-    fun notifyOpen(channel: OutputChannel<*>) {
+    fun notifyOpened(channel: ChannelImpl<*>) {
         newlyOpenedChannels.add(channel)
+        log.log(currentTime, "Channel opened: $channel")
     }
 
-    fun nextStep() {
-        val nextEvent = diary.poll() ?: return
-        currentTime = nextEvent.time
-        nextEvent.action()
-        reactToChannelOpens()
+    fun notifyClosed(channel: ChannelImpl<*>) {
+        log.log(currentTime, "Channel closed: $channel")
     }
 
     private fun emitNode(node: Node<*, *, *>) {
-        log.log(currentTime, "Attempted emission at $node")
-        node.onEmit(this)
+        node.onEmit()
     }
 
     private fun reactToChannelOpens() {
-        while (true) {
-            val channel = newlyOpenedChannels.removeFirst() ?: break
+        while (newlyOpenedChannels.isNotEmpty()) {
+            val channel = newlyOpenedChannels.removeFirst()
             val tokens = waiters[channel] ?: continue
-            while (channel.isOpen()) {
-                val selectedToken = tokens.removeFirst() ?: break
+            while (channel.isOpen() && tokens.isNotEmpty()) {
+                val selectedToken = tokens.removeFirst()
                 // Wake up node in token
                 // If token causes the channel to be saturated, then the loop will break after this
                 // iteration

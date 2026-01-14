@@ -11,32 +11,22 @@ class RoadNode<T : RoadObject>(
 ) : Node<Nothing, T, T>(label, listOf(source), listOf(destination)) {
     private val contents = mutableListOf<T>()
 
-    override fun onArrive(simulator: Simulator, obj: T) {
+    context(_: Simulator)
+    override fun onArrive(obj: T) {
         contents.add(obj)
         if (contents.size == capacity) {
             source.close()
         }
-        simulator.scheduleEmit(
-            this,
-            timeToTraverse,
-            /** plus some randomised time * */
-        )
+        scheduleEmit(timeToTraverse /* plus some randomised time */)
     }
 
-    override fun onEmit(simulator: Simulator) {
+    context(_: Simulator)
+    override fun onEmit() {
         if (destination.isOpen()) {
-            destination.send(simulator, contents.removeLast())
-            source.open(simulator)
+            destination.send(contents.removeLast())
+            source.open()
         } else {
-            simulator.emitWhenOpen(this, destination)
+            emitWhenOpen(destination)
         }
     }
 }
-
-// fun main() {
-//    val sim = Simulator()
-//    val (sourceOutput, roadInput) = sim.newChannel<RoadObject>()
-//    val (roadOutput, sinkInput) = sim.newChannel<RoadObject>()
-//
-//    val road = RoadNode("", roadInput, roadOutput, 100, 5.seconds)
-// }

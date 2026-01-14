@@ -1,42 +1,63 @@
 package com.group7
 
-interface InputChannel<out T> {
-    fun open(simulator: Simulator)
+fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> = ChannelImpl<T>().let { it to it }
 
+interface InputChannel<out T> {
+    context(_: Simulator)
+    fun open()
+
+    context(_: Simulator)
     fun close()
 }
 
 interface OutputChannel<in T> {
     fun isOpen(): Boolean
 
-    fun send(simulator: Simulator, data: T)
+    context(_: Simulator)
+    fun send(data: T)
 }
 
 internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
-    private var openness: Boolean = false
-    private var receivingNode: Node<*, T, *>? = null
+    private var isOpen: Boolean = true
+    lateinit var upstreamNode: Node<*, *, T>
+        private set
 
-    fun setReceivingNode(node: Node<*, T, *>) {
-        check(receivingNode == null) { "Channel already has a receiving node" }
-        this.receivingNode = node
+    lateinit var downstreamNode: Node<*, T, *>
+        private set
+
+    fun setUpstreamNode(node: Node<*, *, T>) {
+        check(!::upstreamNode.isInitialized) { "Channel already has a different upstream node" }
+        this.upstreamNode = node
     }
 
-    override fun open(simulator: Simulator) {
-        openness = true
-        (simulator as SimulatorImpl).notifyOpen(this)
+    fun setDownstreamNode(node: Node<*, T, *>) {
+        check(!::downstreamNode.isInitialized) { "Channel already has a downstream node" }
+        this.downstreamNode = node
     }
 
+    context(sim: Simulator)
+    override fun open() {
+        isOpen = true
+        (sim as SimulatorImpl).notifyOpened(this)
+    }
+
+    context(sim: Simulator)
     override fun close() {
-        openness = false
+        isOpen = false
+        (sim as SimulatorImpl).notifyClosed(this)
     }
 
     override fun isOpen(): Boolean {
-        return openness
+        return isOpen
     }
 
-    override fun send(simulator: Simulator, data: T) {
+    context(sim: Simulator)
+    override fun send(data: T) {
         // forward to the simulator
-        check(openness) { "Channel is closed" }
-        (simulator as SimulatorImpl).sendTo(receivingNode!!, data)
+        check(isOpen) { "Channel is closed" }
+        (sim as SimulatorImpl).send(upstreamNode, downstreamNode, data)
     }
+
+    override fun toString(): String =
+        "${if (::upstreamNode.isInitialized) upstreamNode else null} to ${if (::downstreamNode.isInitialized) downstreamNode else null}"
 }
