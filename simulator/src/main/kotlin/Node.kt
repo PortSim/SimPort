@@ -2,13 +2,6 @@ package com.group7
 
 import kotlin.time.Duration
 
-abstract class SourceNode<in EventT, OutputT>(label: String, outgoing: List<OutputChannel<OutputT>>) :
-    Node<EventT, Nothing, OutputT>(label, emptyList(), outgoing) {
-
-    context(_: Simulator)
-    abstract fun onStart()
-}
-
 abstract class Node<in EventT, InputT, OutputT>(
     val label: String,
     val incoming: List<InputChannel<InputT>>,
@@ -56,3 +49,10 @@ abstract class Node<in EventT, InputT, OutputT>(
 }
 
 data class Metrics(val percentageFull: Float? = null, val occupants: Int? = null)
+
+abstract class SourceNode<in EventT, OutputT>(label: String, outgoing: List<OutputChannel<OutputT>>) :
+    Node<EventT, Nothing, OutputT>(label, emptyList(), outgoing) {
+
+    context(_: Simulator)
+    abstract fun onStart()
+}
