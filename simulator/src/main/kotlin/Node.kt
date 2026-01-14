@@ -2,6 +2,13 @@ package com.group7
 
 import kotlin.time.Duration
 
+abstract class SourceNode<in EventT, OutputT>(label: String, outgoing: List<OutputChannel<OutputT>>) :
+    Node<EventT, Nothing, OutputT>(label, emptyList(), outgoing) {
+
+    context(_: Simulator)
+    abstract fun onStart()
+}
+
 abstract class Node<in EventT, InputT, OutputT>(
     val label: String,
     val incoming: List<InputChannel<InputT>>,
@@ -27,9 +34,6 @@ abstract class Node<in EventT, InputT, OutputT>(
     // Handles failures to emit
     context(_: Simulator)
     abstract fun onEmit()
-
-    context(_: Simulator)
-    open fun onStart() {}
 
     open fun reportMetrics() = Metrics()
 

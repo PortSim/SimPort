@@ -11,16 +11,16 @@ sealed interface Simulator {
     fun nextStep()
 }
 
-fun Simulator(log: EventLog, port: Port): Simulator = SimulatorImpl(log, port)
+fun Simulator(log: EventLog, scenario: Scenario): Simulator = SimulatorImpl(log, scenario)
 
-internal class SimulatorImpl(private val log: EventLog, private val port: Port) : Simulator {
+internal class SimulatorImpl(private val log: EventLog, private val scenario: Scenario) : Simulator {
     private val diary = PriorityQueue<Event>()
     private var currentTime = Clock.System.now()
     private val waiters = mutableMapOf<OutputChannel<*>, SequencedSet<WaitToken>>()
     private val newlyOpenedChannels: SequencedSet<OutputChannel<*>> = LinkedHashSet<OutputChannel<*>>()
 
     init {
-        port.nodes.forEach { it.onStart() }
+        scenario.sources.forEach { it.onStart() }
     }
 
     override val isFinished

@@ -4,11 +4,11 @@ sealed interface SourceEvent
 
 private data object NewArrival : SourceEvent
 
-open class Source<OutputT>(
+class GeneratorSource<OutputT>(
     label: String,
     private val destination: OutputChannel<OutputT>,
     private val generator: Generator<OutputT>,
-) : Node<SourceEvent, Nothing, OutputT>(label, emptyList(), listOf(destination)) {
+) : SourceNode<SourceEvent, OutputT>(label, listOf(destination)) {
     private val queue = ArrayDeque<OutputT>()
 
     context(_: Simulator)

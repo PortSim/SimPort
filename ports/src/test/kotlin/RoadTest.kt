@@ -12,13 +12,14 @@ class RoadTest :
             val (sourceOutput, roadInput) = newChannel<RoadObject>()
             val (roadOutput, sinkInput) = newChannel<RoadObject>()
 
-            val source = Source("Source", sourceOutput, Generators.exponentialDelay(Truck, 1.0).take(numTrucks))
+            val source =
+                GeneratorSource("Source", sourceOutput, Generators.exponentialDelay(Truck, 1.0).take(numTrucks))
             val road = RoadNode("Road", roadInput, roadOutput, 5, 5.seconds)
             val sink = Sink("Sink", listOf(sinkInput))
 
-            val port = Port(source, road, sink)
+            val scenario = Scenario(source)
 
-            val simulator = Simulator(EventLog.noop(), port)
+            val simulator = Simulator(EventLog.noop(), scenario)
             while (!simulator.isFinished) {
                 simulator.nextStep()
             }
