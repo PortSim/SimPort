@@ -19,8 +19,8 @@ class DelayNode<T>(
         source.onReceive {
             occupants++
             scheduleDelayed(delayProvider.nextDelay()) {
-                destination.send(it)
                 occupants--
+                destination.send(it)
             }
         }
     }

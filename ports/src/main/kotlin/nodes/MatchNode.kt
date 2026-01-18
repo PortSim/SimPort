@@ -25,9 +25,9 @@ class MatchNode<A, B, R>(
     private fun onArriveA(a: A) {
         valueB?.let { b ->
             // Can emit immediately
-            emit(a, b.value)
             valueB = null
             sourceB.open()
+            emit(a, b.value)
             return
         }
         // Need to wait for B
@@ -39,9 +39,9 @@ class MatchNode<A, B, R>(
     private fun onArriveB(b: B) {
         valueA?.let { a ->
             // Can emit immediately
-            emit(a.value, b)
             valueA = null
             sourceA.open()
+            emit(a.value, b)
             return
         }
         // Need to wait for A

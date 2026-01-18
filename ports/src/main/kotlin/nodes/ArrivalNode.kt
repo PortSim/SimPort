@@ -21,14 +21,9 @@ class ArrivalNode<OutputT>(
         if (generator.hasNext()) {
             val (obj, delay) = generator.next()
             scheduleDelayed(delay) {
-                emit(obj)
                 scheduleNext()
+                destination.send(obj)
             }
         }
-    }
-
-    context(_: Simulator)
-    private fun emit(obj: OutputT) {
-        destination.send(obj)
     }
 }
