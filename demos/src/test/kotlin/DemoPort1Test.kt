@@ -8,7 +8,8 @@ class Port1Tests :
         test("Everything sent into port 1 eventually comes out") {
             val numTrucks = 100
 
-            val (simulator, sink) = generatePort(numTrucks = numTrucks)
+            val (scenario, sink) = generatePort(numTrucks = numTrucks)
+            val simulator = Simulator(EventLog.noop(), scenario)
             while (!simulator.isFinished) {
                 simulator.nextStep()
             }

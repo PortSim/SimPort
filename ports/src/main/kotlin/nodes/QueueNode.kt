@@ -6,15 +6,24 @@ import com.group7.Node
 import com.group7.OutputChannel
 import com.group7.Simulator
 
-class QueueNode<T>(label: String, source: InputChannel<T>, private val destination: OutputChannel<T>) :
-    Node(label, listOf(destination)) {
+class QueueNode<T>(
+    label: String,
+    source: InputChannel<T>,
+    private val destination: OutputChannel<T>,
+    initialContents: List<T> = emptyList(),
+) : Node(label, listOf(destination)) {
 
-    private val contents = ArrayDeque<T>()
+    private val contents = ArrayDeque(initialContents)
     private var scheduled = false
 
     init {
         source.onReceive { onArrive(it) }
         destination.whenOpened { scheduleDrain() }
+    }
+
+    context(_: Simulator)
+    override fun onStart() {
+        scheduleDrain()
     }
 
     override fun reportMetrics() = Metrics(occupants = contents.size)

@@ -28,7 +28,6 @@ import kotlin.time.DurationUnit
 // Truck leaves (sink node)
 
 fun generatePort(
-    log: EventLog = EventLog.noop(),
     entryGateLanes: Int = 6,
     exitGateLanes: Int = 6,
     numStackBlocks: Int = 29,
@@ -38,7 +37,7 @@ fun generatePort(
     averageHandlingTimeAtStack: Duration = 6.minutes,
     numTokens: Int = 30,
     numTrucks: Int? = null,
-): Pair<Simulator, SinkNode<Truck>> {
+): Pair<Scenario, SinkNode<Truck>> {
     val (arrivalOutput, arrivalQueueInput) = newChannel<Truck>()
     val arrivals =
         ArrivalNode(
@@ -54,7 +53,7 @@ fun generatePort(
 
     val (tokenSplitTokenOutput, tokenQueueInput) = newChannel<Token>()
     val (tokenQueueOutput, tokenMatchTokenInput) = newChannel<Token>()
-    QueueNode("Token Queue", tokenQueueInput, tokenQueueOutput)
+    QueueNode("Token Queue", tokenQueueInput, tokenQueueOutput, List(numTokens) { Token })
 
     val (tokenMatchOutput, entranceQueueInput) = newChannel<Truck>()
     MatchNode("Token Match", tokenMatchTruckInput, tokenMatchTokenInput, tokenMatchOutput) { truck, _ -> truck }
@@ -87,16 +86,7 @@ fun generatePort(
         Pair(truck, Token)
     }
 
-    val sink = SinkNode("Sink", listOf(sinkInput))
-
-    val simulator = Simulator(log, Scenario(arrivals))
-
-    context(simulator) {
-        // Fill the token pool
-        repeat(numTokens) { tokenSplitTokenOutput.send(Token) }
-    }
-
-    return simulator to sink
+    return Scenario(arrivals) to SinkNode("Truck Departures", listOf(sinkInput))
 }
 
 private fun <T> makeGatesWithQueue(
