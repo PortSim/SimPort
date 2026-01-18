@@ -1,6 +1,10 @@
-package com.group7
+package com.group7.nodes
 
-open class Sink<InputT>(label: String, incoming: List<InputChannel<InputT>>) : Node(label) {
+import com.group7.InputChannel
+import com.group7.Metrics
+import com.group7.Node
+
+open class SinkNode<InputT>(label: String, incoming: List<InputChannel<InputT>>) : Node(label, emptyList()) {
     private val results = mutableMapOf<InputT, Int>()
     private var count = 0
 
@@ -14,6 +18,6 @@ open class Sink<InputT>(label: String, incoming: List<InputChannel<InputT>>) : N
     }
 
     override fun reportMetrics(): Metrics {
-        return Metrics(null, count)
+        return Metrics(occupants = count)
     }
 }

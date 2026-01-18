@@ -1,8 +1,22 @@
 package com.group7
 
-import kotlin.time.Duration.Companion.seconds
+import com.group7.generators.Delays
+import com.group7.generators.Generators
+import com.group7.generators.take
+import com.group7.nodes.ArrivalNode
+import com.group7.nodes.DelayNode
+import com.group7.nodes.ForkNode
+import com.group7.nodes.JoinNode
+import com.group7.nodes.MatchNode
+import com.group7.nodes.QueueNode
+import com.group7.nodes.ServiceNode
+import com.group7.nodes.SinkNode
+import com.group7.nodes.SplitNode
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.DurationUnit
 
-// Port layout based on figure the paper "Solving semi-open queuing networks with time-varying arrivals:
+// Port layout based on figure 8 from the paper "Solving semi-open queuing networks with time-varying arrivals:
 // An application in container terminal landside operations"
 
 // Truck arrival (source node) ->
@@ -13,89 +27,108 @@ import kotlin.time.Duration.Companion.seconds
 // Exit gates (m lanes, modeled as an m capacity node) ->
 // Truck leaves (sink node)
 
-fun generatePort(gateSize: Int, craneNum: Int, numTrucks: Int): Pair<Simulator, Sink<RoadObject>> {
-    val (sourceOutput, roadToGatesInput) = newChannel<RoadObject>()
-    val source = GeneratorSource("Source", sourceOutput, Generators.exponentialDelay(Truck, 1.0).take(numTrucks))
+fun generatePort(
+    log: EventLog = EventLog.noop(),
+    entryGateLanes: Int = 6,
+    exitGateLanes: Int = 6,
+    numStackBlocks: Int = 29,
+    truckArrivalsPerHour: Double = 60.0,
+    averageGateServiceTime: Duration = 6.minutes,
+    averageTravelTime: Duration = 5.6.minutes,
+    averageHandlingTimeAtStack: Duration = 6.minutes,
+    numTokens: Int = 30,
+    numTrucks: Int? = null,
+): Pair<Simulator, SinkNode<Truck>> {
+    val (arrivalOutput, arrivalQueueInput) = newChannel<Truck>()
+    val arrivals =
+        ArrivalNode(
+            "Truck Arrivals",
+            arrivalOutput,
+            Generators.constant(Truck, Delays.exponential(truckArrivalsPerHour, DurationUnit.HOURS)).let {
+                if (numTrucks != null) it.take(numTrucks) else it
+            },
+        )
 
-    val (roadToGatesOutput, junctionToGatesInput) = newChannel<RoadObject>()
-    val roadToGates = RoadNode("Road To Gates", roadToGatesInput, roadToGatesOutput, 100, 5.seconds)
+    val (arrivalQueueOutput, tokenMatchTruckInput) = newChannel<Truck>()
+    QueueNode("Truck Arrival Queue", arrivalQueueInput, arrivalQueueOutput)
 
-    val (junctionToGatesOutputs, entranceGatesInputs) = newChannels<RoadObject>(gateSize)
-    val junctionToGates =
-        JunctionNode("Junction To Gates", listOf(junctionToGatesInput), junctionToGatesOutputs, 10, 5.seconds)
+    val (tokenSplitTokenOutput, tokenQueueInput) = newChannel<Token>()
+    val (tokenQueueOutput, tokenMatchTokenInput) = newChannel<Token>()
+    QueueNode("Token Queue", tokenQueueInput, tokenQueueOutput)
 
-    val (entranceGatesOutputs, junctionFromGatesInputs) = newChannels<RoadObject>(gateSize)
-    val entranceGates =
-        List(gateSize) { i ->
-            RoadNode("Entrance Gate $i", entranceGatesInputs[i], entranceGatesOutputs[i], 1, 60.seconds)
+    val (tokenMatchOutput, entranceQueueInput) = newChannel<Truck>()
+    MatchNode("Token Match", tokenMatchTruckInput, tokenMatchTokenInput, tokenMatchOutput) { truck, _ -> truck }
+
+    val travelToStacksInput = makeGatesWithQueue("Entrance", entranceQueueInput, entryGateLanes, averageGateServiceTime)
+
+    val (travelToStacksOutput, stacksInput) = newChannel<Truck>()
+    DelayNode(
+        "Travel to stacks",
+        travelToStacksInput,
+        travelToStacksOutput,
+        Delays.exponentialWithMean(averageTravelTime),
+    )
+
+    val travelToGatesInput =
+        makeLanes("ASC", stacksInput, numStackBlocks) { i, input, output ->
+            val (queueOutput, craneInput) = newChannel<Truck>()
+            QueueNode("ASC Queue $i", input, queueOutput)
+
+            ServiceNode("ASC $i", craneInput, output, Delays.exponentialWithMean(averageHandlingTimeAtStack))
         }
 
-    val (junctionFromGatesOutput, roadToCranesInput) = newChannel<RoadObject>()
-    val junctionFromGates =
-        JunctionNode("Junction From Gates", junctionFromGatesInputs, listOf(junctionFromGatesOutput), 10, 5.seconds)
+    val (travelToGatesOutput, exitQueueInput) = newChannel<Truck>()
+    DelayNode("Travel to gates", travelToGatesInput, travelToGatesOutput, Delays.exponentialWithMean(averageTravelTime))
 
-    val (roadToCranesOutput, junctionToCranesInput) = newChannel<RoadObject>()
-    val roadToCranes = RoadNode("Road To Cranes", roadToCranesInput, roadToCranesOutput, 10, 5.seconds)
+    val tokenSplitInput = makeGatesWithQueue("Exit", exitQueueInput, exitGateLanes, averageGateServiceTime)
 
-    val (junctionToCranesOutputs, craneInputs) = newChannels<RoadObject>(craneNum)
-    val junctionToCranes =
-        JunctionNode(
-            "Junction To Crane Platforms",
-            listOf(junctionToCranesInput),
-            junctionToCranesOutputs,
-            10,
-            5.seconds,
-        )
+    val (tokenSplitTruckOutput, sinkInput) = newChannel<Truck>()
+    SplitNode("Token Split", tokenSplitInput, tokenSplitTruckOutput, tokenSplitTokenOutput) { truck ->
+        Pair(truck, Token)
+    }
 
-    // TODO() cranes currently modelled as roads, need a separate node later
-    val (craneOutputs, junctionFromCranesInputs) = newChannels<RoadObject>(craneNum)
-    val cranePlatforms = List(craneNum) { i -> RoadNode("Crane $i", craneInputs[i], craneOutputs[i], 1, 60.seconds) }
+    val sink = SinkNode("Sink", listOf(sinkInput))
 
-    val (junctionFromCranesOutput, roadToExitGatesInput) = newChannel<RoadObject>()
-    val junctionFromCranes =
-        JunctionNode(
-            "Junction From Crane Platforms",
-            junctionFromCranesInputs,
-            listOf(junctionFromCranesOutput),
-            10,
-            5.seconds,
-        )
+    val simulator = Simulator(log, Scenario(arrivals))
 
-    val (roadToExitGatesOutput, junctionToExitGatesInput) = newChannel<RoadObject>()
-    val roadToExitGates = RoadNode("Road To Exit Gates", roadToExitGatesInput, roadToExitGatesOutput, 10, 5.seconds)
+    context(simulator) {
+        // Fill the token pool
+        repeat(numTokens) { tokenSplitTokenOutput.send(Token) }
+    }
 
-    val (junctionToExitGatesOutputs, exitGatesInputs) = newChannels<RoadObject>(gateSize)
-    val junctionToExitGates =
-        JunctionNode(
-            "Junction To Exit Gates",
-            listOf(junctionToExitGatesInput),
-            junctionToExitGatesOutputs,
-            10,
-            5.seconds,
-        )
+    return simulator to sink
+}
 
-    val (exitGatesOutputs, junctionFromExitGatesInputs) = newChannels<RoadObject>(gateSize)
-    val exitGates =
-        List(gateSize) { i -> RoadNode("Exit Gate $i", exitGatesInputs[i], exitGatesOutputs[i], 1, 60.seconds) }
+private fun <T> makeGatesWithQueue(
+    description: String,
+    source: InputChannel<T>,
+    numLanes: Int,
+    averageServiceTime: Duration,
+): InputChannel<T> {
+    val (queueOutput, forkInput) = newChannel<T>()
+    QueueNode("$description Queue", source, queueOutput)
+    return makeLanes(description, forkInput, numLanes) { i, input, output ->
+        ServiceNode("$description Gate $i", input, output, Delays.exponentialWithMean(averageServiceTime))
+    }
+}
 
-    val (junctionFromExitGatesOutput, roadToSinkInput) = newChannel<RoadObject>()
-    val junctionFromExitGates =
-        JunctionNode(
-            "Junction From Exit Gates",
-            junctionFromExitGatesInputs,
-            listOf(junctionFromExitGatesOutput),
-            10,
-            5.seconds,
-        )
+private fun <T> makeLanes(
+    description: String,
+    source: InputChannel<T>,
+    numLanes: Int,
+    makeLane: (Int, InputChannel<T>, OutputChannel<T>) -> Unit,
+): InputChannel<T> {
+    val (queueOutputs, laneInputs) = newChannels<T>(numLanes)
+    ForkNode("$description Lane Split", source, queueOutputs)
 
-    val (roadToSinkOutput, sinkInput) = newChannel<RoadObject>()
-    val roadToSink = RoadNode("Road Out Of Port", roadToSinkInput, roadToSinkOutput, 10, 5.seconds)
+    val (laneOutputs, joinInputs) = newChannels<T>(numLanes)
+    for ((i, channels) in laneInputs.asSequence().zip(laneOutputs.asSequence()).withIndex()) {
+        val (input, output) = channels
+        makeLane(i, input, output)
+    }
 
-    val sink = Sink("Sink", listOf(sinkInput))
+    val (joinOutput, resultInput) = newChannel<T>()
+    JoinNode("$description Lane Join", joinInputs, joinOutput)
 
-    val scenario = Scenario(source)
-
-    val simulator = Simulator(EventLog.noop(), scenario)
-
-    return Pair(simulator, sink)
+    return resultInput
 }

@@ -17,6 +17,18 @@ interface OutputChannel<in T> {
 
     context(_: Simulator)
     fun send(data: T)
+
+    fun whenOpened(
+        callback:
+            context(Simulator)
+            () -> Unit
+    )
+
+    fun whenClosed(
+        callback:
+            context(Simulator)
+            () -> Unit
+    )
 }
 
 internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
@@ -26,6 +38,16 @@ internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
     private lateinit var callback:
         context(Simulator)
         (T) -> Unit
+    private val openedCallbacks =
+        mutableListOf<
+            context(Simulator)
+            () -> Unit
+        >()
+    private val closedCallbacks =
+        mutableListOf<
+            context(Simulator)
+            () -> Unit
+        >()
 
     fun setUpstreamNode(node: Node) {
         check(!::upstreamNode.isInitialized) { "Channel already has a different upstream node" }
@@ -49,6 +71,7 @@ internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
             return
         }
         (sim as SimulatorImpl).notifyOpened(this)
+        openedCallbacks.forEach { it() }
         isOpen = true
     }
 
@@ -58,6 +81,7 @@ internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
             return
         }
         (sim as SimulatorImpl).notifyClosed(this)
+        closedCallbacks.forEach { it() }
         isOpen = false
     }
 
@@ -71,6 +95,22 @@ internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
         check(isOpen) { "Channel is closed" }
         (sim as SimulatorImpl).notifySend(upstreamNode, downstreamNode, data)
         callback(data)
+    }
+
+    override fun whenOpened(
+        callback:
+            context(Simulator)
+            () -> Unit
+    ) {
+        openedCallbacks.add(callback)
+    }
+
+    override fun whenClosed(
+        callback:
+            context(Simulator)
+            () -> Unit
+    ) {
+        closedCallbacks.add(callback)
     }
 
     override fun toString(): String =

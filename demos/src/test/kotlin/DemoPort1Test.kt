@@ -7,10 +7,8 @@ class Port1Tests :
     FunSpec({
         test("Everything sent into port 1 eventually comes out") {
             val numTrucks = 100
-            val gateSize = 10
-            val craneNum = 5
 
-            val (simulator, sink) = generatePort(gateSize, craneNum, numTrucks)
+            val (simulator, sink) = generatePort(numTrucks = numTrucks)
             while (!simulator.isFinished) {
                 simulator.nextStep()
             }
