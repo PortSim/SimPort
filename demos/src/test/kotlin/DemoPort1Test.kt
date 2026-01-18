@@ -1,0 +1,20 @@
+package com.group7
+
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
+
+class Port1Tests :
+    FunSpec({
+        test("Everything sent into port 1 eventually comes out") {
+            val numTrucks = 100
+            val gateSize = 10
+            val craneNum = 5
+
+            val (simulator, sink) = generatePort(gateSize, craneNum, numTrucks)
+            while (!simulator.isFinished) {
+                simulator.nextStep()
+            }
+
+            sink.reportMetrics().occupants shouldBe numTrucks
+        }
+    })

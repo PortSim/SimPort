@@ -2,14 +2,14 @@ package com.group7
 
 import kotlin.time.Duration
 
-private const val DEFAULT_ROAD_CAPACITY = 100
+private const val DEFAULT_GATE_NUM = 10
 
-class RoadNode<T : RoadObject>(
+class GateNode<T : RoadObject>(
     label: String,
     private val source: InputChannel<T>,
     private val destination: OutputChannel<T>,
-    private val capacity: Int = DEFAULT_ROAD_CAPACITY,
-    private val timeToTraverse: Duration,
+    private val capacity: Int = DEFAULT_GATE_NUM,
+    private val waitTime: Duration,
 ) : Node(label, destination) {
     private val contents = ArrayDeque<T>()
 
@@ -25,7 +25,7 @@ class RoadNode<T : RoadObject>(
         if (contents.size == capacity) {
             source.close()
         }
-        scheduleDelayed(timeToTraverse) { tryEmit() }
+        scheduleDelayed(waitTime) { tryEmit() }
     }
 
     context(_: Simulator)

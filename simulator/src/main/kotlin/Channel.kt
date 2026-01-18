@@ -2,6 +2,8 @@ package com.group7
 
 fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> = ChannelImpl<T>().let { it to it }
 
+fun <T> newChannels(n: Int): Pair<List<OutputChannel<T>>, List<InputChannel<T>>> = List(n) { newChannel<T>() }.unzip()
+
 interface InputChannel<out T> {
     context(_: Simulator)
     fun open()
