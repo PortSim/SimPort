@@ -18,7 +18,7 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
     private var currentTime = Clock.System.now()
 
     init {
-        scenario.sources.forEach { it.onStart() }
+        startNodes()
     }
 
     override val isFinished
@@ -45,6 +45,23 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
 
     fun notifyClosed(channel: ChannelImpl<*>) {
         log.log(currentTime, "Channel closed: $channel")
+    }
+
+    private fun startNodes() {
+        val stack = scenario.sources.toMutableList<Node>()
+        val visited = stack.toMutableSet()
+
+        while (stack.isNotEmpty()) {
+            val node = stack.removeLast()
+
+            node.onStart()
+            for (outgoing in node.outgoing) {
+                val downstream = outgoing.downstreamNode
+                if (visited.add(downstream)) {
+                    stack.add(downstream)
+                }
+            }
+        }
     }
 }
 

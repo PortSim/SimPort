@@ -5,6 +5,8 @@ fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> = ChannelImpl<T>()
 fun <T> newChannels(n: Int): Pair<List<OutputChannel<T>>, List<InputChannel<T>>> = List(n) { newChannel<T>() }.unzip()
 
 interface InputChannel<out T> {
+    val upstreamNode: Node
+
     context(_: Simulator)
     fun open()
 
@@ -13,6 +15,8 @@ interface InputChannel<out T> {
 }
 
 interface OutputChannel<in T> {
+    val downstreamNode: Node
+
     fun isOpen(): Boolean
 
     context(_: Simulator)
@@ -33,8 +37,7 @@ interface OutputChannel<in T> {
 
 internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
     private var isOpen: Boolean = true
-    private lateinit var upstreamNode: Node
-    private lateinit var downstreamNode: Node
+
     private lateinit var callback:
         context(Simulator)
         (T) -> Unit
@@ -48,6 +51,12 @@ internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
             context(Simulator)
             () -> Unit
         >()
+
+    override lateinit var upstreamNode: Node
+        private set
+
+    override lateinit var downstreamNode: Node
+        private set
 
     fun setUpstreamNode(node: Node) {
         check(!::upstreamNode.isInitialized) { "Channel already has a different upstream node" }

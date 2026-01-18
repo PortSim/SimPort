@@ -2,8 +2,10 @@ package com.group7
 
 import kotlin.time.Duration
 
-abstract class Node(val label: String, private val outgoing: List<OutputChannel<*>>) {
-    private val incoming = mutableListOf<InputChannel<*>>()
+abstract class Node(val label: String, val outgoing: List<OutputChannel<*>>) {
+    private val _incoming = mutableListOf<InputChannel<*>>()
+    val incoming: List<InputChannel<*>>
+        get() = _incoming
 
     init {
         outgoing.forEach { (it as ChannelImpl).setUpstreamNode(this) }
@@ -14,9 +16,12 @@ abstract class Node(val label: String, private val outgoing: List<OutputChannel<
             context(Simulator)
             (T) -> Unit
     ) {
-        incoming.add(this)
+        _incoming.add(this)
         (this as ChannelImpl).setDownstreamNode(this@Node, callback)
     }
+
+    context(_: Simulator)
+    open fun onStart() {}
 
     open fun reportMetrics() = Metrics()
 
@@ -42,5 +47,5 @@ data class Metrics(val occupants: Int? = null)
 abstract class SourceNode(label: String, outgoing: List<OutputChannel<*>>) : Node(label, outgoing) {
 
     context(_: Simulator)
-    abstract fun onStart()
+    abstract override fun onStart()
 }
