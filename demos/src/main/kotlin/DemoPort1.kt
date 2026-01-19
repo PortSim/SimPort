@@ -31,7 +31,7 @@ fun generatePort(
     entryGateLanes: Int = 6,
     exitGateLanes: Int = 6,
     numStackBlocks: Int = 29,
-    truckArrivalsPerHour: Double = 60.0,
+    truckArrivalsPerHour: Double = 50.0,
     averageGateServiceTime: Duration = 6.minutes,
     averageTravelTime: Duration = 5.6.minutes,
     averageHandlingTimeAtStack: Duration = 6.minutes,

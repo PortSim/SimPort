@@ -7,6 +7,9 @@ import kotlin.time.Instant
 
 sealed interface Simulator {
     val isFinished: Boolean
+    val currentTime: Instant
+
+    val nextEventTime: Instant?
 
     fun nextStep()
 }
@@ -15,7 +18,9 @@ fun Simulator(log: EventLog, scenario: Scenario): Simulator = SimulatorImpl(log,
 
 internal class SimulatorImpl(private val log: EventLog, private val scenario: Scenario) : Simulator {
     private val diary = PriorityQueue<Event>()
-    private var currentTime = Clock.System.now()
+
+    override var currentTime = Clock.System.now()
+        private set
 
     init {
         startNodes()
@@ -23,6 +28,9 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
 
     override val isFinished
         get() = diary.isEmpty()
+
+    override val nextEventTime: Instant?
+        get() = diary.peek()?.time
 
     override fun nextStep() {
         val nextEvent = diary.poll() ?: return

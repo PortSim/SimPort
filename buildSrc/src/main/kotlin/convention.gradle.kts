@@ -9,7 +9,10 @@ group = "com.group7"
 
 version = "1.0-SNAPSHOT"
 
-repositories { mavenCentral() }
+repositories {
+    mavenCentral()
+    google()
+}
 
 val kotestVersion = "6.0.7"
 
