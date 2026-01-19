@@ -36,7 +36,9 @@ dependencies {
 
 kotlin {
     jvmToolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
-    compilerOptions { freeCompilerArgs.add("-Xcontext-parameters") }
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xcontext-parameters", "-Xopt-in=kotlin.contracts.ExperimentalContracts")
+    }
 }
 
 tasks.test { useJUnitPlatform() }
