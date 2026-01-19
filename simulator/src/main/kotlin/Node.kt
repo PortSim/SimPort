@@ -2,9 +2,10 @@ package com.group7
 
 import kotlin.time.Duration
 
-abstract class Node(val label: String, vararg outgoing: OutputChannel<*>) {
-    private val incoming = mutableListOf<InputChannel<*>>()
-    private val outgoing = outgoing.toList()
+abstract class Node(val label: String, val outgoing: List<OutputChannel<*>>) {
+    private val _incoming = mutableListOf<InputChannel<*>>()
+    val incoming: List<InputChannel<*>>
+        get() = _incoming
 
     init {
         outgoing.forEach { (it as ChannelImpl).setUpstreamNode(this) }
@@ -15,9 +16,12 @@ abstract class Node(val label: String, vararg outgoing: OutputChannel<*>) {
             context(Simulator)
             (T) -> Unit
     ) {
-        incoming.add(this)
+        _incoming.add(this)
         (this as ChannelImpl).setDownstreamNode(this@Node, callback)
     }
+
+    context(_: Simulator)
+    open fun onStart() {}
 
     open fun reportMetrics() = Metrics()
 
@@ -25,23 +29,23 @@ abstract class Node(val label: String, vararg outgoing: OutputChannel<*>) {
 
     protected companion object {
         @JvmStatic
-        context(sim: Simulator)
-        protected fun scheduleDelayed(delay: Duration, callback: () -> Unit) {
-            (sim as SimulatorImpl).scheduleDelayed(delay, callback)
+        context(_: Simulator)
+        protected fun schedule(callback: () -> Unit) {
+            scheduleDelayed(Duration.ZERO, callback)
         }
 
         @JvmStatic
         context(sim: Simulator)
-        protected fun scheduleWhenOpened(vararg waitingFor: OutputChannel<*>, callback: () -> Unit) {
-            (sim as SimulatorImpl).scheduleWhenOpened(waitingFor, callback)
+        protected fun scheduleDelayed(delay: Duration, callback: () -> Unit) {
+            (sim as SimulatorImpl).scheduleDelayed(delay, callback)
         }
     }
 }
 
-data class Metrics(val percentageFull: Float? = null, val occupants: Int? = null)
+data class Metrics(val occupants: Int? = null)
 
-abstract class SourceNode(label: String, vararg outgoing: OutputChannel<*>) : Node(label, *outgoing) {
+abstract class SourceNode(label: String, outgoing: List<OutputChannel<*>>) : Node(label, outgoing) {
 
     context(_: Simulator)
-    abstract fun onStart()
+    abstract override fun onStart()
 }

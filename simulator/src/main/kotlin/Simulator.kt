@@ -16,11 +16,9 @@ fun Simulator(log: EventLog, scenario: Scenario): Simulator = SimulatorImpl(log,
 internal class SimulatorImpl(private val log: EventLog, private val scenario: Scenario) : Simulator {
     private val diary = PriorityQueue<Event>()
     private var currentTime = Clock.System.now()
-    private val waiters = mutableMapOf<OutputChannel<*>, SequencedSet<WaitToken>>()
-    private val newlyOpenedChannels: SequencedSet<OutputChannel<*>> = LinkedHashSet<OutputChannel<*>>()
 
     init {
-        scenario.sources.forEach { it.onStart() }
+        startNodes()
     }
 
     override val isFinished
@@ -30,22 +28,10 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
         val nextEvent = diary.poll() ?: return
         currentTime = nextEvent.time
         nextEvent.action()
-        reactToChannelOpens()
     }
 
     fun scheduleDelayed(delay: Duration, callback: () -> Unit) {
         diary.add(Event(currentTime + delay, callback))
-    }
-
-    fun scheduleWhenOpened(waitingFor: Array<out OutputChannel<*>>, callback: () -> Unit) {
-        if (waitingFor.any { it.isOpen() }) {
-            scheduleDelayed(Duration.ZERO, callback)
-            return
-        }
-        val token = WaitToken(waitingFor, callback)
-        for (channel in waitingFor) {
-            waiters.getOrPut(channel, ::LinkedHashSet).add(token)
-        }
     }
 
     fun <T> notifySend(from: Node, to: Node, data: T) {
@@ -54,7 +40,6 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
 
     /** Channel notifies the simulator that it is now open. */
     fun notifyOpened(channel: ChannelImpl<*>) {
-        newlyOpenedChannels.add(channel)
         log.log(currentTime, "Channel opened: $channel")
     }
 
@@ -62,33 +47,19 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
         log.log(currentTime, "Channel closed: $channel")
     }
 
-    private fun reactToChannelOpens() {
-        while (newlyOpenedChannels.isNotEmpty()) {
-            val channel = newlyOpenedChannels.removeFirst()
-            val tokens = waiters[channel] ?: continue
-            while (channel.isOpen() && tokens.isNotEmpty()) {
-                val selectedToken = tokens.removeFirst()
-                // Wake up node in token
-                // If token causes the channel to be saturated, then the loop will break after this
-                // iteration
-                selectedToken.callback()
-                retireWaitToken(selectedToken)
-            }
+    private fun startNodes() {
+        val stack = scenario.sources.toMutableList<Node>()
+        val visited = stack.toMutableSet()
 
-            // Retire channel from the waiters map if there are no more waitTokens associated with
-            // the channel
-            if (tokens.isEmpty()) {
-                waiters.remove(channel)
-            }
-        }
-    }
+        while (stack.isNotEmpty()) {
+            val node = stack.removeLast()
 
-    /** Removes waitToken from all OutputChannels' waiter sets */
-    private fun retireWaitToken(waitToken: WaitToken) {
-        for (waitingChannel in waitToken.waitingFor) {
-            waiters.compute(waitingChannel) { _, tokens ->
-                tokens?.remove(waitToken)
-                tokens?.takeUnless { it.isEmpty() }
+            node.onStart()
+            for (outgoing in node.outgoing) {
+                val downstream = outgoing.downstreamNode
+                if (visited.add(downstream)) {
+                    stack.add(downstream)
+                }
             }
         }
     }
@@ -97,5 +68,3 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
 private data class Event(val time: Instant, val action: () -> Unit) : Comparable<Event> {
     override fun compareTo(other: Event): Int = time.compareTo(other.time)
 }
-
-private class WaitToken(val waitingFor: Array<out OutputChannel<*>>, val callback: () -> Unit)
