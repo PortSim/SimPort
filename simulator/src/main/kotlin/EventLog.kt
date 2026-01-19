@@ -10,5 +10,12 @@ interface EventLog {
             object : EventLog {
                 override fun log(time: Instant, message: String) {}
             }
+
+        fun stdout() =
+            object : EventLog {
+                override fun log(time: Instant, message: String) {
+                    println("[$time] $message")
+                }
+            }
     }
 }
