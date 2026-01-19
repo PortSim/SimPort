@@ -1,7 +1,6 @@
 package com.group7
 
 import java.util.*
-import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
@@ -16,10 +15,16 @@ sealed interface Simulator {
 
 fun Simulator(log: EventLog, scenario: Scenario): Simulator = SimulatorImpl(log, scenario)
 
-internal class SimulatorImpl(private val log: EventLog, private val scenario: Scenario) : Simulator {
+private val defaultStartTime = Instant.parse("2000-01-01T00:00:00Z")
+
+internal class SimulatorImpl(
+    private val log: EventLog,
+    private val scenario: Scenario,
+    startTime: Instant = defaultStartTime,
+) : Simulator {
     private val diary = PriorityQueue<Event>()
 
-    override var currentTime = Clock.System.now()
+    override var currentTime = startTime
         private set
 
     init {
