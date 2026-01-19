@@ -12,6 +12,8 @@ sealed interface Simulator {
     val nextEventTime: Instant?
 
     fun nextStep()
+
+    fun log(message: String)
 }
 
 fun Simulator(log: EventLog, scenario: Scenario): Simulator = SimulatorImpl(log, scenario)
@@ -53,6 +55,11 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
 
     fun notifyClosed(channel: ChannelImpl<*>) {
         log.log(currentTime, "Channel closed: $channel")
+    }
+
+    /** Node policies can log any arbitrary events with the simulator, usually internal changes */
+    override fun log(message: String) {
+        log.log(currentTime, message)
     }
 
     private fun startNodes() {
