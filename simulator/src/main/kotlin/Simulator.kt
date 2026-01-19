@@ -13,7 +13,7 @@ sealed interface Simulator {
 
     fun nextStep()
 
-    fun log(message: String)
+    fun log(message: () -> String)
 }
 
 fun Simulator(log: EventLog, scenario: Scenario): Simulator = SimulatorImpl(log, scenario)
@@ -45,20 +45,20 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
     }
 
     fun <T> notifySend(from: Node, to: Node, data: T) {
-        log.log(currentTime, "Sending $data from $from to $to")
+        log.log(currentTime) { "Sending $data from $from to $to" }
     }
 
     /** Channel notifies the simulator that it is now open. */
     fun notifyOpened(channel: ChannelImpl<*>) {
-        log.log(currentTime, "Channel opened: $channel")
+        log.log(currentTime) { "Channel opened: $channel" }
     }
 
     fun notifyClosed(channel: ChannelImpl<*>) {
-        log.log(currentTime, "Channel closed: $channel")
+        log.log(currentTime) { "Channel closed: $channel" }
     }
 
     /** Node policies can log any arbitrary events with the simulator, usually internal changes */
-    override fun log(message: String) {
+    override fun log(message: () -> String) {
         log.log(currentTime, message)
     }
 
