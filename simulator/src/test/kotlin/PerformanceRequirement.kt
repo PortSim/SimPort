@@ -9,7 +9,7 @@ import kotlin.time.measureTime
 private class CountingLogger : EventLog {
     var count = 0
 
-    override fun log(time: Instant, message: String) {
+    override fun log(time: Instant, message: () -> String) {
         count++
     }
 }
