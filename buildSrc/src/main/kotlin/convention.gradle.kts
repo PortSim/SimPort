@@ -32,10 +32,7 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-        vendor.set(JvmVendorSpec.ADOPTIUM)
-    }
+    jvmToolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
     compilerOptions { freeCompilerArgs.add("-Xcontext-parameters") }
 }
 
