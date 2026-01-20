@@ -1,10 +1,19 @@
 package com.group7
 
-fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> = ChannelImpl<T>().let { it to it }
+fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> {
+    val output = OutputChannelImpl<T>()
+    val input = InputChannelImpl<T>()
+    output.connectTo(input)
+    return output to input
+}
 
 fun <T> newChannels(n: Int): Pair<List<OutputChannel<T>>, List<InputChannel<T>>> = List(n) { newChannel<T>() }.unzip()
 
-interface InputChannel<out T> {
+fun <T> newConnectableInputChannel(): ConnectableInputChannel<T> = InputChannelImpl()
+
+fun <T> newConnectableOutputChannel(): ConnectableOutputChannel<T> = OutputChannelImpl()
+
+sealed interface InputChannel<out T> {
     val upstreamNode: Node
 
     context(_: Simulator)
@@ -14,7 +23,9 @@ interface InputChannel<out T> {
     fun close()
 }
 
-interface OutputChannel<in T> {
+sealed interface ConnectableInputChannel<out T> : InputChannel<T>
+
+sealed interface OutputChannel<in T> {
     val downstreamNode: Node
 
     fun isOpen(): Boolean
@@ -35,12 +46,64 @@ interface OutputChannel<in T> {
     )
 }
 
-internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
-    private var isOpen: Boolean = true
+sealed interface ConnectableOutputChannel<in T> : OutputChannel<T> {
+    fun connectTo(downstream: ConnectableInputChannel<T>)
+}
 
+internal class InputChannelImpl<T> : ConnectableInputChannel<T> {
     private lateinit var callback:
         context(Simulator)
         (T) -> Unit
+
+    lateinit var upstream: OutputChannelImpl<T>
+        private set
+
+    override val upstreamNode
+        get() = upstream.upstreamNode
+
+    lateinit var downstreamNode: Node
+        private set
+
+    fun setUpstream(channel: OutputChannel<T>) {
+        require(!::upstream.isInitialized) { "Channel already connected" }
+        this.upstream = channel.asImpl()
+    }
+
+    fun setDownstreamNode(
+        node: Node,
+        callback:
+            context(Simulator)
+            (T) -> Unit,
+    ) {
+        require(!::downstreamNode.isInitialized) { "Channel already has a downstream node" }
+        this.downstreamNode = node
+        this.callback = callback
+    }
+
+    context(_: Simulator)
+    override fun open() {
+        upstream.open()
+    }
+
+    context(_: Simulator)
+    override fun close() {
+        upstream.close()
+    }
+
+    context(sim: Simulator)
+    fun send(data: T) {
+        sim.asImpl().notifySend(upstream.upstreamNode, downstreamNode, data)
+        callback(data)
+    }
+
+    override fun toString() =
+        runCatching { "${upstream.upstreamNode} to $downstreamNode" }.getOrElse { "Disconnected channel" }
+}
+
+internal class OutputChannelImpl<T> : ConnectableOutputChannel<T> {
+    internal var isOpen = true
+        private set
+
     private val openedCallbacks =
         mutableListOf<
             context(Simulator)
@@ -52,58 +115,28 @@ internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
             () -> Unit
         >()
 
-    override lateinit var upstreamNode: Node
+    lateinit var upstreamNode: Node
         private set
 
-    override lateinit var downstreamNode: Node
+    lateinit var downstream: InputChannelImpl<T>
         private set
+
+    override val downstreamNode
+        get() = downstream.downstreamNode
 
     fun setUpstreamNode(node: Node) {
-        check(!::upstreamNode.isInitialized) { "Channel already has a different upstream node" }
+        require(!::upstreamNode.isInitialized) { "Channel already has an upstream node" }
         this.upstreamNode = node
     }
 
-    fun setDownstreamNode(
-        node: Node,
-        callback:
-            context(Simulator)
-            (T) -> Unit,
-    ) {
-        check(!::downstreamNode.isInitialized) { "Channel already has a downstream node" }
-        this.downstreamNode = node
-        this.callback = callback
+    fun setDownstream(channel: InputChannel<T>) {
+        require(!::downstream.isInitialized) { "Channel already connected" }
+        this.downstream = channel.asImpl()
     }
 
-    context(sim: Simulator)
-    override fun open() {
-        if (isOpen) {
-            return
-        }
-        (sim as SimulatorImpl).notifyOpened(this)
-        openedCallbacks.forEach { it() }
-        isOpen = true
-    }
-
-    context(sim: Simulator)
-    override fun close() {
-        if (!isOpen) {
-            return
-        }
-        (sim as SimulatorImpl).notifyClosed(this)
-        closedCallbacks.forEach { it() }
-        isOpen = false
-    }
-
-    override fun isOpen(): Boolean {
-        return isOpen
-    }
-
-    context(sim: Simulator)
-    override fun send(data: T) {
-        // forward to the simulator
-        check(isOpen) { "Channel is closed" }
-        (sim as SimulatorImpl).notifySend(upstreamNode, downstreamNode, data)
-        callback(data)
+    override fun connectTo(downstream: ConnectableInputChannel<T>) {
+        setDownstream(downstream)
+        downstream.asImpl().setUpstream(this)
     }
 
     override fun whenOpened(
@@ -122,6 +155,44 @@ internal class ChannelImpl<T> : InputChannel<T>, OutputChannel<T> {
         closedCallbacks.add(callback)
     }
 
-    override fun toString(): String =
-        "${if (::upstreamNode.isInitialized) upstreamNode else null} to ${if (::downstreamNode.isInitialized) downstreamNode else null}"
+    override fun isOpen() = isOpen
+
+    context(_: Simulator)
+    override fun send(data: T) {
+        check(isOpen) { "Channel is closed" }
+        downstream.send(data)
+    }
+
+    context(sim: Simulator)
+    fun open() {
+        if (isOpen) {
+            return
+        }
+        isOpen = true
+        sim.asImpl().notifyOpened(this)
+        openedCallbacks.forEach { it() }
+    }
+
+    context(sim: Simulator)
+    fun close() {
+        if (!isOpen) {
+            return
+        }
+        isOpen = false
+        sim.asImpl().notifyClosed(this)
+        closedCallbacks.forEach { it() }
+    }
+
+    override fun toString() =
+        runCatching { "$upstreamNode to ${downstream.downstreamNode}" }.getOrElse { "Disconnected channel" }
 }
+
+internal fun <T> InputChannel<T>.asImpl() =
+    when (this) {
+        is InputChannelImpl -> this
+    }
+
+internal fun <T> OutputChannel<T>.asImpl() =
+    when (this) {
+        is OutputChannelImpl -> this
+    }
