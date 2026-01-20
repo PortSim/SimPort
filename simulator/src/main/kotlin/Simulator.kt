@@ -24,7 +24,11 @@ internal fun Simulator.asImpl() =
 
 private val defaultStartTime = Instant.parse("2000-01-01T00:00:00Z")
 
-internal class SimulatorImpl(private val log: EventLog, private val scenario: Scenario, startTime: Instant = defaultStartTime,) : Simulator {
+internal class SimulatorImpl(
+    private val log: EventLog,
+    private val scenario: Scenario,
+    startTime: Instant = defaultStartTime,
+) : Simulator {
     private val diary = PriorityQueue<Event>()
 
     override var currentTime = startTime
