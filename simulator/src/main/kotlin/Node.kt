@@ -8,7 +8,7 @@ abstract class Node(val label: String, val outgoing: List<OutputChannel<*>>) {
         get() = _incoming
 
     init {
-        outgoing.forEach { (it as ChannelImpl).setUpstreamNode(this) }
+        outgoing.forEach { it.asImpl().setUpstreamNode(this) }
     }
 
     protected fun <T> InputChannel<T>.onReceive(
@@ -17,7 +17,7 @@ abstract class Node(val label: String, val outgoing: List<OutputChannel<*>>) {
             (T) -> Unit
     ) {
         _incoming.add(this)
-        (this as ChannelImpl).setDownstreamNode(this@Node, callback)
+        this.asImpl().setDownstreamNode(this@Node, callback)
     }
 
     context(_: Simulator)
@@ -37,7 +37,7 @@ abstract class Node(val label: String, val outgoing: List<OutputChannel<*>>) {
         @JvmStatic
         context(sim: Simulator)
         protected fun scheduleDelayed(delay: Duration, callback: () -> Unit) {
-            (sim as SimulatorImpl).scheduleDelayed(delay, callback)
+            sim.asImpl().scheduleDelayed(delay, callback)
         }
     }
 }

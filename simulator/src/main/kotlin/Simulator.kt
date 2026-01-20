@@ -18,6 +18,11 @@ sealed interface Simulator {
 
 fun Simulator(log: EventLog, scenario: Scenario): Simulator = SimulatorImpl(log, scenario)
 
+internal fun Simulator.asImpl() =
+    when (this) {
+        is SimulatorImpl -> this
+    }
+
 internal class SimulatorImpl(private val log: EventLog, private val scenario: Scenario) : Simulator {
     private val diary = PriorityQueue<Event>()
 
@@ -49,11 +54,11 @@ internal class SimulatorImpl(private val log: EventLog, private val scenario: Sc
     }
 
     /** Channel notifies the simulator that it is now open. */
-    fun notifyOpened(channel: ChannelImpl<*>) {
+    fun notifyOpened(channel: OutputChannel<*>) {
         log.log(currentTime) { "Channel opened: $channel" }
     }
 
-    fun notifyClosed(channel: ChannelImpl<*>) {
+    fun notifyClosed(channel: OutputChannel<*>) {
         log.log(currentTime) { "Channel closed: $channel" }
     }
 
