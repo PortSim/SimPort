@@ -1,11 +1,12 @@
 package com.group7
 
 import com.group7.dsl.NodeBuilder
+import com.group7.dsl.RegularNodeBuilder
 import com.group7.dsl.arrivals
 import com.group7.dsl.buildScenario
 import com.group7.dsl.match
 import com.group7.dsl.newConnection
-import com.group7.dsl.saveNode
+import com.group7.dsl.thenConnect
 import com.group7.dsl.thenDelay
 import com.group7.dsl.thenFork
 import com.group7.dsl.thenJoin
@@ -71,20 +72,22 @@ fun generatePort(
             .thenJoin("ASC Join")
             .thenDelay("Travel to gates", Delays.exponentialWithMean(averageTravelTime))
             .thenQueueAndGates("Exit", exitGateLanes, averageGateServiceTime)
-            .thenSplit("Token Split", connectionB = tokenBackEdge) { truck -> Pair(truck, Token) }
-            .first
-            .thenSink("Truck Departures")
-            .saveNode { sink = it }
+            .thenSplit("Token Split") { truck -> Pair(truck, Token) }
+            .let { (trucks, tokens) ->
+                sink = trucks.thenSink("Truck Departures")
+
+                tokens.thenConnect(tokenBackEdge)
+            }
     }
 
     return scenario to sink
 }
 
-private fun <T> NodeBuilder<*, T>.thenQueueAndGates(
+private fun <T> NodeBuilder<T>.thenQueueAndGates(
     description: String,
     numLanes: Int,
     averageServiceTime: Duration,
-): NodeBuilder<JoinNode<T>, T> =
+): RegularNodeBuilder<JoinNode<T>, T> =
     this.thenQueue("$description Queue")
         .thenFork("$description Lane Split", numLanes) { i, lane ->
             lane.thenService("$description Gate $i", Delays.exponentialWithMean(averageServiceTime))

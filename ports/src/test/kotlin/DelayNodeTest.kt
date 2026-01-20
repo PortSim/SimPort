@@ -2,7 +2,6 @@ package com.group7
 
 import com.group7.dsl.arrivals
 import com.group7.dsl.buildScenario
-import com.group7.dsl.saveNode
 import com.group7.dsl.thenDelay
 import com.group7.dsl.thenSink
 import com.group7.generators.Delays
@@ -24,7 +23,7 @@ class DelayNodeTest :
                 arrivals("Source", Generators.constant(Car, Delays.fixed(10.seconds)).take(numCars))
                     .thenDelay("Road", Delays.fixed(1.minutes))
                     .thenSink("Sink")
-                    .saveNode { sink = it }
+                    .let { sink = it }
             }
 
             val simulator = Simulator(EventLog.noop(), scenario)
