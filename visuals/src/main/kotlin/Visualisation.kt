@@ -1,13 +1,6 @@
 import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +27,11 @@ import components.AutoSizedText
 import components.DurationPicker
 import components.PlaybackSpeedSlider
 import kotlinx.coroutines.launch
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import kotlin.time.toJavaInstant
+
+private val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS yyyy-MM-dd").withZone(ZoneOffset.UTC)
 
 @Composable
 fun Visualisation(scenario: Scenario) {
@@ -86,7 +84,13 @@ fun Visualisation(scenario: Scenario) {
                 modifier = Modifier.weight(1f),
             )
 
-            Text(simulation.currentTime.toString(), fontFamily = FontFamily.Monospace)
+            val time = formatter.format(simulation.currentTime.toJavaInstant())
+            Text(
+                time,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.width(250.dp),
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
