@@ -85,7 +85,12 @@ fun Visualisation(scenario: Scenario) {
             )
 
             val time = formatter.format(simulation.currentTime.toJavaInstant())
-            Text(time, fontFamily = FontFamily.Monospace)
+            Text(
+                time,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.width(250.dp),
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
