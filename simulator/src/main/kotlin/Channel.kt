@@ -1,5 +1,7 @@
 package com.group7
 
+class ClosedChannelException(channel: OutputChannel<*>) : Exception("Channel is closed: $channel")
+
 fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> {
     val output = OutputChannelImpl<T>()
     val input = InputChannelImpl<T>()
@@ -159,7 +161,10 @@ internal class OutputChannelImpl<T> : ConnectableOutputChannel<T> {
 
     context(_: Simulator)
     override fun send(data: T) {
-        check(isOpen) { "Channel is closed" }
+        if (!isOpen) {
+            throw ClosedChannelException(this)
+        }
+
         downstream.send(data)
     }
 
