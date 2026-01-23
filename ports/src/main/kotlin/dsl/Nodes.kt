@@ -2,15 +2,7 @@ package com.group7.dsl
 
 import com.group7.generators.DelayProvider
 import com.group7.generators.Generator
-import com.group7.nodes.ArrivalNode
-import com.group7.nodes.DelayNode
-import com.group7.nodes.ForkNode
-import com.group7.nodes.JoinNode
-import com.group7.nodes.MatchNode
-import com.group7.nodes.QueueNode
-import com.group7.nodes.ServiceNode
-import com.group7.nodes.SinkNode
-import com.group7.nodes.SplitNode
+import com.group7.nodes.*
 
 context(_: ScenarioBuilderScope)
 fun <T> arrivals(label: String, generator: Generator<T>): RegularNodeBuilder<ArrivalNode<T>, T> = sourceBuilder {
@@ -69,5 +61,7 @@ fun <T, A, B> NodeBuilder<T>.thenSplit(
     }
 
 fun <T> NodeBuilder<T>.thenSink(label: String): SinkNode<T> = thenTerminal { input -> SinkNode(label, listOf(input)) }
+
+fun <T> NodeBuilder<T>.thenDeadEnd(label: String): DeadEndNode<T> = thenTerminal { input -> DeadEndNode(label, input) }
 
 fun <T> List<NodeBuilder<T>>.thenSink(label: String): SinkNode<T> = thenTerminal { inputs -> SinkNode(label, inputs) }
