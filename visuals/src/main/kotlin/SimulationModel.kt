@@ -1,25 +1,15 @@
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.*
 import com.group7.Simulator
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 internal class SimulationModel(private val simulator: Simulator) {
     var isRunning by mutableStateOf(false)
@@ -33,6 +23,8 @@ internal class SimulationModel(private val simulator: Simulator) {
     private var nextEventTime by mutableStateOf<Long?>(null)
     private val progress = Animatable(0f)
     private var stepJob by mutableStateOf<Job?>(null)
+    private var runToken by mutableIntStateOf(0)
+    private var runJob: Job? = null
 
     val isStepping
         get() = stepJob != null
@@ -46,25 +38,28 @@ internal class SimulationModel(private val simulator: Simulator) {
             )
 
     suspend fun run(onStep: () -> Unit = {}) {
-        snapshotFlow { isRunning to playbackSpeed }
+        snapshotFlow { Triple(isRunning, playbackSpeed, runToken) }
             .collectLatest { (isRunning, playbackSpeed) ->
-                nextEventTime?.let { nextTime ->
-                    currentBaseTime += ((nextTime - currentBaseTime) * progress.value).roundToLong()
-                }
-                progress.snapTo(0f)
-
+                updateBaseTime()
                 if (isRunning) {
-                    while (!simulator.isFinished) {
-                        nextEventTime = simulator.nextEventTime!!.toEpochMilliseconds()
-                        val delay = ((nextEventTime!! - currentBaseTime) / playbackSpeed).roundToInt()
-                        progress.snapTo(0f)
-                        progress.animateTo(1f, animationSpec = tween(durationMillis = delay, easing = LinearEasing))
-                        simulator.nextStep()
-                        nextEventTime = null
-                        currentBaseTime = simulator.currentTime.toEpochMilliseconds()
-                        onStep()
+                    coroutineScope {
+                        runJob = launch {
+                            while (!simulator.isFinished) {
+                                nextEventTime = simulator.nextEventTime!!.toEpochMilliseconds()
+                                val delay = ((nextEventTime!! - currentBaseTime) / playbackSpeed).roundToInt()
+                                progress.snapTo(0f)
+                                progress.animateTo(
+                                    1f,
+                                    animationSpec = tween(durationMillis = delay, easing = LinearEasing),
+                                )
+                                simulator.nextStep()
+                                nextEventTime = null
+                                currentBaseTime = simulator.currentTime.toEpochMilliseconds()
+                                onStep()
+                            }
+                            this@SimulationModel.isRunning = false
+                        }
                     }
-                    this.isRunning = false
                 }
             }
     }
@@ -75,37 +70,41 @@ internal class SimulationModel(private val simulator: Simulator) {
         }
     }
 
+    suspend fun updateBaseTime() {
+        currentBaseTime = currentTime.toEpochMilliseconds()
+        nextEventTime = null
+        progress.snapTo(0f)
+    }
+
     suspend fun step(scope: CoroutineScope) {
-        stepJob?.cancel()
+        runJob?.cancelAndJoin()
         val duration = stepDuration ?: return
+        // this leads to an exception in run
+        updateBaseTime()
+        val endTime = Instant.fromEpochMilliseconds(currentBaseTime) + duration
         stepJob =
             scope.launch(Dispatchers.Default) {
-                nextEventTime?.let { nextTime ->
-                    currentBaseTime += ((nextTime - currentBaseTime) * progress.value).roundToLong()
-                }
-                progress.snapTo(0f)
-
-                val endTime = Instant.fromEpochMilliseconds(currentBaseTime) + duration
-
-                while (!simulator.isFinished) {
-                    if (simulator.nextEventTime!! > endTime) {
-                        break
+                try {
+                    while (!simulator.isFinished) {
+                        if (simulator.nextEventTime!! > endTime) {
+                            break
+                        }
+                        currentCoroutineContext().ensureActive()
+                        simulator.nextStep()
+                        currentBaseTime = simulator.currentTime.toEpochMilliseconds()
                     }
-                    currentCoroutineContext().ensureActive()
-                    simulator.nextStep()
-                    currentBaseTime = simulator.currentTime.toEpochMilliseconds()
+                    currentBaseTime = endTime.toEpochMilliseconds()
+                } finally {
+                    if (!simulator.isFinished) {
+                        runToken++
+                    }
                 }
-                if (simulator.isFinished) {
-                    isRunning = false
-                }
-
-                currentBaseTime = endTime.toEpochMilliseconds()
             }
         stepJob?.join()
         stepJob = null
     }
 
-    fun stopStepping() {
-        stepJob?.cancel()
+    suspend fun stopStepping() {
+        stepJob?.cancelAndJoin()
     }
 }
