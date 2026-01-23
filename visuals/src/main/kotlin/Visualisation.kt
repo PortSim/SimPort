@@ -26,10 +26,10 @@ import com.group7.Simulator
 import components.AutoSizedText
 import components.DurationPicker
 import components.PlaybackSpeedSlider
-import kotlinx.coroutines.launch
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.time.toJavaInstant
+import kotlinx.coroutines.launch
 
 private val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS yyyy-MM-dd").withZone(ZoneOffset.UTC)
 
