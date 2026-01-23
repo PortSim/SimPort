@@ -61,7 +61,7 @@ fun Visualisation(scenario: Scenario) {
             }
 
             if (simulation.isStepping) {
-                Button(onClick = { simulation.stopStepping() }) { Text("Cancel") }
+                Button(onClick = { scope.launch { simulation.stopStepping() } }) { Text("Cancel") }
             } else {
                 Button(
                     onClick = {
