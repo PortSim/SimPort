@@ -16,24 +16,18 @@ import kotlin.time.Duration.Companion.seconds
 class DelayNodeTest :
     FunSpec({
         test("Everything sent into a delay node eventually comes out") {
-            val numCars = 100
+            val numCars = NUM_VEHICLES
 
-            val sink: SinkNode<Car>
+            val sink: SinkNode<TestVehicle>
             val scenario = buildScenario {
-                arrivals("Source", Generators.constant(Car, Delays.fixed(10.seconds)).take(numCars))
+                arrivals("Source", Generators.constant(TestVehicle, Delays.fixed(10.seconds)).take(numCars))
                     .thenDelay("Road", Delays.fixed(1.minutes))
                     .thenSink("Sink")
                     .let { sink = it }
             }
 
-            val simulator = Simulator(EventLog.noop(), scenario)
-            while (!simulator.isFinished) {
-                simulator.nextStep()
-            }
+            runSimulation(scenario)
 
             sink.reportMetrics().occupants shouldBe numCars
         }
-    }) {
-
-    private data object Car
-}
+    })

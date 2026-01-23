@@ -32,5 +32,5 @@ object Delays {
 
 fun <T> Generator<T>.take(n: Int) = asSequence().take(n).asGenerator()
 
-private fun <T> Sequence<Pair<T, Duration>>.asGenerator(): Generator<T> =
+internal fun <T> Sequence<Pair<T, Duration>>.asGenerator(): Generator<T> =
     object : Generator<T>, Iterator<Pair<T, Duration>> by iterator() {}
