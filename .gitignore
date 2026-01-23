@@ -1,5 +1,7 @@
 .gradle/
 /.idea/**
 !/.idea/ktfmt.xml
+!/.idea/codeStyles
+!/.idea/codeStyles/**
 build/
 /.kotlin/
