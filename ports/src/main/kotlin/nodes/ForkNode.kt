@@ -5,6 +5,7 @@ import com.group7.Node
 import com.group7.OutputChannel
 import com.group7.Simulator
 
+/** Takes in a vehicle, and emits it in any one of its destination, as long as the output channel is open */
 class ForkNode<T>(label: String, source: InputChannel<T>, destinations: List<OutputChannel<T>>) :
     Node(label, destinations) {
 

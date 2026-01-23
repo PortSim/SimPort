@@ -5,6 +5,10 @@ import com.group7.Simulator
 import com.group7.SourceNode
 import com.group7.generators.Generator
 
+/**
+ * Simulates connection to the outside world, generates based on some script (Generator) and sends this traffic
+ * generated to its Output channel
+ */
 class ArrivalNode<OutputT>(
     label: String,
     private val destination: OutputChannel<OutputT>,
