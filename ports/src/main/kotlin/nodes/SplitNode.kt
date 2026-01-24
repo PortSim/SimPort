@@ -15,6 +15,20 @@ class SplitNode<T, A, B>(
 
     init {
         source.onReceive { onArrive(it) }
+
+        destinationA.whenClosed { source.close() }
+        destinationB.whenClosed { source.close() }
+
+        destinationA.whenOpened {
+            if (destinationB.isOpen()) {
+                source.open()
+            }
+        }
+        destinationB.whenOpened {
+            if (destinationA.isOpen()) {
+                source.open()
+            }
+        }
     }
 
     context(_: Simulator)

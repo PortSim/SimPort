@@ -19,6 +19,22 @@ class MatchNode<A, B, R>(
     init {
         sourceA.onReceive { onArriveA(it) }
         sourceB.onReceive { onArriveB(it) }
+
+        destination.whenOpened {
+            // Only reopen sourceA if we want something from it
+            if (valueA == null) {
+                sourceA.open()
+            }
+            // Only reopen sourceB if we want something from it
+            if (valueB == null) {
+                sourceB.open()
+            }
+        }
+
+        destination.whenClosed {
+            sourceA.close()
+            sourceB.close()
+        }
     }
 
     context(_: Simulator)
