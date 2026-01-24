@@ -15,7 +15,7 @@ class QueueNodeTest :
             val (queueOut, sinkIn) = newChannel<TestVehicle>()
 
             val queue = QueueNode("Queue", queueIn, queueOut)
-            val sink = SinkNode("Sink", listOf(sinkIn))
+            val sink = SinkNode("Sink", sinkIn)
 
             runSimulation(scenario)
 

@@ -24,7 +24,7 @@ class MatchNodeTest :
                         ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(0, obj = TestContainer)),
                     )
 
-                SinkNode("Sink", listOf(sinkIn))
+                SinkNode("Sink", sinkIn)
 
                 MatchNode<TestVehicle, TestContainer, TestLoadedVehicle>(
                     "Match",
@@ -50,7 +50,7 @@ class MatchNodeTest :
                         ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(2, obj = TestContainer)),
                     )
 
-                SinkNode("Sink", listOf(sinkIn))
+                SinkNode("Sink", sinkIn)
 
                 MatchNode<TestVehicle, TestContainer, TestLoadedVehicle>(
                     "Match",
@@ -75,7 +75,7 @@ class MatchNodeTest :
                     ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(0, obj = TestContainer)),
                 )
 
-            val sink = SinkNode("Sink", listOf(sinkIn))
+            val sink = SinkNode("Sink", sinkIn)
 
             MatchNode<TestVehicle, TestContainer, TestLoadedVehicle>(
                 "Match",
@@ -101,7 +101,7 @@ class MatchNodeTest :
                     ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(1, obj = TestContainer)),
                 )
 
-            val sink = SinkNode("Sink", listOf(sinkIn))
+            val sink = SinkNode("Sink", sinkIn)
 
             MatchNode<TestVehicle, TestContainer, TestLoadedVehicle>(
                 "Match",
@@ -128,7 +128,7 @@ class MatchNodeTest :
                     ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(1, obj = TestContainer)),
                 )
 
-            val sink = SinkNode("Sink", listOf(sinkIn))
+            val sink = SinkNode("Sink", sinkIn)
 
             // Delay input A a little bit
             DelayNode("Delay for input A", delayIn, delayOut, Delays.fixed(10.seconds))

@@ -60,8 +60,6 @@ fun <T, A, B> NodeBuilder<T>.thenSplit(
         SplitNode(label, input, outputA, outputB, splitter)
     }
 
-fun <T> NodeBuilder<T>.thenSink(label: String): SinkNode<T> = thenTerminal { input -> SinkNode(label, listOf(input)) }
+fun <T> NodeBuilder<T>.thenSink(label: String): SinkNode<T> = thenTerminal { input -> SinkNode(label, input) }
 
 fun <T> NodeBuilder<T>.thenDeadEnd(label: String): DeadEndNode<T> = thenTerminal { input -> DeadEndNode(label, input) }
-
-fun <T> List<NodeBuilder<T>>.thenSink(label: String): SinkNode<T> = thenTerminal { inputs -> SinkNode(label, inputs) }
