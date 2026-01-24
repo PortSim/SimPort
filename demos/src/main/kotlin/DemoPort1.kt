@@ -1,24 +1,12 @@
 package com.group7
 
-import com.group7.dsl.NodeBuilder
-import com.group7.dsl.RegularNodeBuilder
-import com.group7.dsl.arrivals
-import com.group7.dsl.buildScenario
-import com.group7.dsl.match
-import com.group7.dsl.newConnection
-import com.group7.dsl.thenConnect
-import com.group7.dsl.thenDelay
-import com.group7.dsl.thenFork
-import com.group7.dsl.thenJoin
-import com.group7.dsl.thenQueue
-import com.group7.dsl.thenService
-import com.group7.dsl.thenSink
-import com.group7.dsl.thenSplit
+import com.group7.dsl.*
 import com.group7.generators.Delays
 import com.group7.generators.Generators
 import com.group7.generators.take
 import com.group7.nodes.JoinNode
 import com.group7.nodes.SinkNode
+import com.group7.utils.thenSubnetwork
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.DurationUnit
@@ -48,36 +36,28 @@ fun generatePort(
     val sink: SinkNode<Truck>
 
     val scenario = buildScenario {
-        val tokenBackEdge = newConnection<Token>()
-
-        val truckQueue =
-            arrivals(
-                    "Truck Arrivals",
-                    Generators.constant(Truck, Delays.exponential(truckArrivalsPerHour, DurationUnit.HOURS)).let {
-                        if (numTrucks != null) it.take(numTrucks) else it
-                    },
-                )
-                .thenQueue("Truck Arrival Queue")
-
-        val tokenQueue = tokenBackEdge.thenQueue("Token Queue", List(numTokens) { Token })
-
-        match("Token Match", truckQueue, tokenQueue) { truck, _ -> truck }
-            .thenQueueAndGates("Entrance", entryGateLanes, averageGateServiceTime)
-            .thenDelay("Travel to stacks", Delays.exponentialWithMean(averageTravelTime))
-            .thenFork("ASC Split", numStackBlocks) { i, lane ->
-                lane
-                    .thenQueue("ASC Queue $i")
-                    .thenService("ASC $i", Delays.exponentialWithMean(averageHandlingTimeAtStack))
+        arrivals(
+                "Truck Arrivals",
+                Generators.constant(Truck, Delays.exponential(truckArrivalsPerHour, DurationUnit.HOURS)).let {
+                    if (numTrucks != null) it.take(numTrucks) else it
+                },
+            )
+            .thenQueue("Truck Arrival Queue")
+            .thenSubnetwork(capacity = numTokens) { entrance ->
+                entrance
+                    .thenQueueAndGates("Entrance", entryGateLanes, averageGateServiceTime)
+                    .thenDelay("Travel to stacks", Delays.exponentialWithMean(averageTravelTime))
+                    .thenFork("ASC Split", numStackBlocks) { i, lane ->
+                        lane
+                            .thenQueue("ASC Queue $i")
+                            .thenService("ASC $i", Delays.exponentialWithMean(averageHandlingTimeAtStack))
+                    }
+                    .thenJoin("ASC Join")
+                    .thenDelay("Travel to gates", Delays.exponentialWithMean(averageTravelTime))
+                    .thenQueueAndGates("Exit", exitGateLanes, averageGateServiceTime)
             }
-            .thenJoin("ASC Join")
-            .thenDelay("Travel to gates", Delays.exponentialWithMean(averageTravelTime))
-            .thenQueueAndGates("Exit", exitGateLanes, averageGateServiceTime)
-            .thenSplit("Token Split") { truck -> Pair(truck, Token) }
-            .let { (trucks, tokens) ->
-                sink = trucks.thenSink("Truck Departures")
-
-                tokens.thenConnect(tokenBackEdge)
-            }
+            .thenSink("Truck Departures")
+            .let { sink = it }
     }
 
     return scenario to sink
