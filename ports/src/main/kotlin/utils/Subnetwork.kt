@@ -1,10 +1,10 @@
 package com.group7.utils
 
 import com.group7.dsl.*
+import com.group7.policies.queue.Token
+import com.group7.policies.queue.TokenQueuePolicy
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-
-private data object Token
 
 context(_: ScenarioBuilderScope)
 fun <InputT, OutputT> NodeBuilder<InputT>.thenSubnetwork(
@@ -18,7 +18,7 @@ fun <InputT, OutputT> NodeBuilder<InputT>.thenSubnetwork(
 
     val tokenBackEdge = newConnection<Token>()
     // TODO: This should use a dedicated queue policy to model the tokens as an integer rather than a List
-    val tokenQueue = tokenBackEdge.thenQueue("${namePrefix}Token Queue", List(capacity) { Token })
+    val tokenQueue = tokenBackEdge.thenQueue("${namePrefix}Token Queue", TokenQueuePolicy(capacity))
 
     match("${namePrefix}Token Match", this, tokenQueue) { input, _ -> input }
         .let(inner)
