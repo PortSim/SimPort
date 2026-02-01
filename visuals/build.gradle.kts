@@ -10,7 +10,13 @@ dependencies {
     implementation(project(":demos"))
     implementation(compose.desktop.currentOs)
     implementation("org.jetbrains.compose.material3:material3:1.9.0")
-    implementation("io.github.justdeko:kuiver:0.2.1")
+    /* Stuff for the ELK layout algorithm */
+    implementation("org.eclipse.xtext:org.eclipse.xtext.xbase.lib:2.35.0")
+    implementation("org.eclipse.elk:org.eclipse.elk.core:0.11.0")
+    implementation("org.eclipse.elk:org.eclipse.elk.graph:0.11.0")
+    implementation("org.eclipse.elk:org.eclipse.elk.alg.layered:0.11.0")
+    implementation("org.eclipse.elk:org.eclipse.elk.alg.mrtree:0.11.0")
+    implementation("org.eclipse.elk:org.eclipse.elk.alg.force:0.11.0")
 }
 
 compose.desktop { application { mainClass = "MainKt" } }
