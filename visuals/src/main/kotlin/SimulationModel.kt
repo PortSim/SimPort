@@ -1,28 +1,18 @@
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.*
+import com.group7.Metrics
+import com.group7.Node
+import com.group7.Sampler
 import com.group7.Simulator
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 class SimulationModel(private val simulator: Simulator) {
     var isRunning by mutableStateOf(false)
@@ -119,5 +109,16 @@ class SimulationModel(private val simulator: Simulator) {
 
     suspend fun stopStepping() {
         stepJob?.cancelAndJoin()
+    }
+}
+
+/** Samples the metric when called, and adds to internal log to be visualised. */
+internal class MetricSampler(val nodes: Set<Node>, override val sampleInterval: Duration) : Sampler {
+    private var _samplesOverTime: MutableList<Pair<Instant, Map<Node, Metrics>>> = mutableListOf()
+    val samplesOverTime: List<Pair<Instant, Map<Node, Metrics>>>
+        get() = _samplesOverTime
+
+    override fun sample(currentTime: Instant) {
+        _samplesOverTime.add(currentTime to nodes.associateWith { node -> node.reportMetrics() })
     }
 }

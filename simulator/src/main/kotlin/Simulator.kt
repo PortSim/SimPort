@@ -28,6 +28,7 @@ internal class SimulatorImpl(
     private val log: EventLog,
     private val scenario: Scenario,
     startTime: Instant = defaultStartTime,
+    private val sampler: Sampler? = null,
 ) : Simulator {
     private val diary = PriorityQueue<Event>()
 
@@ -36,6 +37,7 @@ internal class SimulatorImpl(
 
     init {
         startNodes()
+        scheduleSampling()
     }
 
     override val isFinished
@@ -52,6 +54,16 @@ internal class SimulatorImpl(
 
     fun scheduleDelayed(delay: Duration, callback: () -> Unit) {
         diary.add(Event(currentTime + delay, callback))
+    }
+
+    /** Schedules a sample event according to the sampler provided to the simulator */
+    fun scheduleSampling() {
+        if (sampler != null) {
+            scheduleDelayed(sampler.sampleInterval) {
+                sampler.sample(currentTime)
+                scheduleSampling()
+            }
+        }
     }
 
     fun <T> notifySend(from: Node, to: Node, data: T) {
@@ -92,4 +104,16 @@ internal class SimulatorImpl(
 
 private data class Event(val time: Instant, val action: () -> Unit) : Comparable<Event> {
     override fun compareTo(other: Event): Int = time.compareTo(other.time)
+}
+
+/**
+ * Sampler handles collection of data at an instantaneous point in time when called by the simulator, with separation
+ * between sample collections defined by ```sampleInterval```
+ */
+interface Sampler {
+    /** Time between samples */
+    val sampleInterval: Duration
+
+    /** Function to run every ```sampleInterval``` to collect and log data. */
+    fun sample(currentTime: Instant)
 }
