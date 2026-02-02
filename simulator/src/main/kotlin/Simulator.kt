@@ -2,7 +2,6 @@ package com.group7
 
 import java.util.*
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 sealed interface Simulator {
@@ -60,12 +59,10 @@ internal class SimulatorImpl(
     /** Schedules a sample event according to the sampler provided to the simulator */
     fun scheduleSampling() {
         if (sampler != null) {
-            diary.add(
-                Event(currentTime + sampler.sampleInterval.seconds) {
-                    sampler.sample()
-                    scheduleSampling()
-                }
-            )
+            scheduleDelayed(sampler.sampleInterval) {
+                sampler.sample(currentTime)
+                scheduleSampling()
+            }
         }
     }
 
@@ -110,24 +107,13 @@ private data class Event(val time: Instant, val action: () -> Unit) : Comparable
 }
 
 /**
- * Pass sampler to define which nodes to sample occupancy for, and sample interval, for the duration of the simulation
+ * Sampler handles collection of data at an instantaneous point in time when called by the simulator, with separation
+ * between sample collections defined by ```sampleInterval```
  */
 interface Sampler {
-    val nodes: Set<Node>
-    val sampleInterval: Double
-    val samplesOverTime: List<Pair<Instant, Map<Node, Metrics>>>
+    /** Time between samples */
+    val sampleInterval: Duration
 
-    context(sim: Simulator)
-    fun sample()
-}
-
-internal class MetricSampler(override val nodes: Set<Node>, override val sampleInterval: Double) : Sampler {
-    var _samplesOverTime: MutableList<Pair<Instant, Map<Node, Metrics>>> = mutableListOf()
-    override val samplesOverTime: List<Pair<Instant, Map<Node, Metrics>>>
-        get() = _samplesOverTime
-
-    context(sim: Simulator)
-    override fun sample() {
-        _samplesOverTime.add(sim.currentTime to nodes.associateWith { node -> node.reportMetrics() })
-    }
+    /** Function to run every ```sampleInterval``` to collect and log data. */
+    fun sample(currentTime: Instant)
 }
