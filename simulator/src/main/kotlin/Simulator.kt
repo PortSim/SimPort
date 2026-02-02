@@ -2,6 +2,7 @@ package com.group7
 
 import java.util.*
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 sealed interface Simulator {
@@ -9,6 +10,8 @@ sealed interface Simulator {
     val currentTime: Instant
 
     val nextEventTime: Instant?
+
+    val sampleData: Map<Node, Metrics>?
 
     fun nextStep()
 
@@ -28,14 +31,19 @@ internal class SimulatorImpl(
     private val log: EventLog,
     private val scenario: Scenario,
     startTime: Instant = defaultStartTime,
+    private val sampler: Sampler? = null,
 ) : Simulator {
     private val diary = PriorityQueue<Event>()
 
     override var currentTime = startTime
         private set
 
+    override var sampleData: Map<Node, Metrics>? = null
+        private set
+
     init {
         startNodes()
+        scheduleSampling()
     }
 
     override val isFinished
@@ -45,6 +53,9 @@ internal class SimulatorImpl(
         get() = diary.peek()?.time
 
     override fun nextStep() {
+        // Nullify sample data from previous (potentially) sample event to represent the data becoming stale
+        sampleData = null
+
         val nextEvent = diary.poll() ?: return
         currentTime = nextEvent.time
         nextEvent.action()
@@ -52,6 +63,18 @@ internal class SimulatorImpl(
 
     fun scheduleDelayed(delay: Duration, callback: () -> Unit) {
         diary.add(Event(currentTime + delay, callback))
+    }
+
+    /** Schedules a sample event according to the sampler provided to the simulator */
+    fun scheduleSampling() {
+        if (sampler != null) {
+            diary.add(
+                Event(currentTime + sampler.sampleInterval.seconds) {
+                    sampleData = sampler.nodes.associateWith { node -> node.reportMetrics() }
+                    scheduleSampling()
+                }
+            )
+        }
     }
 
     fun <T> notifySend(from: Node, to: Node, data: T) {
@@ -93,3 +116,8 @@ internal class SimulatorImpl(
 private data class Event(val time: Instant, val action: () -> Unit) : Comparable<Event> {
     override fun compareTo(other: Event): Int = time.compareTo(other.time)
 }
+
+/**
+ * Pass sampler to define which nodes to sample occupancy for, and sample interval, for the duration of the simulation
+ */
+data class Sampler(val nodes: Set<Node>, val sampleInterval: Double)
