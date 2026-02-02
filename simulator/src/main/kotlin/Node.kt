@@ -2,7 +2,7 @@ package com.group7
 
 import kotlin.time.Duration
 
-abstract class Node(val label: String, val outgoing: List<OutputChannel<*>>) {
+abstract class Node(label: String, final override val outgoing: List<OutputChannel<*>>) : NodeGroup(label) {
     private val _incoming = mutableListOf<InputChannel<*>>()
     val incoming: List<InputChannel<*>>
         get() = _incoming
@@ -24,8 +24,6 @@ abstract class Node(val label: String, val outgoing: List<OutputChannel<*>>) {
     open fun onStart() {}
 
     open fun reportMetrics() = Metrics()
-
-    override fun toString() = label
 
     protected companion object {
         @JvmStatic

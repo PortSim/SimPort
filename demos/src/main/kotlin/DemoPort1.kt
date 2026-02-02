@@ -63,6 +63,7 @@ fun generatePort(
     return scenario to sink
 }
 
+context(_: GroupScope)
 private fun <T> NodeBuilder<T>.thenQueueAndGates(
     description: String,
     numLanes: Int,

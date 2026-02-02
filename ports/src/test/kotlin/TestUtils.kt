@@ -1,5 +1,6 @@
 package com.group7
 
+import com.group7.dsl.GroupScope
 import com.group7.dsl.RegularNodeBuilder
 import com.group7.dsl.ScenarioBuilderScope
 import com.group7.dsl.arrivals
@@ -114,7 +115,7 @@ internal fun runSimulation(scenario: Scenario, timeConstraint: Duration = Durati
  * Generates parallel arrival lanes which can then be processed independently, and joined after each lane passes through
  * some stages
  */
-context(_: ScenarioBuilderScope)
+context(_: ScenarioBuilderScope, _: GroupScope)
 fun <T, R> arrivalLanes(
     generators: List<Generator<T>>,
     laneAction: (Int, RegularNodeBuilder<ArrivalNode<T>, T>) -> R,
