@@ -11,8 +11,6 @@ sealed interface Simulator {
 
     val nextEventTime: Instant?
 
-    val sampleData: Map<Node, Metrics>?
-
     fun nextStep()
 
     fun log(message: () -> String)
@@ -38,9 +36,6 @@ internal class SimulatorImpl(
     override var currentTime = startTime
         private set
 
-    override var sampleData: Map<Node, Metrics>? = null
-        private set
-
     init {
         startNodes()
         scheduleSampling()
@@ -53,9 +48,6 @@ internal class SimulatorImpl(
         get() = diary.peek()?.time
 
     override fun nextStep() {
-        // Nullify sample data from previous (potentially) sample event to represent the data becoming stale
-        sampleData = null
-
         val nextEvent = diary.poll() ?: return
         currentTime = nextEvent.time
         nextEvent.action()
@@ -70,7 +62,7 @@ internal class SimulatorImpl(
         if (sampler != null) {
             diary.add(
                 Event(currentTime + sampler.sampleInterval.seconds) {
-                    sampleData = sampler.nodes.associateWith { node -> node.reportMetrics() }
+                    sampler.sample()
                     scheduleSampling()
                 }
             )
@@ -120,4 +112,22 @@ private data class Event(val time: Instant, val action: () -> Unit) : Comparable
 /**
  * Pass sampler to define which nodes to sample occupancy for, and sample interval, for the duration of the simulation
  */
-data class Sampler(val nodes: Set<Node>, val sampleInterval: Double)
+interface Sampler {
+    val nodes: Set<Node>
+    val sampleInterval: Double
+    val samplesOverTime: List<Pair<Instant, Map<Node, Metrics>>>
+
+    context(sim: Simulator)
+    fun sample()
+}
+
+internal class MetricSampler(override val nodes: Set<Node>, override val sampleInterval: Double) : Sampler {
+    var _samplesOverTime: MutableList<Pair<Instant, Map<Node, Metrics>>> = mutableListOf()
+    override val samplesOverTime: List<Pair<Instant, Map<Node, Metrics>>>
+        get() = _samplesOverTime
+
+    context(sim: Simulator)
+    override fun sample() {
+        _samplesOverTime.add(sim.currentTime to nodes.associateWith { node -> node.reportMetrics() })
+    }
+}
