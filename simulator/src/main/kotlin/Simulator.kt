@@ -93,7 +93,7 @@ internal class SimulatorImpl(
 
             node.onStart()
             for (outgoing in node.outgoing) {
-                val downstream = outgoing.downstreamNode
+                val downstream = outgoing.downstream.downstreamNode
                 if (visited.add(downstream)) {
                     stack.add(downstream)
                 }
