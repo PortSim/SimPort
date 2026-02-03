@@ -1,14 +1,9 @@
 import androidx.compose.runtime.mutableStateOf
 import com.group7.Node
 import com.group7.NodeGroup
-import com.group7.OutputChannel
 import com.group7.Scenario
-import org.eclipse.elk.alg.layered.options.CycleBreakingStrategy
-import org.eclipse.elk.alg.layered.options.FixedAlignment
-import org.eclipse.elk.alg.layered.options.LayeredMetaDataProvider
-import org.eclipse.elk.alg.layered.options.LayeredOptions
-import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
-import org.eclipse.elk.alg.layered.options.OrderingStrategy
+import com.group7.channels.PushOutputChannel
+import org.eclipse.elk.alg.layered.options.*
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
 import org.eclipse.elk.core.data.LayoutMetaDataService
 import org.eclipse.elk.core.options.CoreOptions
@@ -24,13 +19,13 @@ import org.eclipse.elk.graph.util.ElkGraphUtil
 internal class ScenarioGraph {
     val sources: List<Node>
     val nodesOrderedByBFS: List<Node>
-    val edgesWithChannels: List<Triple<Node, Node, OutputChannel<*>>>
+    val edgesWithChannels: List<Triple<Node, Node, PushOutputChannel<*>>>
 
     constructor(scenario: Scenario) {
         /* Enumerate all nodes and channels between them */
         val setOfNodes = mutableSetOf<Node>()
         val nodesOrdered = mutableListOf<Node>()
-        val channels = mutableListOf<Triple<Node, Node, OutputChannel<*>>>()
+        val channels = mutableListOf<Triple<Node, Node, PushOutputChannel<*>>>()
         val queue = ArrayDeque<Node>(scenario.sources)
         while (queue.isNotEmpty()) {
             val node = queue.removeFirst()

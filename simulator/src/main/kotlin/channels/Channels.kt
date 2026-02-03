@@ -1,22 +1,27 @@
-package com.group7
+package com.group7.channels
 
-class ClosedChannelException(channel: OutputChannel<*>) : Exception("Channel is closed: $channel")
+import com.group7.Node
+import com.group7.Simulator
+import com.group7.asImpl
 
-fun <T> newChannel(): Pair<OutputChannel<T>, InputChannel<T>> {
-    val output = OutputChannelImpl<T>()
-    val input = InputChannelImpl<T>()
+class ClosedChannelException(channel: PushOutputChannel<*>) : Exception("Channel is closed: $channel")
+
+fun <T> newPushChannel(): Pair<PushOutputChannel<T>, PushInputChannel<T>> {
+    val output = PushOutputChannelImpl<T>()
+    val input = PushInputChannelImpl<T>()
     output.connectTo(input)
     return output to input
 }
 
-fun <T> newChannels(n: Int): Pair<List<OutputChannel<T>>, List<InputChannel<T>>> = List(n) { newChannel<T>() }.unzip()
+fun <T> newPushChannels(n: Int): Pair<List<PushOutputChannel<T>>, List<PushInputChannel<T>>> =
+    List(n) { newPushChannel<T>() }.unzip()
 
-fun <T> newConnectableInputChannel(): ConnectableInputChannel<T> = InputChannelImpl()
+fun <T> newConnectablePushInputChannel(): ConnectablePushInputChannel<T> = PushInputChannelImpl()
 
-fun <T> newConnectableOutputChannel(): ConnectableOutputChannel<T> = OutputChannelImpl()
+fun <T> newConnectablePushOutputChannel(): ConnectablePushOutputChannel<T> = PushOutputChannelImpl()
 
-sealed interface InputChannel<out T> {
-    val upstream: OutputChannel<*>
+sealed interface PushInputChannel<out T> {
+    val upstream: PushOutputChannel<*>
     val downstreamNode: Node
 
     context(_: Simulator)
@@ -26,11 +31,11 @@ sealed interface InputChannel<out T> {
     fun close()
 }
 
-sealed interface ConnectableInputChannel<out T> : InputChannel<T>
+sealed interface ConnectablePushInputChannel<out T> : PushInputChannel<T>
 
-sealed interface OutputChannel<in T> {
+sealed interface PushOutputChannel<in T> {
     val upstreamNode: Node
-    val downstream: InputChannel<*>
+    val downstream: PushInputChannel<*>
 
     fun isOpen(): Boolean
 
@@ -50,22 +55,22 @@ sealed interface OutputChannel<in T> {
     )
 }
 
-sealed interface ConnectableOutputChannel<in T> : OutputChannel<T> {
-    fun connectTo(downstream: ConnectableInputChannel<T>)
+sealed interface ConnectablePushOutputChannel<in T> : PushOutputChannel<T> {
+    fun connectTo(downstream: ConnectablePushInputChannel<T>)
 }
 
-internal class InputChannelImpl<T> : ConnectableInputChannel<T> {
+internal class PushInputChannelImpl<T> : ConnectablePushInputChannel<T> {
     private lateinit var callback:
         context(Simulator)
         (T) -> Unit
 
-    override lateinit var upstream: OutputChannelImpl<T>
+    override lateinit var upstream: PushOutputChannelImpl<T>
         private set
 
     override lateinit var downstreamNode: Node
         private set
 
-    fun setUpstream(channel: OutputChannel<T>) {
+    fun setUpstream(channel: PushOutputChannel<T>) {
         require(!::upstream.isInitialized) { "Channel already connected" }
         this.upstream = channel.asImpl()
     }
@@ -101,7 +106,7 @@ internal class InputChannelImpl<T> : ConnectableInputChannel<T> {
         runCatching { "${upstream.upstreamNode} to $downstreamNode" }.getOrElse { "Disconnected channel" }
 }
 
-internal class OutputChannelImpl<T> : ConnectableOutputChannel<T> {
+internal class PushOutputChannelImpl<T> : ConnectablePushOutputChannel<T> {
     internal var isOpen = true
         private set
 
@@ -119,7 +124,7 @@ internal class OutputChannelImpl<T> : ConnectableOutputChannel<T> {
     override lateinit var upstreamNode: Node
         private set
 
-    override lateinit var downstream: InputChannelImpl<T>
+    override lateinit var downstream: PushInputChannelImpl<T>
         private set
 
     fun setUpstreamNode(node: Node) {
@@ -127,12 +132,12 @@ internal class OutputChannelImpl<T> : ConnectableOutputChannel<T> {
         this.upstreamNode = node
     }
 
-    fun setDownstream(channel: InputChannel<T>) {
+    fun setDownstream(channel: PushInputChannel<T>) {
         require(!::downstream.isInitialized) { "Channel already connected" }
         this.downstream = channel.asImpl()
     }
 
-    override fun connectTo(downstream: ConnectableInputChannel<T>) {
+    override fun connectTo(downstream: ConnectablePushInputChannel<T>) {
         setDownstream(downstream)
         downstream.asImpl().setUpstream(this)
     }
@@ -188,12 +193,12 @@ internal class OutputChannelImpl<T> : ConnectableOutputChannel<T> {
         runCatching { "$upstreamNode to ${downstream.downstreamNode}" }.getOrElse { "Disconnected channel" }
 }
 
-internal fun <T> InputChannel<T>.asImpl() =
+internal fun <T> PushInputChannel<T>.asImpl() =
     when (this) {
-        is InputChannelImpl -> this
+        is PushInputChannelImpl -> this
     }
 
-internal fun <T> OutputChannel<T>.asImpl() =
+internal fun <T> PushOutputChannel<T>.asImpl() =
     when (this) {
-        is OutputChannelImpl -> this
+        is PushOutputChannelImpl -> this
     }

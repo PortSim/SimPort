@@ -1,16 +1,16 @@
 package com.group7.nodes
 
-import com.group7.InputChannel
 import com.group7.Node
-import com.group7.OutputChannel
 import com.group7.Simulator
+import com.group7.channels.PushInputChannel
+import com.group7.channels.PushOutputChannel
 import com.group7.properties.Match
 
 class MatchNode<A, B, R>(
     label: String,
-    private val sourceA: InputChannel<A>,
-    private val sourceB: InputChannel<B>,
-    private val destination: OutputChannel<R>,
+    private val sourceA: PushInputChannel<A>,
+    private val sourceB: PushInputChannel<B>,
+    private val destination: PushOutputChannel<R>,
     private val combiner: (A, B) -> R,
 ) : Node(label, listOf(destination)), Match {
 

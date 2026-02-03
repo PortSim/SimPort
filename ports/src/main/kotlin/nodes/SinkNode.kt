@@ -1,10 +1,10 @@
 package com.group7.nodes
 
-import com.group7.InputChannel
 import com.group7.Node
+import com.group7.channels.PushInputChannel
 import com.group7.properties.Sink
 
-class SinkNode<InputT>(label: String, inputChannel: InputChannel<InputT>) : Node(label, emptyList()), Sink {
+class SinkNode<InputT>(label: String, inputChannel: PushInputChannel<InputT>) : Node(label, emptyList()), Sink {
     private val results = mutableMapOf<InputT, Int>()
 
     override var occupants = 0

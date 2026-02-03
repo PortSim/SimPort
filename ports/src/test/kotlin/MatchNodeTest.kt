@@ -1,5 +1,7 @@
 package com.group7
 
+import com.group7.channels.ClosedChannelException
+import com.group7.channels.newPushChannel
 import com.group7.generators.Delays
 import com.group7.nodes.ArrivalNode
 import com.group7.nodes.DelayNode
@@ -15,9 +17,9 @@ class MatchNodeTest :
     FunSpec({
         test("Only take one of input A") {
             shouldThrow<ClosedChannelException> {
-                val (source1Out, matchIn1) = newChannel<TestVehicle>()
-                val (source2Out, matchIn2) = newChannel<TestContainer>()
-                val (matchOut, sinkIn) = newChannel<TestLoadedVehicle>()
+                val (source1Out, matchIn1) = newPushChannel<TestVehicle>()
+                val (source2Out, matchIn2) = newPushChannel<TestContainer>()
+                val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
 
                 val sources =
                     listOf(
@@ -41,9 +43,9 @@ class MatchNodeTest :
 
         test("Only take one of input B") {
             shouldThrow<ClosedChannelException> {
-                val (source1Out, matchIn1) = newChannel<TestVehicle>()
-                val (source2Out, matchIn2) = newChannel<TestContainer>()
-                val (matchOut, sinkIn) = newChannel<TestLoadedVehicle>()
+                val (source1Out, matchIn1) = newPushChannel<TestVehicle>()
+                val (source2Out, matchIn2) = newPushChannel<TestContainer>()
+                val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
 
                 val sources =
                     listOf(
@@ -66,9 +68,9 @@ class MatchNodeTest :
         }
 
         test("Stores one of input A") {
-            val (source1Out, matchIn1) = newChannel<TestVehicle>()
-            val (source2Out, matchIn2) = newChannel<TestContainer>()
-            val (matchOut, sinkIn) = newChannel<TestLoadedVehicle>()
+            val (source1Out, matchIn1) = newPushChannel<TestVehicle>()
+            val (source2Out, matchIn2) = newPushChannel<TestContainer>()
+            val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
 
             val sources =
                 listOf(
@@ -92,9 +94,9 @@ class MatchNodeTest :
         }
 
         test("Stores one of input B") {
-            val (source1Out, matchIn1) = newChannel<TestVehicle>()
-            val (source2Out, matchIn2) = newChannel<TestContainer>()
-            val (matchOut, sinkIn) = newChannel<TestLoadedVehicle>()
+            val (source1Out, matchIn1) = newPushChannel<TestVehicle>()
+            val (source2Out, matchIn2) = newPushChannel<TestContainer>()
+            val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
 
             val sources =
                 listOf(
@@ -118,10 +120,10 @@ class MatchNodeTest :
         }
 
         test("Processes inputs correctly") {
-            val (source1Out, delayIn) = newChannel<TestVehicle>()
-            val (delayOut, matchIn1) = newChannel<TestVehicle>()
-            val (source2Out, matchIn2) = newChannel<TestContainer>()
-            val (matchOut, sinkIn) = newChannel<TestLoadedVehicle>()
+            val (source1Out, delayIn) = newPushChannel<TestVehicle>()
+            val (delayOut, matchIn1) = newPushChannel<TestVehicle>()
+            val (source2Out, matchIn2) = newPushChannel<TestContainer>()
+            val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
 
             val sources =
                 listOf(

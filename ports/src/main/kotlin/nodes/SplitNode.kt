@@ -1,15 +1,15 @@
 package com.group7.nodes
 
-import com.group7.InputChannel
 import com.group7.Node
-import com.group7.OutputChannel
 import com.group7.Simulator
+import com.group7.channels.PushInputChannel
+import com.group7.channels.PushOutputChannel
 
 class SplitNode<T, A, B>(
     label: String,
-    source: InputChannel<T>,
-    private val destinationA: OutputChannel<A>,
-    private val destinationB: OutputChannel<B>,
+    source: PushInputChannel<T>,
+    private val destinationA: PushOutputChannel<A>,
+    private val destinationB: PushOutputChannel<B>,
     private val splitter: (T) -> Pair<A, B>,
 ) : Node(label, listOf(destinationA, destinationB)) {
 

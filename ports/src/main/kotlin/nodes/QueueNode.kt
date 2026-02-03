@@ -1,17 +1,17 @@
 package com.group7.nodes
 
-import com.group7.InputChannel
 import com.group7.Node
-import com.group7.OutputChannel
 import com.group7.Simulator
+import com.group7.channels.PushInputChannel
+import com.group7.channels.PushOutputChannel
 import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import com.group7.properties.Queue
 
 class QueueNode<T>(
     label: String,
-    source: InputChannel<T>,
-    private val destination: OutputChannel<T>,
+    source: PushInputChannel<T>,
+    private val destination: PushOutputChannel<T>,
     private val policy: QueuePolicy<T> = FIFOQueuePolicy(),
 ) : Node(label, listOf(destination)), Queue {
 

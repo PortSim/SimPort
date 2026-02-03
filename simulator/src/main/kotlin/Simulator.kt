@@ -1,5 +1,6 @@
 package com.group7
 
+import com.group7.channels.PushOutputChannel
 import java.util.*
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -74,11 +75,11 @@ internal class SimulatorImpl(
     }
 
     /** Channel notifies the simulator that it is now open. */
-    fun notifyOpened(channel: OutputChannel<*>) {
+    fun notifyOpened(channel: PushOutputChannel<*>) {
         log.log(currentTime) { "Channel opened: $channel" }
     }
 
-    fun notifyClosed(channel: OutputChannel<*>) {
+    fun notifyClosed(channel: PushOutputChannel<*>) {
         log.log(currentTime) { "Channel closed: $channel" }
     }
 
