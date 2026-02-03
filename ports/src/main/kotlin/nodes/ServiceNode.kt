@@ -1,7 +1,6 @@
 package com.group7.nodes
 
 import com.group7.InputChannel
-import com.group7.Metrics
 import com.group7.Node
 import com.group7.OutputChannel
 import com.group7.Simulator
@@ -21,8 +20,6 @@ class ServiceNode<T>(
     init {
         source.onReceive { startServing(it) }
     }
-
-    override fun reportMetrics() = Metrics(occupants = if (isServing) 1 else 0)
 
     context(_: Simulator)
     private fun startServing(obj: T) {

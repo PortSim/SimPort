@@ -23,8 +23,6 @@ abstract class Node(label: String, final override val outgoing: List<OutputChann
     context(_: Simulator)
     open fun onStart() {}
 
-    open fun reportMetrics() = Metrics()
-
     protected companion object {
         @JvmStatic
         context(_: Simulator)
@@ -39,8 +37,6 @@ abstract class Node(label: String, final override val outgoing: List<OutputChann
         }
     }
 }
-
-data class Metrics(val occupants: Int? = null)
 
 abstract class SourceNode(label: String, outgoing: List<OutputChannel<*>>) : Node(label, outgoing) {
 

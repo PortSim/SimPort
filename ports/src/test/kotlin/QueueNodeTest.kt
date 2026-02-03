@@ -23,8 +23,8 @@ class QueueNodeTest :
 
             runSimulation(scenario)
 
-            sink.reportMetrics().occupants shouldBe NUM_VEHICLES
-            queue.reportMetrics().occupants shouldBe 0
+            sink.occupants shouldBe NUM_VEHICLES
+            queue.occupants shouldBe 0
         }
 
         test("Can store vehicles") {
@@ -39,6 +39,6 @@ class QueueNodeTest :
 
             runSimulation(Scenario(source))
 
-            queue.reportMetrics().occupants shouldBe NUM_VEHICLES
+            queue.occupants shouldBe NUM_VEHICLES
         }
     })

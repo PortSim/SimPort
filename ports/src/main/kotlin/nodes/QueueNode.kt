@@ -1,6 +1,9 @@
 package com.group7.nodes
 
-import com.group7.*
+import com.group7.InputChannel
+import com.group7.Node
+import com.group7.OutputChannel
+import com.group7.Simulator
 import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import com.group7.properties.Queue
@@ -23,8 +26,6 @@ class QueueNode<T>(
     override fun onStart() {
         scheduleDrain()
     }
-
-    override fun reportMetrics() = Metrics(occupants = occupants)
 
     override val occupants
         get() = policy.reportOccupancy()

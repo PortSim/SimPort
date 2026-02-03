@@ -31,6 +31,6 @@ class DelayNodeTest :
 
             runSimulation(scenario)
 
-            sink.reportMetrics().occupants shouldBe numCars
+            sink.occupants shouldBe numCars
         }
     })

@@ -14,6 +14,6 @@ class Port1Tests :
                 simulator.nextStep()
             }
 
-            sink.reportMetrics().occupants shouldBe numTrucks
+            sink.occupants shouldBe numTrucks
         }
     })

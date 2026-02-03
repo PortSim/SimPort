@@ -38,7 +38,7 @@ class JoinNodeTest :
                 }
             )
 
-            sink.reportMetrics().occupants shouldBe numSources * numVehiclesPerSource
+            sink.occupants shouldBe numSources * numVehiclesPerSource
         }
 
         test("Channels should be blocked if the output is unavailable") {

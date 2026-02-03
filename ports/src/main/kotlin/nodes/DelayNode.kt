@@ -1,7 +1,6 @@
 package com.group7.nodes
 
 import com.group7.InputChannel
-import com.group7.Metrics
 import com.group7.Node
 import com.group7.OutputChannel
 import com.group7.generators.DelayProvider
@@ -30,6 +29,4 @@ class DelayNode<T>(
             }
         }
     }
-
-    override fun reportMetrics() = Metrics(occupants = occupants)
 }

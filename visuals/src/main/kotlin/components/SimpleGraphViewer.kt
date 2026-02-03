@@ -1,6 +1,7 @@
 package components
 
 import DefaultColorPalette
+import Metrics
 import ScenarioLayout
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -26,7 +27,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.group7.Metrics
 import kotlin.math.atan2
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode

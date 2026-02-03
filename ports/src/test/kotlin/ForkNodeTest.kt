@@ -32,6 +32,6 @@ class ForkNodeTest :
                 }
             )
 
-            sinks.sumOf { sink -> sink.reportMetrics().occupants ?: 0 } shouldBe NUM_VEHICLES
+            sinks.sumOf { sink -> sink.occupants } shouldBe NUM_VEHICLES
         }
     })

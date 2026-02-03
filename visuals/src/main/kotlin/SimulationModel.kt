@@ -2,7 +2,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
-import com.group7.Metrics
 import com.group7.Node
 import com.group7.Sampler
 import com.group7.Simulator
