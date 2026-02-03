@@ -1,5 +1,6 @@
 package com.group7.utils
 
+import com.group7.dsl.GroupScope
 import com.group7.dsl.RegularNodeBuilder
 import com.group7.dsl.ScenarioBuilderScope
 import com.group7.dsl.arrivals
@@ -11,7 +12,7 @@ internal object DSLAddons {
      * Generates parallel arrival lanes which can then be processed independently, and joined after each lane passes
      * through some stages
      */
-    context(_: ScenarioBuilderScope)
+    context(_: ScenarioBuilderScope, _: GroupScope)
     fun <T, R> arrivalLanes(
         generators: List<Generator<T>>,
         laneAction: (Int, RegularNodeBuilder<ArrivalNode<T>, T>) -> R,
