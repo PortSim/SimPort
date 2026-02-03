@@ -1,31 +1,18 @@
 package com.group7.utils
 
-import com.group7.dsl.*
-import com.group7.policies.queue.Token
-import com.group7.policies.queue.TokenQueuePolicy
-import kotlin.contracts.InvocationKind
-import kotlin.contracts.contract
+import com.group7.compound.BoundedSubnetwork
+import com.group7.dsl.GroupScope
+import com.group7.dsl.NodeBuilder
+import com.group7.dsl.RegularNodeBuilder
+import com.group7.dsl.compoundBuilder
 
-context(_: ScenarioBuilderScope)
+context(_: GroupScope)
 fun <InputT, OutputT> NodeBuilder<InputT>.thenSubnetwork(
-    networkName: String? = null,
+    networkName: String = "Bounded Subnetwork",
     capacity: Int,
-    inner: (NodeBuilder<InputT>) -> NodeBuilder<OutputT>,
-): NodeBuilder<OutputT> {
-    contract { callsInPlace(inner, InvocationKind.EXACTLY_ONCE) }
-
-    val namePrefix = networkName?.let { "$it " } ?: ""
-
-    val tokenBackEdge = newConnection<Token>()
-    // TODO: This should use a dedicated queue policy to model the tokens as an integer rather than a List
-    val tokenQueue = tokenBackEdge.thenQueue("${namePrefix}Token Queue", TokenQueuePolicy(capacity))
-
-    match("${namePrefix}Token Match", this, tokenQueue) { input, _ -> input }
-        .let(inner)
-        .thenSplit("${namePrefix}Token Split") { output -> output to Token }
-        .let { (outputs, tokens) ->
-            tokens.thenConnect(tokenBackEdge)
-
-            return outputs
-        }
+    inner:
+        context(GroupScope)
+        (NodeBuilder<InputT>) -> NodeBuilder<OutputT>,
+): RegularNodeBuilder<BoundedSubnetwork<InputT, OutputT>, OutputT> = compoundBuilder { output ->
+    BoundedSubnetwork(networkName, capacity, this, inner, output)
 }

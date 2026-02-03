@@ -8,16 +8,18 @@ import com.group7.policies.fork.RandomForkPolicy
 import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 
-context(_: ScenarioBuilderScope)
+context(_: ScenarioBuilderScope, _: GroupScope)
 fun <T> arrivals(label: String, generator: Generator<T>): RegularNodeBuilder<ArrivalNode<T>, T> = sourceBuilder {
     ArrivalNode(label, it, generator)
 }
 
+context(_: GroupScope)
 fun <T> NodeBuilder<T>.thenDelay(label: String, delayProvider: DelayProvider): RegularNodeBuilder<DelayNode<T>, T> =
     then { input, output ->
         DelayNode(label, input, output, delayProvider)
     }
 
+context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT>.thenFork(
     label: String,
     lanes: List<(RegularNodeBuilder<ForkNode<ItemT>, ItemT>) -> R>,
@@ -27,6 +29,7 @@ fun <ItemT, R> NodeBuilder<ItemT>.thenFork(
         .zip(lanes) { node, lane -> lane(node) }
 }
 
+context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT>.thenFork(
     label: String,
     numLanes: Int,
@@ -34,12 +37,13 @@ fun <ItemT, R> NodeBuilder<ItemT>.thenFork(
     laneAction: (Int, RegularNodeBuilder<ForkNode<ItemT>, ItemT>) -> R,
 ): List<R> = thenFork(label, List(numLanes) { i -> { node -> laneAction(i, node) } }, policy)
 
+context(_: GroupScope)
 fun <T> List<NodeBuilder<T>>.thenJoin(label: String): RegularNodeBuilder<JoinNode<T>, T> =
     thenConverge { inputs, output ->
         JoinNode(label, inputs, output)
     }
 
-context(_: ScenarioBuilderScope)
+context(_: GroupScope)
 fun <A, B, R> match(
     label: String,
     a: NodeBuilder<A>,
@@ -48,16 +52,19 @@ fun <A, B, R> match(
 ): RegularNodeBuilder<MatchNode<A, B, R>, R> =
     zip(a, b) { inputA, inputB, output -> MatchNode(label, inputA, inputB, output, combiner) }
 
+context(_: GroupScope)
 fun <T> NodeBuilder<T>.thenQueue(
     label: String,
     policy: QueuePolicy<T> = FIFOQueuePolicy(),
 ): RegularNodeBuilder<QueueNode<T>, T> = then { input, output -> QueueNode(label, input, output, policy) }
 
+context(_: GroupScope)
 fun <T> NodeBuilder<T>.thenService(label: String, delayProvider: DelayProvider): RegularNodeBuilder<ServiceNode<T>, T> =
     then { input, output ->
         ServiceNode(label, input, output, delayProvider)
     }
 
+context(_: GroupScope)
 fun <T, A, B> NodeBuilder<T>.thenSplit(
     label: String,
     splitter: (T) -> Pair<A, B>,
@@ -66,6 +73,8 @@ fun <T, A, B> NodeBuilder<T>.thenSplit(
         SplitNode(label, input, outputA, outputB, splitter)
     }
 
+context(_: GroupScope)
 fun <T> NodeBuilder<T>.thenSink(label: String): SinkNode<T> = thenTerminal { input -> SinkNode(label, input) }
 
+context(_: GroupScope)
 fun <T> NodeBuilder<T>.thenDeadEnd(label: String): DeadEndNode<T> = thenTerminal { input -> DeadEndNode(label, input) }

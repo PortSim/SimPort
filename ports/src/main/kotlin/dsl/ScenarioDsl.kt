@@ -9,13 +9,13 @@ sealed interface ScenarioBuilderScope
 
 inline fun buildScenario(
     builder:
-        context(ScenarioBuilderScope)
+        context(ScenarioBuilderScope, GroupScope)
         () -> Unit
 ): Scenario {
     contract { callsInPlace(builder, InvocationKind.EXACTLY_ONCE) }
-    val scope = ScenarioBuilderScope()
-    context(scope) { builder() }
-    return Scenario(scope.sources)
+    val scenarioScope = ScenarioBuilderScope()
+    context(scenarioScope, GroupScope.Root) { builder() }
+    return Scenario(scenarioScope.sources)
 }
 
 private class ScenarioBuilderScopeImpl : ScenarioBuilderScope {
