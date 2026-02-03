@@ -3,13 +3,14 @@ package com.group7.nodes
 import com.group7.*
 import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
+import com.group7.properties.Queue
 
 class QueueNode<T>(
     label: String,
     source: InputChannel<T>,
     private val destination: OutputChannel<T>,
     private val policy: QueuePolicy<T> = FIFOQueuePolicy(),
-) : Node(label, listOf(destination)) {
+) : Node(label, listOf(destination)), Queue {
 
     private var scheduled = false
 
@@ -23,7 +24,10 @@ class QueueNode<T>(
         scheduleDrain()
     }
 
-    override fun reportMetrics() = Metrics(occupants = policy.reportOccupancy())
+    override fun reportMetrics() = Metrics(occupants = occupants)
+
+    override val occupants
+        get() = policy.reportOccupancy()
 
     context(_: Simulator)
     private fun onArrive(obj: T) {

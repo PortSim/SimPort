@@ -5,6 +5,7 @@ import com.group7.Metrics
 import com.group7.Node
 import com.group7.OutputChannel
 import com.group7.generators.DelayProvider
+import com.group7.properties.Delay
 
 /**
  * Takes in a vehicle, and sends it out through the designated destination output channel after some specified delay
@@ -15,9 +16,10 @@ class DelayNode<T>(
     source: InputChannel<T>,
     destination: OutputChannel<T>,
     delayProvider: DelayProvider,
-) : Node(label, listOf(destination)) {
+) : Node(label, listOf(destination)), Delay {
 
-    private var occupants = 0
+    override var occupants = 0
+        private set
 
     init {
         source.onReceive {

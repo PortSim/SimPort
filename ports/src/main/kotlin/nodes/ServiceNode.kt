@@ -6,15 +6,17 @@ import com.group7.Node
 import com.group7.OutputChannel
 import com.group7.Simulator
 import com.group7.generators.DelayProvider
+import com.group7.properties.Service
 
 class ServiceNode<T>(
     label: String,
     private val source: InputChannel<T>,
     private val destination: OutputChannel<T>,
     private val delayProvider: DelayProvider,
-) : Node(label, listOf(destination)) {
+) : Node(label, listOf(destination)), Service {
 
-    private var isServing = false
+    override var isServing = false
+        private set
 
     init {
         source.onReceive { startServing(it) }
