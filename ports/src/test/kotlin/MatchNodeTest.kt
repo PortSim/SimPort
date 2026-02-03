@@ -5,6 +5,7 @@ import com.group7.nodes.ArrivalNode
 import com.group7.nodes.DelayNode
 import com.group7.nodes.MatchNode
 import com.group7.nodes.SinkNode
+import com.group7.utils.*
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe

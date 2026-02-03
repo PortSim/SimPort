@@ -4,6 +4,9 @@ import com.group7.dsl.arrivals
 import com.group7.dsl.buildScenario
 import com.group7.dsl.thenSink
 import com.group7.nodes.SinkNode
+import com.group7.utils.TestDelays
+import com.group7.utils.TestVehicle
+import com.group7.utils.runSimulation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlin.time.Duration.Companion.seconds

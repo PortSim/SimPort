@@ -4,6 +4,10 @@ import com.group7.nodes.ArrivalNode
 import com.group7.nodes.DeadEndNode
 import com.group7.nodes.QueueNode
 import com.group7.nodes.SinkNode
+import com.group7.utils.NUM_VEHICLES
+import com.group7.utils.Presets
+import com.group7.utils.TestVehicle
+import com.group7.utils.runSimulation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 

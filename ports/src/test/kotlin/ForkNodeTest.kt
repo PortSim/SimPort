@@ -8,6 +8,9 @@ import com.group7.generators.Delays
 import com.group7.generators.Generators
 import com.group7.generators.take
 import com.group7.nodes.SinkNode
+import com.group7.utils.NUM_VEHICLES
+import com.group7.utils.TestVehicle
+import com.group7.utils.runSimulation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlin.time.Duration.Companion.seconds

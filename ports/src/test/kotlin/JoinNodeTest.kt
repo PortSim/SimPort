@@ -6,6 +6,10 @@ import com.group7.dsl.thenSink
 import com.group7.nodes.DeadEndNode
 import com.group7.nodes.JoinNode
 import com.group7.nodes.SinkNode
+import com.group7.utils.DSLAddons.arrivalLanes
+import com.group7.utils.Presets
+import com.group7.utils.TestVehicle
+import com.group7.utils.runSimulation
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
