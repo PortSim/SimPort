@@ -61,7 +61,7 @@ fun ElkNodeRenderer(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metric
                     contentAlignment = Alignment.TopStart,
                 ) {
                     if (node.identifier != null) {
-                        Text(text = node.identifier, fontSize = 16.sp)
+                        Text(text = node.identifier, fontSize = 24.sp)
                     }
                 }
             } else {
