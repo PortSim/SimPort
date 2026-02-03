@@ -1,6 +1,9 @@
 package com.group7.dsl
 
 import com.group7.*
+import com.group7.tags.BasicTag
+import com.group7.tags.MutableBasicTag
+import com.group7.tags.newTag
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
@@ -156,6 +159,20 @@ fun <ItemT> RegularNodeBuilder<*, ItemT>.thenConnect(connection: Connection<Item
 
 fun <ItemT> RegularNodeBuilder<*, ItemT>.thenOutput(outputRef: OutputRef<ItemT>) {
     outputRef.asImpl().output = this.asImpl().output
+}
+
+fun <NodeT : NodeGroup, ItemT> RegularNodeBuilder<NodeT, ItemT>.tagged(
+    tag: MutableBasicTag<in NodeT>
+): RegularNodeBuilder<NodeT, ItemT> {
+    tag.bind(this.node)
+    return this
+}
+
+fun <NodeT : NodeGroup, ItemT> RegularNodeBuilder<NodeT, ItemT>.tagged(
+    tags: MutableList<in BasicTag<NodeT>>
+): RegularNodeBuilder<NodeT, ItemT> {
+    tags.add(newTag(this.node))
+    return this
 }
 
 private fun <T> NodeBuilder<T>.nextInput(): ConnectableInputChannel<T> =
