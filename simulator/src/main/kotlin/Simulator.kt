@@ -1,5 +1,6 @@
 package com.group7
 
+import com.group7.channels.PullInputChannel
 import com.group7.channels.PushOutputChannel
 import java.util.*
 import kotlin.time.Duration
@@ -81,6 +82,14 @@ internal class SimulatorImpl(
 
     fun notifyClosed(channel: PushOutputChannel<*>) {
         log.log(currentTime) { "Channel closed: $channel" }
+    }
+
+    fun notifyReady(channel: PullInputChannel<*>) {
+        log.log(currentTime) { "Channel ready: $channel" }
+    }
+
+    fun notifyNotReady(channel: PullInputChannel<*>) {
+        log.log(currentTime) { "Channel not ready: $channel" }
     }
 
     /** Node policies can log any arbitrary events with the simulator, usually internal changes */

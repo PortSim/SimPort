@@ -2,9 +2,7 @@ import androidx.compose.runtime.mutableStateOf
 import com.group7.Node
 import com.group7.NodeGroup
 import com.group7.Scenario
-import com.group7.channels.OutputChannel
-import com.group7.channels.isOpen
-import com.group7.channels.isPush
+import com.group7.channels.*
 import org.eclipse.elk.alg.layered.options.*
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
 import org.eclipse.elk.core.data.LayoutMetaDataService
@@ -131,5 +129,6 @@ class ScenarioLayout(scenario: Scenario) {
 private fun OutputChannel<*, *>.openStatus(): Boolean =
     when {
         this.isPush() -> this.isOpen()
-        else -> TODO()
+        this.isPull() -> this.downstream.isReady()
+        else -> error("Unexpected output channel $this")
     }

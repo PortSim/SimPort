@@ -16,6 +16,7 @@ sealed interface InputChannel<out ItemT, ChannelT : ChannelType<ChannelT>> {
 internal fun InputChannel<*, *>.setDownstreamNode(node: Node) {
     when (this) {
         is PushInputChannelImpl -> this.downstreamNode = node
+        is PullInputChannelImpl -> this.downstreamNode = node
     }
 }
 
@@ -27,6 +28,7 @@ sealed interface OutputChannel<in ItemT, ChannelT : ChannelType<ChannelT>> {
 internal fun OutputChannel<*, *>.setUpstreamNode(node: Node) {
     when (this) {
         is PushOutputChannelImpl -> this.upstreamNode = node
+        is PullOutputChannelImpl -> this.upstreamNode = node
     }
 }
 
@@ -40,7 +42,7 @@ sealed interface ConnectableOutputChannel<ItemT, ChannelT : ChannelType<ChannelT
 fun <ItemT, ChannelT : ChannelType<ChannelT>> newConnectableInputChannel(type: ChannelT) =
     when (type) {
         ChannelType.Push -> newConnectablePushInputChannel<ItemT>()
-        ChannelType.Pull -> TODO()
+        ChannelType.Pull -> newConnectablePullInputChannel()
     }
         as ConnectableInputChannel<ItemT, ChannelT>
 
@@ -48,6 +50,6 @@ fun <ItemT, ChannelT : ChannelType<ChannelT>> newConnectableInputChannel(type: C
 fun <ItemT, ChannelT : ChannelType<ChannelT>> newConnectableOutputChannel(type: ChannelT) =
     when (type) {
         ChannelType.Push -> newConnectablePushOutputChannel<ItemT>()
-        ChannelType.Pull -> TODO()
+        ChannelType.Pull -> newConnectablePullOutputChannel()
     }
         as ConnectableOutputChannel<ItemT, ChannelT>

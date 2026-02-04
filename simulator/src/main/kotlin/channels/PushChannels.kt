@@ -11,7 +11,10 @@ typealias PushInputChannel<T> = InputChannel<T, ChannelType.Push>
 
 @Suppress("KotlinConstantConditions")
 fun <T> InputChannel<T, *>.isPush(): Boolean {
-    contract { returns(true) implies (this@isPush is PushInputChannel<T>) }
+    contract {
+        returns(true) implies (this@isPush is PushInputChannel<T>)
+        returns(false) implies (this@isPush is PullInputChannel<T>)
+    }
     return this is PushInputChannelImpl
 }
 
@@ -33,7 +36,10 @@ typealias PushOutputChannel<T> = OutputChannel<T, ChannelType.Push>
 
 @Suppress("KotlinConstantConditions")
 fun <T> OutputChannel<T, *>.isPush(): Boolean {
-    contract { returns(true) implies (this@isPush is PushOutputChannel<T>) }
+    contract {
+        returns(true) implies (this@isPush is PushOutputChannel<T>)
+        returns(false) implies (this@isPush is PullOutputChannel<T>)
+    }
     return this is PushOutputChannelImpl
 }
 
@@ -180,14 +186,17 @@ internal class PushOutputChannelImpl<T> : ConnectablePushOutputChannel<T> {
 private fun <T> PushInputChannel<T>.asImpl(): PushInputChannelImpl<out T> =
     when (this) {
         is PushInputChannelImpl -> this
+        else -> error("Unexpected PushInputChannel: $this")
     }
 
 private fun <T> PushOutputChannel<T>.asImpl(): PushOutputChannelImpl<in T> =
     when (this) {
         is PushOutputChannelImpl -> this
+        else -> error("Unexpected PushOutputChannel: $this")
     }
 
 private fun <T> ConnectableInputChannel<T, ChannelType.Push>.asImpl(): PushInputChannelImpl<T> =
     when (this) {
         is PushInputChannelImpl -> this
+        else -> error("Unexpected ConnectableInputChannel: $this")
     }
