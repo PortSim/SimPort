@@ -2,8 +2,7 @@ package com.group7.nodes
 
 import com.group7.Node
 import com.group7.Simulator
-import com.group7.channels.PushInputChannel
-import com.group7.channels.PushOutputChannel
+import com.group7.channels.*
 
 class SplitNode<T, A, B>(
     label: String,
@@ -11,7 +10,7 @@ class SplitNode<T, A, B>(
     private val destinationA: PushOutputChannel<A>,
     private val destinationB: PushOutputChannel<B>,
     private val splitter: (T) -> Pair<A, B>,
-) : Node(label, listOf(destinationA, destinationB)) {
+) : Node(label, listOf(source), listOf(destinationA, destinationB)) {
 
     init {
         source.onReceive { onArrive(it) }

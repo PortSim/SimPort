@@ -4,6 +4,8 @@ import com.group7.Node
 import com.group7.Simulator
 import com.group7.channels.PushInputChannel
 import com.group7.channels.PushOutputChannel
+import com.group7.channels.onReceive
+import com.group7.channels.send
 import com.group7.policies.fork.ForkPolicy
 import com.group7.policies.fork.RandomForkPolicy
 
@@ -13,7 +15,7 @@ class ForkNode<T>(
     private val source: PushInputChannel<T>,
     private val destinations: List<PushOutputChannel<T>>,
     private val policy: ForkPolicy<T> = RandomForkPolicy(),
-) : Node(label, destinations) {
+) : Node(label, listOf(source), destinations) {
 
     init {
         source.onReceive { emit(it) }

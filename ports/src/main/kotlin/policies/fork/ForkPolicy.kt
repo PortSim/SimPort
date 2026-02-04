@@ -1,8 +1,7 @@
 package com.group7.policies.fork
 
 import com.group7.Simulator
-import com.group7.channels.PushInputChannel
-import com.group7.channels.PushOutputChannel
+import com.group7.channels.*
 
 interface ForkPolicy<T> {
     fun selectChannel(obj: T): PushOutputChannel<T>

@@ -2,8 +2,7 @@ package com.group7.nodes
 
 import com.group7.Node
 import com.group7.Simulator
-import com.group7.channels.PushInputChannel
-import com.group7.channels.PushOutputChannel
+import com.group7.channels.*
 import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import com.group7.properties.Queue
@@ -13,7 +12,7 @@ class QueueNode<T>(
     source: PushInputChannel<T>,
     private val destination: PushOutputChannel<T>,
     private val policy: QueuePolicy<T> = FIFOQueuePolicy(),
-) : Node(label, listOf(destination)), Queue {
+) : Node(label, listOf(source), listOf(destination)), Queue {
 
     private var scheduled = false
 

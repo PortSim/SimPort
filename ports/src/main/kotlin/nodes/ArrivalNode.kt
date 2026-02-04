@@ -3,6 +3,7 @@ package com.group7.nodes
 import com.group7.Simulator
 import com.group7.SourceNode
 import com.group7.channels.PushOutputChannel
+import com.group7.channels.send
 import com.group7.generators.Generator
 
 /**

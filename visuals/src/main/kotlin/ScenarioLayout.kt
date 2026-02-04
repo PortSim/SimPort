@@ -2,7 +2,9 @@ import androidx.compose.runtime.mutableStateOf
 import com.group7.Node
 import com.group7.NodeGroup
 import com.group7.Scenario
-import com.group7.channels.PushOutputChannel
+import com.group7.channels.OutputChannel
+import com.group7.channels.isOpen
+import com.group7.channels.isPush
 import org.eclipse.elk.alg.layered.options.*
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
 import org.eclipse.elk.core.data.LayoutMetaDataService
@@ -19,13 +21,13 @@ import org.eclipse.elk.graph.util.ElkGraphUtil
 internal class ScenarioGraph {
     val sources: List<Node>
     val nodesOrderedByBFS: List<Node>
-    val edgesWithChannels: List<Triple<Node, Node, PushOutputChannel<*>>>
+    val edgesWithChannels: List<Triple<Node, Node, OutputChannel<*, *>>>
 
     constructor(scenario: Scenario) {
         /* Enumerate all nodes and channels between them */
         val setOfNodes = mutableSetOf<Node>()
         val nodesOrdered = mutableListOf<Node>()
-        val channels = mutableListOf<Triple<Node, Node, PushOutputChannel<*>>>()
+        val channels = mutableListOf<Triple<Node, Node, OutputChannel<*, *>>>()
         val queue = ArrayDeque<Node>(scenario.sources)
         while (queue.isNotEmpty()) {
             val node = queue.removeFirst()
@@ -108,14 +110,14 @@ class ScenarioLayout(scenario: Scenario) {
     val nodeMetrics =
         simulationNodeToElkNode.entries.associate { (node, elkNode) -> elkNode to mutableStateOf(node.reportMetrics()) }
     val edgeStatuses =
-        simulationEdgeToElkEdge.entries.associate { (channel, edge) -> edge to mutableStateOf(channel.isOpen()) }
+        simulationEdgeToElkEdge.entries.associate { (channel, edge) -> edge to mutableStateOf(channel.openStatus()) }
 
     fun refresh() {
         simulationNodeToElkNode.forEach { (node, elkNode) ->
             nodeMetrics.getValue(elkNode).value = node.reportMetrics()
         }
         simulationEdgeToElkEdge.forEach { (channel, elkEdge) ->
-            edgeStatuses.getValue(elkEdge).value = channel.isOpen()
+            edgeStatuses.getValue(elkEdge).value = channel.openStatus()
         }
     }
 
@@ -125,3 +127,9 @@ class ScenarioLayout(scenario: Scenario) {
         }
     }
 }
+
+private fun OutputChannel<*, *>.openStatus(): Boolean =
+    when {
+        this.isPush() -> this.isOpen()
+        else -> TODO()
+    }

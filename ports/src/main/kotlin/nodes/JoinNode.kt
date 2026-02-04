@@ -1,12 +1,11 @@
 package com.group7.nodes
 
 import com.group7.Node
-import com.group7.channels.PushInputChannel
-import com.group7.channels.PushOutputChannel
+import com.group7.channels.*
 
 /** Joins multiple streams together. */
 class JoinNode<T>(label: String, sources: List<PushInputChannel<T>>, destination: PushOutputChannel<T>) :
-    Node(label, listOf(destination)) {
+    Node(label, sources, listOf(destination)) {
 
     init {
         for (source in sources) {

@@ -1,5 +1,6 @@
 package com.group7
 
+import com.group7.channels.ChannelType
 import com.group7.dsl.*
 import com.group7.generators.Delays
 import com.group7.generators.Generators
@@ -64,11 +65,11 @@ fun generatePort(
 }
 
 context(_: GroupScope)
-private fun <T> NodeBuilder<T>.thenQueueAndGates(
+private fun <T> NodeBuilder<T, ChannelType.Push>.thenQueueAndGates(
     description: String,
     numLanes: Int,
     averageServiceTime: Duration,
-): RegularNodeBuilder<JoinNode<T>, T> =
+): RegularNodeBuilder<JoinNode<T>, T, ChannelType.Push> =
     this.thenQueue("$description Queue")
         .thenFork("$description Lane Split", numLanes) { i, lane ->
             lane.thenService("$description Gate $i", Delays.exponentialWithMean(averageServiceTime))
