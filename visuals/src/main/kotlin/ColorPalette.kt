@@ -18,6 +18,7 @@ class ColorPalette(
     val reds: ColorScale,
     val greens: ColorScale,
     val yellows: ColorScale,
+    val chartColors: List<Color>,
 )
 
 val DefaultColorPalette =
@@ -81,5 +82,16 @@ val DefaultColorPalette =
                 _7 = Color(0xFFE7F280),
                 _8 = Color(0xFFF4FEA9),
                 _9 = Color(0xFFFBFFD1),
+            ),
+        chartColors =
+            listOf(
+                Color(0xFF23af92),
+                Color(0xFF2196F3),
+                Color(0xFFFF9800),
+                Color(0xFFE91E63),
+                Color(0xFF9C27B0),
+                Color(0xFF4CAF50),
+                Color(0xFF00BCD4),
+                Color(0xFFFF5722),
             ),
     )
