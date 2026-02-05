@@ -93,6 +93,7 @@ class ScenarioLayout(scenario: Scenario) {
             elkNode.identifier = node.label
             put(node, elkNode)
         }
+        putAll(nodeGroups)
     }
 
     private val simulationEdgeToElkEdge = buildMap {
