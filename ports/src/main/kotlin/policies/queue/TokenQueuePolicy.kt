@@ -8,7 +8,10 @@ class TokenQueuePolicy(private var count: Int) : QueuePolicy<Token> {
     }
 
     override fun dequeue(): Token {
-        check(count > 0) { "Queue is empty" }
+        check(count >= 0) { "Queue reached negative token count" }
+        if (count == 0) {
+            throw NoSuchElementException("The queue is empty")
+        }
         count--
         return Token
     }

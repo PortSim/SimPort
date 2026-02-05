@@ -1,10 +1,9 @@
-package com.group7
+package com.group7.nodes
 
+import com.group7.ClosedChannelException
+import com.group7.Scenario
 import com.group7.generators.Delays
-import com.group7.nodes.ArrivalNode
-import com.group7.nodes.DelayNode
-import com.group7.nodes.MatchNode
-import com.group7.nodes.SinkNode
+import com.group7.newChannel
 import com.group7.utils.*
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
