@@ -4,7 +4,7 @@ import com.group7.Node
 import com.group7.Simulator
 import com.group7.channels.*
 
-class DrainNode<T>(
+class PumpNode<T>(
     label: String,
     private val source: PullInputChannel<T>,
     private val destination: PushOutputChannel<T>,
@@ -13,12 +13,12 @@ class DrainNode<T>(
     private var isScheduled = false
 
     init {
-        source.whenReady { scheduleDrain() }
-        destination.whenOpened { scheduleDrain() }
+        source.whenReady { schedulePump() }
+        destination.whenOpened { schedulePump() }
     }
 
     context(_: Simulator)
-    private fun scheduleDrain() {
+    private fun schedulePump() {
         if (isScheduled) {
             return
         }
@@ -29,7 +29,7 @@ class DrainNode<T>(
             }
             isScheduled = false
             if (source.isReady() && destination.isOpen()) {
-                scheduleDrain()
+                schedulePump()
             }
         }
     }

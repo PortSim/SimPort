@@ -15,11 +15,11 @@ class QueueNodeTest :
         test("All vehicles entering leaves eventually") {
             val (scenario, queueIn) =
                 Presets.generateSourcesWithGenerator(Presets.defaultFixedGenerator(NUM_VEHICLES, obj = TestVehicle))
-            val (queueOut, drainIn) = newPullChannel<TestVehicle>()
-            val (drainOut, sinkIn) = newPushChannel<TestVehicle>()
+            val (queueOut, pumpIn) = newPullChannel<TestVehicle>()
+            val (pumpOut, sinkIn) = newPushChannel<TestVehicle>()
 
             val queue = QueueNode("Queue", queueIn, queueOut)
-            val drain = DrainNode("Drain", drainIn, drainOut)
+            PumpNode("Pump", pumpIn, pumpOut)
             val sink = SinkNode("Sink", sinkIn)
 
             runSimulation(scenario)
