@@ -29,10 +29,7 @@ sealed interface RegularNodeBuilder<out NodeT : NodeGroup, ItemT, ChannelT : Cha
 sealed interface Connection<ItemT, ChannelT : ChannelType<ChannelT>> : NodeBuilder<ItemT, ChannelT>
 
 internal val <ItemT, ChannelT : ChannelType<ChannelT>> Connection<ItemT, ChannelT>.nextInput
-    get() =
-        when (this) {
-            is ConnectionImpl -> this.nextInput
-        }
+    get() = asImpl().nextInput
 
 fun <ItemT, ChannelT : ChannelType<ChannelT>> newConnection(channelType: ChannelT): Connection<ItemT, ChannelT> =
     ConnectionImpl(channelType)
@@ -195,15 +192,15 @@ internal fun <
     InputChannelT : ChannelType<InputChannelT>,
     OutputChannelT : ChannelType<OutputChannelT>,
 > NodeBuilder<InputT, InputChannelT>.thenCompound(
-    node: (Connection<InputT, InputChannelT>, OutputRef<OutputT, OutputChannelT>) -> NodeT
+    node: (Connection<out InputT, InputChannelT>, OutputRef<OutputT, OutputChannelT>) -> NodeT
 ): RegularNodeBuilder<NodeT, OutputT, OutputChannelT> {
     val connection =
-        when (this) {
-            is Connection<InputT, InputChannelT> -> this
-            is RegularNodeBuilder<*, InputT, InputChannelT> -> {
-                newConnection<InputT, InputChannelT>(this.channelType).also { this.thenConnect(it) }
-            }
-        }
+        this.patternMatch(
+            whenConnection = { it },
+            whenRegular = { builder ->
+                newConnection<InputT, InputChannelT>(this.channelType).also { builder.thenConnect(it) }
+            },
+        )
     val output = OutputRefImpl<OutputT, OutputChannelT>()
     val compoundNode = node(connection, output).withGroup(groupScope)
     return NodeBuilderImpl(compoundNode, output.output)
@@ -212,23 +209,13 @@ internal fun <
 fun <ItemT, ChannelT : ChannelType<ChannelT>> RegularNodeBuilder<*, out ItemT, ChannelT>.thenConnect(
     connection: Connection<in ItemT, ChannelT>
 ) {
-    when (this) {
-        is NodeBuilderImpl ->
-            when (connection) {
-                is ConnectionImpl -> this.output.connectTo(connection.nextInput)
-            }
-    }
+    this.asImpl().output.connectTo(connection.asImpl().nextInput)
 }
 
 fun <ItemT, ChannelT : ChannelType<ChannelT>> RegularNodeBuilder<*, ItemT, ChannelT>.thenOutput(
     outputRef: OutputRef<ItemT, ChannelT>
 ) {
-    when (this) {
-        is NodeBuilderImpl ->
-            when (outputRef) {
-                is OutputRefImpl -> outputRef.output = this.output
-            }
-    }
+    outputRef.asImpl().output = this.asImpl().output
 }
 
 fun <BuilderT : RegularNodeBuilder<NodeT, *, *>, NodeT : NodeGroup> BuilderT.tagged(
@@ -248,13 +235,43 @@ fun <BuilderT : RegularNodeBuilder<NodeT, *, *>, NodeT : NodeGroup> BuilderT.tag
 private fun <T, ChannelT : ChannelType<ChannelT>> NodeBuilder<T, ChannelT>.nextInput(
     channelType: ChannelT
 ): InputChannel<T, ChannelT> =
-    when (this) {
-        is ConnectionImpl -> this.nextInput
-        is NodeBuilderImpl<*, T, ChannelT> -> {
-            val input = newConnectableInputChannel<T, _>(channelType)
-            this.output.connectTo(input)
-            input
-        }
-    }
+    this.patternMatch(
+        whenConnection = { it.nextInput },
+        whenRegular = { builder ->
+            newConnectableInputChannel<T, _>(channelType).also { builder.asImpl().output.connectTo(it) }
+        },
+    )
 
 private fun <T : NodeGroup> T.withGroup(scope: GroupScope) = this.apply { parent = scope.group }
+
+private fun <NodeT : NodeGroup, ItemT, ChannelT : ChannelType<ChannelT>> RegularNodeBuilder<NodeT, ItemT, ChannelT>
+    .asImpl(): NodeBuilderImpl<NodeT, ItemT, ChannelT> =
+    when (this) {
+        is NodeBuilderImpl -> this
+    }
+
+private fun <ItemT, ChannelT : ChannelType<ChannelT>> Connection<ItemT, ChannelT>.asImpl():
+    ConnectionImpl<ItemT, ChannelT> =
+    when (this) {
+        is ConnectionImpl -> this
+    }
+
+private fun <ItemT, ChannelT : ChannelType<ChannelT>> OutputRef<ItemT, ChannelT>.asImpl():
+    OutputRefImpl<ItemT, ChannelT> =
+    when (this) {
+        is OutputRefImpl -> this
+    }
+
+private inline fun <ItemT, ChannelT : ChannelType<ChannelT>, R> NodeBuilder<ItemT, ChannelT>.patternMatch(
+    whenRegular: (RegularNodeBuilder<*, out ItemT, ChannelT>) -> R,
+    whenConnection: (Connection<out ItemT, ChannelT>) -> R,
+): R {
+    contract {
+        callsInPlace(whenRegular, InvocationKind.AT_MOST_ONCE)
+        callsInPlace(whenConnection, InvocationKind.AT_MOST_ONCE)
+    }
+    return when (this) {
+        is NodeBuilderImpl<*, out ItemT, ChannelT> -> whenRegular(this)
+        is ConnectionImpl -> whenConnection(this)
+    }
+}

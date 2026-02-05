@@ -10,7 +10,7 @@ import com.group7.properties.Container
 class BoundedSubnetwork<InputT, OutputT, ChannelT : ChannelType<ChannelT>>(
     label: String,
     override val capacity: Int,
-    input: Connection<InputT, ChannelT>,
+    input: Connection<out InputT, ChannelT>,
     inner:
         context(GroupScope)
         (NodeBuilder<InputT, ChannelT>) -> NodeBuilder<OutputT, ChannelT>,
