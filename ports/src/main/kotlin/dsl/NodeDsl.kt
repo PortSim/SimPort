@@ -17,7 +17,9 @@ interface GroupScope {
     }
 }
 
-sealed interface NodeBuilder<out ItemT, ChannelT : ChannelType<ChannelT>>
+sealed interface NodeBuilder<out ItemT, ChannelT : ChannelType<ChannelT>> {
+    val channelType: ChannelT
+}
 
 sealed interface RegularNodeBuilder<out NodeT : NodeGroup, ItemT, ChannelT : ChannelType<ChannelT>> :
     NodeBuilder<ItemT, ChannelT> {
@@ -49,9 +51,13 @@ inline fun <BuilderT : RegularNodeBuilder<NodeT, *, *>, NodeT : NodeGroup> Build
 private class NodeBuilderImpl<out NodeT : NodeGroup, ItemT, OutputChannelT : ChannelType<OutputChannelT>>(
     override val node: NodeT,
     val output: ConnectableOutputChannel<ItemT, OutputChannelT>,
-) : RegularNodeBuilder<NodeT, ItemT, OutputChannelT>
+) : RegularNodeBuilder<NodeT, ItemT, OutputChannelT> {
+    @Suppress("UNCHECKED_CAST")
+    override val channelType
+        get() = (if (output.isPush()) ChannelType.Push else ChannelType.Pull) as OutputChannelT
+}
 
-internal class ConnectionImpl<ItemT, ChannelT : ChannelType<ChannelT>>(channelType: ChannelT) :
+internal class ConnectionImpl<ItemT, ChannelT : ChannelType<ChannelT>>(override val channelType: ChannelT) :
     Connection<ItemT, ChannelT> {
     val nextInput = newConnectableInputChannel<ItemT, _>(channelType)
 }
@@ -79,11 +85,10 @@ internal fun <
     InputChannelT : ChannelType<InputChannelT>,
     OutputChannelT : ChannelType<OutputChannelT>,
 > NodeBuilder<InputT, InputChannelT>.then(
-    inputChannelType: InputChannelT,
     outputChannelType: OutputChannelT,
     node: (InputChannel<InputT, InputChannelT>, OutputChannel<OutputT, OutputChannelT>) -> NodeT,
 ): RegularNodeBuilder<NodeT, OutputT, OutputChannelT> {
-    val input = nextInput(inputChannelType)
+    val input = nextInput(this.channelType)
     val output = newConnectableOutputChannel<OutputT, _>(outputChannelType)
     return NodeBuilderImpl(node(input, output).withGroup(groupScope), output)
 }
@@ -96,12 +101,11 @@ internal fun <
     InputChannelT : ChannelType<InputChannelT>,
     OutputChannelT : ChannelType<OutputChannelT>,
 > NodeBuilder<InputT, InputChannelT>.thenDiverge(
-    inputChannelType: InputChannelT,
     outputChannelType: OutputChannelT,
     numLanes: Int,
     node: (InputChannel<InputT, InputChannelT>, List<OutputChannel<OutputT, OutputChannelT>>) -> NodeT,
 ): List<RegularNodeBuilder<NodeT, OutputT, OutputChannelT>> {
-    val input = nextInput(inputChannelType)
+    val input = nextInput(this.channelType)
     val outputs = List(numLanes) { newConnectableOutputChannel<OutputT, _>(outputChannelType) }
     val forkNode = node(input, outputs).withGroup(groupScope)
     return outputs.map { NodeBuilderImpl(forkNode, it) }
@@ -115,11 +119,10 @@ internal fun <
     InputChannelT : ChannelType<InputChannelT>,
     OutputChannelT : ChannelType<OutputChannelT>,
 > List<NodeBuilder<InputT, InputChannelT>>.thenConverge(
-    inputChannelType: InputChannelT,
     outputChannelType: OutputChannelT,
     node: (List<InputChannel<InputT, InputChannelT>>, OutputChannel<OutputT, OutputChannelT>) -> NodeT,
 ): RegularNodeBuilder<NodeT, OutputT, OutputChannelT> {
-    val inputs = this.map { it.nextInput(inputChannelType) }
+    val inputs = this.map { it.nextInput(it.channelType) }
     val output = newConnectableOutputChannel<OutputT, _>(outputChannelType)
 
     return NodeBuilderImpl(node(inputs, output).withGroup(groupScope), output)
@@ -135,8 +138,6 @@ internal fun <
     InputBChannelT : ChannelType<InputBChannelT>,
     OutputChannelT : ChannelType<OutputChannelT>,
 > zip(
-    inputAChannelType: InputAChannelT,
-    inputBChannelType: InputBChannelT,
     outputChannelType: OutputChannelT,
     a: NodeBuilder<InputAT, InputAChannelT>,
     b: NodeBuilder<InputBT, InputBChannelT>,
@@ -147,8 +148,8 @@ internal fun <
             OutputChannel<OutputT, OutputChannelT>,
         ) -> NodeT,
 ): RegularNodeBuilder<NodeT, OutputT, OutputChannelT> {
-    val inputA = a.nextInput(inputAChannelType)
-    val inputB = b.nextInput(inputBChannelType)
+    val inputA = a.nextInput(a.channelType)
+    val inputB = b.nextInput(b.channelType)
     val output = newConnectableOutputChannel<OutputT, _>(outputChannelType)
     return NodeBuilderImpl(node(inputA, inputB, output).withGroup(groupScope), output)
 }
@@ -163,7 +164,6 @@ internal fun <
     OutputAChannelT : ChannelType<OutputAChannelT>,
     OutputBChannelT : ChannelType<OutputBChannelT>,
 > NodeBuilder<InputT, InputChannelT>.thenUnzip(
-    inputChannelType: InputChannelT,
     outputAChannelType: OutputAChannelT,
     outputBChannelType: OutputBChannelT,
     node:
@@ -173,7 +173,7 @@ internal fun <
             OutputChannel<OutputBT, OutputBChannelT>,
         ) -> NodeT,
 ): Pair<RegularNodeBuilder<NodeT, OutputAT, OutputAChannelT>, RegularNodeBuilder<NodeT, OutputBT, OutputBChannelT>> {
-    val input = nextInput(inputChannelType)
+    val input = nextInput(this.channelType)
     val outputA = newConnectableOutputChannel<OutputAT, _>(outputAChannelType)
     val outputB = newConnectableOutputChannel<OutputBT, _>(outputBChannelType)
     val zipNode = node(input, outputA, outputB).withGroup(groupScope)
@@ -182,8 +182,8 @@ internal fun <
 
 context(groupScope: GroupScope)
 internal fun <NodeT : NodeGroup, InputT, InputChannelT : ChannelType<InputChannelT>> NodeBuilder<InputT, InputChannelT>
-    .thenTerminal(inputChannelType: InputChannelT, node: (InputChannel<InputT, InputChannelT>) -> NodeT): NodeT {
-    val input = nextInput(inputChannelType)
+    .thenTerminal(node: (InputChannel<InputT, InputChannelT>) -> NodeT): NodeT {
+    val input = nextInput(this.channelType)
     return node(input).withGroup(groupScope)
 }
 
@@ -195,14 +195,13 @@ internal fun <
     InputChannelT : ChannelType<InputChannelT>,
     OutputChannelT : ChannelType<OutputChannelT>,
 > NodeBuilder<InputT, InputChannelT>.thenCompound(
-    inputChannelType: InputChannelT,
-    node: (Connection<InputT, InputChannelT>, OutputRef<OutputT, OutputChannelT>) -> NodeT,
+    node: (Connection<InputT, InputChannelT>, OutputRef<OutputT, OutputChannelT>) -> NodeT
 ): RegularNodeBuilder<NodeT, OutputT, OutputChannelT> {
     val connection =
         when (this) {
             is Connection<InputT, InputChannelT> -> this
             is RegularNodeBuilder<*, InputT, InputChannelT> -> {
-                newConnection<InputT, InputChannelT>(inputChannelType).also { this.thenConnect(it) }
+                newConnection<InputT, InputChannelT>(this.channelType).also { this.thenConnect(it) }
             }
         }
     val output = OutputRefImpl<OutputT, OutputChannelT>()

@@ -1,10 +1,8 @@
 package com.group7
 
+import com.group7.channels.newPullChannel
 import com.group7.channels.newPushChannel
-import com.group7.nodes.ArrivalNode
-import com.group7.nodes.DeadEndNode
-import com.group7.nodes.QueueNode
-import com.group7.nodes.SinkNode
+import com.group7.nodes.*
 import com.group7.utils.NUM_VEHICLES
 import com.group7.utils.Presets
 import com.group7.utils.TestVehicle
@@ -17,9 +15,11 @@ class QueueNodeTest :
         test("All vehicles entering leaves eventually") {
             val (scenario, queueIn) =
                 Presets.generateSourcesWithGenerator(Presets.defaultFixedGenerator(NUM_VEHICLES, obj = TestVehicle))
-            val (queueOut, sinkIn) = newPushChannel<TestVehicle>()
+            val (queueOut, drainIn) = newPullChannel<TestVehicle>()
+            val (drainOut, sinkIn) = newPushChannel<TestVehicle>()
 
             val queue = QueueNode("Queue", queueIn, queueOut)
+            val drain = DrainNode("Drain", drainIn, drainOut)
             val sink = SinkNode("Sink", sinkIn)
 
             runSimulation(scenario)
@@ -31,7 +31,7 @@ class QueueNodeTest :
         test("Can store vehicles") {
             // Set up
             val (sourceOut, queueIn) = newPushChannel<TestVehicle>()
-            val (queueOut, deadIn) = newPushChannel<TestVehicle>()
+            val (queueOut, deadIn) = newPullChannel<TestVehicle>()
 
             val source =
                 ArrivalNode("Source", sourceOut, Presets.defaultFixedGenerator(NUM_VEHICLES, obj = TestVehicle))

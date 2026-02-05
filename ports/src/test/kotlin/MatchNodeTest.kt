@@ -1,11 +1,9 @@
 package com.group7
 
 import com.group7.channels.ClosedChannelException
-import com.group7.channels.newPushChannel
+import com.group7.dsl.*
 import com.group7.generators.Delays
-import com.group7.nodes.ArrivalNode
-import com.group7.nodes.DelayNode
-import com.group7.nodes.MatchNode
+import com.group7.nodes.QueueNode
 import com.group7.nodes.SinkNode
 import com.group7.utils.*
 import io.kotest.assertions.throwables.shouldThrow
@@ -15,136 +13,62 @@ import kotlin.time.Duration.Companion.seconds
 
 class MatchNodeTest :
     FunSpec({
-        test("Only take one of input A") {
+        test("Should throw when no side input") {
             shouldThrow<ClosedChannelException> {
-                val (source1Out, matchIn1) = newPushChannel<TestVehicle>()
-                val (source2Out, matchIn2) = newPushChannel<TestContainer>()
-                val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
+                val scenario = buildScenario {
+                    arrivals("Source A", Presets.defaultFixedGenerator(2, obj = TestVehicle))
+                        .thenMatch(
+                            "Match",
+                            arrivals("Source B", Presets.defaultFixedGenerator(0, obj = TestContainer))
+                                .thenQueue("Queue"),
+                        ) { _, _ ->
+                            TestLoadedVehicle
+                        }
+                        .thenSink("Sink")
+                }
 
-                val sources =
-                    listOf(
-                        ArrivalNode("Source A", source1Out, Presets.defaultFixedGenerator(2, obj = TestVehicle)),
-                        ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(0, obj = TestContainer)),
-                    )
-
-                SinkNode("Sink", sinkIn)
-
-                MatchNode<TestVehicle, TestContainer, TestLoadedVehicle>(
-                    "Match",
-                    sourceA = matchIn1,
-                    sourceB = matchIn2,
-                    destination = matchOut,
-                    combiner = { _, _ -> TestLoadedVehicle },
-                )
-
-                runSimulation(Scenario(sources))
+                runSimulation(scenario)
             }
         }
 
-        test("Only take one of input B") {
-            shouldThrow<ClosedChannelException> {
-                val (source1Out, matchIn1) = newPushChannel<TestVehicle>()
-                val (source2Out, matchIn2) = newPushChannel<TestContainer>()
-                val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
-
-                val sources =
-                    listOf(
-                        ArrivalNode("Source A", source1Out, Presets.defaultFixedGenerator(0, obj = TestVehicle)),
-                        ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(2, obj = TestContainer)),
-                    )
-
-                SinkNode("Sink", sinkIn)
-
-                MatchNode<TestVehicle, TestContainer, TestLoadedVehicle>(
-                    "Match",
-                    sourceA = matchIn1,
-                    sourceB = matchIn2,
-                    destination = matchOut,
-                    combiner = { _, _ -> TestLoadedVehicle },
-                )
-
-                runSimulation(Scenario(sources))
+        test("Should not pull when no main input") {
+            val queue: QueueNode<TestContainer>
+            val scenario = buildScenario {
+                arrivals("Source A", Presets.defaultFixedGenerator(0, obj = TestVehicle))
+                    .thenMatch(
+                        "Match",
+                        arrivals("Source B", Presets.defaultFixedGenerator(2, obj = TestContainer))
+                            .thenQueue("Queue")
+                            .saveNode { queue = it },
+                    ) { _, _ ->
+                        TestLoadedVehicle
+                    }
+                    .thenSink("Sink")
             }
-        }
 
-        test("Stores one of input A") {
-            val (source1Out, matchIn1) = newPushChannel<TestVehicle>()
-            val (source2Out, matchIn2) = newPushChannel<TestContainer>()
-            val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
+            runSimulation(scenario)
 
-            val sources =
-                listOf(
-                    ArrivalNode("Source A", source1Out, Presets.defaultFixedGenerator(1, obj = TestVehicle)),
-                    ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(0, obj = TestContainer)),
-                )
-
-            val sink = SinkNode("Sink", sinkIn)
-
-            MatchNode<TestVehicle, TestContainer, TestLoadedVehicle>(
-                "Match",
-                sourceA = matchIn1,
-                sourceB = matchIn2,
-                destination = matchOut,
-                combiner = { _, _ -> TestLoadedVehicle },
-            )
-
-            runSimulation(Scenario(sources))
-
-            sink.occupants shouldBe 0
-        }
-
-        test("Stores one of input B") {
-            val (source1Out, matchIn1) = newPushChannel<TestVehicle>()
-            val (source2Out, matchIn2) = newPushChannel<TestContainer>()
-            val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
-
-            val sources =
-                listOf(
-                    ArrivalNode("Source A", source1Out, Presets.defaultFixedGenerator(0, obj = TestVehicle)),
-                    ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(1, obj = TestContainer)),
-                )
-
-            val sink = SinkNode("Sink", sinkIn)
-
-            MatchNode<TestVehicle, TestContainer, TestLoadedVehicle>(
-                "Match",
-                sourceA = matchIn1,
-                sourceB = matchIn2,
-                destination = matchOut,
-                combiner = { _, _ -> TestLoadedVehicle },
-            )
-
-            runSimulation(Scenario(sources))
-
-            sink.occupants shouldBe 0
+            queue.occupants shouldBe 2
         }
 
         test("Processes inputs correctly") {
-            val (source1Out, delayIn) = newPushChannel<TestVehicle>()
-            val (delayOut, matchIn1) = newPushChannel<TestVehicle>()
-            val (source2Out, matchIn2) = newPushChannel<TestContainer>()
-            val (matchOut, sinkIn) = newPushChannel<TestLoadedVehicle>()
+            val sink: SinkNode<TestLoadedVehicle>
 
-            val sources =
-                listOf(
-                    ArrivalNode("Source A", source1Out, Presets.defaultFixedGenerator(1, obj = TestVehicle)),
-                    ArrivalNode("Source B", source2Out, Presets.defaultFixedGenerator(1, obj = TestContainer)),
-                )
+            val scenario = buildScenario {
+                arrivals("Source A", Presets.defaultFixedGenerator(1, obj = TestVehicle))
+                    .thenDelay("Delay for input A", Delays.fixed(10.seconds))
+                    .thenMatch(
+                        "Match",
+                        arrivals("Source B", Presets.defaultFixedGenerator(1, obj = TestContainer))
+                            .thenQueue("Source B Queue"),
+                    ) { _, _ ->
+                        TestLoadedVehicle
+                    }
+                    .thenSink("Sink")
+                    .let { sink = it }
+            }
 
-            val sink = SinkNode("Sink", sinkIn)
-
-            // Delay input A a little bit
-            DelayNode("Delay for input A", delayIn, delayOut, Delays.fixed(10.seconds))
-
-            MatchNode(
-                "Match",
-                sourceA = matchIn1,
-                sourceB = matchIn2,
-                destination = matchOut,
-                combiner = { _, _ -> TestLoadedVehicle },
-            )
-
-            runSimulation(Scenario(sources))
+            runSimulation(scenario)
 
             sink.occupants shouldBe 1
         }

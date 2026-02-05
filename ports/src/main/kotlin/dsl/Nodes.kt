@@ -18,7 +18,13 @@ fun <T> NodeBuilder<T, ChannelType.Push>.thenDelay(
     label: String,
     delayProvider: DelayProvider,
 ): RegularNodeBuilder<DelayNode<T>, T, ChannelType.Push> =
-    then(ChannelType.Push, ChannelType.Push) { input, output -> DelayNode(label, input, output, delayProvider) }
+    then(ChannelType.Push) { input, output -> DelayNode(label, input, output, delayProvider) }
+
+context(_: GroupScope)
+fun <T> NodeBuilder<T, ChannelType.Pull>.thenDrain(
+    label: String = "Drain"
+): RegularNodeBuilder<DrainNode<T>, T, ChannelType.Push> =
+    then(ChannelType.Push) { input, output -> DrainNode(label, input, output) }
 
 context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Push>.thenFork(
@@ -26,9 +32,7 @@ fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Push>.thenFork(
     lanes: List<(RegularNodeBuilder<ForkNode<ItemT>, ItemT, ChannelType.Push>) -> R>,
     policy: ForkPolicy<ItemT> = RandomForkPolicy(),
 ): List<R> {
-    return thenDiverge(ChannelType.Push, ChannelType.Push, lanes.size) { input, outputs ->
-            ForkNode(label, input, outputs, policy)
-        }
+    return thenDiverge(ChannelType.Push, lanes.size) { input, outputs -> ForkNode(label, input, outputs, policy) }
         .zip(lanes) { node, lane -> lane(node) }
 }
 
@@ -44,49 +48,48 @@ context(_: GroupScope)
 fun <T> List<NodeBuilder<T, ChannelType.Push>>.thenJoin(
     label: String
 ): RegularNodeBuilder<JoinNode<T>, T, ChannelType.Push> =
-    thenConverge(ChannelType.Push, ChannelType.Push) { inputs, output -> JoinNode(label, inputs, output) }
+    thenConverge(ChannelType.Push) { inputs, output -> JoinNode(label, inputs, output) }
 
 context(_: GroupScope)
-fun <A, B, R> match(
+fun <MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT>> NodeBuilder<MainInputT, ChannelT>.thenMatch(
     label: String,
-    a: NodeBuilder<A, ChannelType.Push>,
-    b: NodeBuilder<B, ChannelType.Push>,
-    combiner: (A, B) -> R,
-): RegularNodeBuilder<MatchNode<A, B, R>, R, ChannelType.Push> =
-    zip(ChannelType.Push, ChannelType.Push, ChannelType.Push, a, b) { inputA, inputB, output ->
-        MatchNode(label, inputA, inputB, output, combiner)
-    }
+    side: NodeBuilder<SideInputT, ChannelType.Pull>,
+    combiner: (MainInputT, SideInputT) -> OutputT,
+): RegularNodeBuilder<MatchNode<MainInputT, SideInputT, OutputT, ChannelT>, OutputT, ChannelT> =
+    zip(this.channelType, this, side) { inputA, inputB, output -> MatchNode(label, inputA, inputB, output, combiner) }
 
 context(_: GroupScope)
 fun <T> NodeBuilder<T, ChannelType.Push>.thenQueue(
     label: String,
     policy: QueuePolicy<T> = FIFOQueuePolicy(),
-): RegularNodeBuilder<QueueNode<T>, T, ChannelType.Push> =
-    then(ChannelType.Push, ChannelType.Push) { input, output -> QueueNode(label, input, output, policy) }
+): RegularNodeBuilder<QueueNode<T>, T, ChannelType.Pull> =
+    then(ChannelType.Pull) { input, output -> QueueNode(label, input, output, policy) }
 
 context(_: GroupScope)
 fun <T> NodeBuilder<T, ChannelType.Push>.thenService(
     label: String,
     delayProvider: DelayProvider,
 ): RegularNodeBuilder<ServiceNode<T>, T, ChannelType.Push> =
-    then(ChannelType.Push, ChannelType.Push) { input, output -> ServiceNode(label, input, output, delayProvider) }
+    then(ChannelType.Push) { input, output -> ServiceNode(label, input, output, delayProvider) }
 
 context(_: GroupScope)
-fun <T, A, B> NodeBuilder<T, ChannelType.Push>.thenSplit(
+fun <InputT, MainOutputT, SideOutputT, ChannelT : ChannelType<ChannelT>> NodeBuilder<InputT, ChannelT>.thenSplit(
     label: String,
-    splitter: (T) -> Pair<A, B>,
+    splitter: (InputT) -> Pair<MainOutputT, SideOutputT>,
 ): Pair<
-    RegularNodeBuilder<SplitNode<T, A, B>, A, ChannelType.Push>,
-    RegularNodeBuilder<SplitNode<T, A, B>, B, ChannelType.Push>,
+    RegularNodeBuilder<SplitNode<InputT, MainOutputT, SideOutputT, ChannelT>, MainOutputT, ChannelT>,
+    RegularNodeBuilder<SplitNode<InputT, MainOutputT, SideOutputT, ChannelT>, SideOutputT, ChannelType.Push>,
 > =
-    thenUnzip(ChannelType.Push, ChannelType.Push, ChannelType.Push) { input, outputA, outputB ->
+    thenUnzip(this.channelType, ChannelType.Push) { input, outputA, outputB ->
         SplitNode(label, input, outputA, outputB, splitter)
     }
 
 context(_: GroupScope)
-fun <T> NodeBuilder<T, ChannelType.Push>.thenSink(label: String): SinkNode<T> =
-    thenTerminal(ChannelType.Push) { input -> SinkNode(label, input) }
+fun <T> NodeBuilder<T, ChannelType.Push>.thenSink(label: String): SinkNode<T> = thenTerminal { input ->
+    SinkNode(label, input)
+}
 
 context(_: GroupScope)
-fun <T> NodeBuilder<T, ChannelType.Push>.thenDeadEnd(label: String): DeadEndNode<T> =
-    thenTerminal(ChannelType.Push) { input -> DeadEndNode(label, input) }
+fun <T, ChannelT : ChannelType<ChannelT>> NodeBuilder<T, ChannelT>.thenDeadEnd(
+    label: String
+): DeadEndNode<T, ChannelT> = thenTerminal { input -> DeadEndNode(label, input) }
