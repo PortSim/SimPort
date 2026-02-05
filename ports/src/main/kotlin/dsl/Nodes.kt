@@ -22,10 +22,10 @@ fun <T> NodeBuilder<T, *>.thenDelay(
     asPush().then(ChannelType.Push) { input, output -> DelayNode(label, input, output, delayProvider) }
 
 context(_: GroupScope)
-fun <T> NodeBuilder<T, ChannelType.Pull>.thenDrain(
-    label: String = "Drain"
-): RegularNodeBuilder<DrainNode<T>, T, ChannelType.Push> =
-    then(ChannelType.Push) { input, output -> DrainNode(label, input, output) }
+fun <T> NodeBuilder<T, ChannelType.Pull>.thenPump(
+    label: String = "Pump"
+): RegularNodeBuilder<PumpNode<T>, T, ChannelType.Push> =
+    then(ChannelType.Push) { input, output -> PumpNode(label, input, output) }
 
 context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Push>.thenFork(
@@ -99,7 +99,7 @@ private fun <T> NodeBuilder<T, *>.asPush(): NodeBuilder<T, ChannelType.Push> =
     if (this.isPush()) {
         this
     } else {
-        this.thenDrain()
+        this.thenPump()
     }
 
 @Suppress("KotlinConstantConditions")

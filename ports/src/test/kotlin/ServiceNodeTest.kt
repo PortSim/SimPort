@@ -58,7 +58,7 @@ class ServiceNodeTest :
                                 ),
                             )
                             .thenQueue("Queue")
-                            .thenDrain()
+                            .thenPump()
                             .thenFork("Fork", numParallelServices) { i, lane ->
                                 lane.thenService("Service $i", Delays.fixed(SERVICE_TIME))
                             }

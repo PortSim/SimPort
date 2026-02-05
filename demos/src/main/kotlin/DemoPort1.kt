@@ -71,7 +71,7 @@ private fun <T> NodeBuilder<T, *>.thenQueueAndGates(
     averageServiceTime: Duration,
 ): RegularNodeBuilder<JoinNode<T>, T, ChannelType.Push> =
     this.thenQueue("$description Queue")
-        .thenDrain()
+        .thenPump()
         .thenFork("$description Lane Split", numLanes) { i, lane ->
             lane.thenService("$description Gate $i", Delays.exponentialWithMean(averageServiceTime))
         }
