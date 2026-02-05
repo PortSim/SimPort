@@ -1,4 +1,4 @@
-package com.group7.compound
+package com.group7
 
 import com.group7.dsl.*
 import com.group7.generators.Delays

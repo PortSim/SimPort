@@ -1,4 +1,4 @@
-package com.group7.nodes
+package com.group7
 
 import com.group7.dsl.arrivals
 import com.group7.dsl.buildScenario
@@ -7,6 +7,7 @@ import com.group7.dsl.thenSink
 import com.group7.generators.Delays
 import com.group7.generators.Generators
 import com.group7.generators.take
+import com.group7.nodes.SinkNode
 import com.group7.utils.NUM_VEHICLES
 import com.group7.utils.TestVehicle
 import com.group7.utils.runSimulation

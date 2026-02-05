@@ -1,10 +1,11 @@
-package com.group7.nodes
+package com.group7
 
-import com.group7.ClosedChannelException
 import com.group7.dsl.buildScenario
 import com.group7.dsl.thenJoin
 import com.group7.dsl.thenSink
-import com.group7.newChannel
+import com.group7.nodes.DeadEndNode
+import com.group7.nodes.JoinNode
+import com.group7.nodes.SinkNode
 import com.group7.utils.DSLAddons.arrivalLanes
 import com.group7.utils.Presets
 import com.group7.utils.TestVehicle

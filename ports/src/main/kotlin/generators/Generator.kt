@@ -14,11 +14,8 @@ fun interface DelayProvider {
 }
 
 object Generators {
-    fun <T> constant(obj: T, delayProvider: DelayProvider): Generator<T> =
+    fun <T> constant(obj: T, delayProvider: DelayProvider) =
         generateSequence { obj to delayProvider.nextDelay() }.asGenerator()
-
-    fun <T> alternating(vararg objs: T, delayProvider: DelayProvider): Generator<T> =
-        generateSequence { objs.asList() }.flatten().map { it to delayProvider.nextDelay() }.asGenerator()
 }
 
 object Delays {

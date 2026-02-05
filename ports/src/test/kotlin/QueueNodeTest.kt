@@ -1,7 +1,9 @@
-package com.group7.nodes
+package com.group7
 
-import com.group7.Scenario
-import com.group7.newChannel
+import com.group7.nodes.ArrivalNode
+import com.group7.nodes.DeadEndNode
+import com.group7.nodes.QueueNode
+import com.group7.nodes.SinkNode
 import com.group7.utils.NUM_VEHICLES
 import com.group7.utils.Presets
 import com.group7.utils.TestVehicle
