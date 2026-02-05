@@ -1,15 +1,15 @@
 package com.group7.tags
 
-import com.group7.OutputChannel
+import com.group7.channels.PushOutputChannel
 
 sealed interface Tag<out T> {
-    fun find(start: OutputChannel<*>): T
+    fun find(start: PushOutputChannel<*>): T
 }
 
 sealed interface BasicTag<out T> : Tag<T> {
     val value: T
 
-    override fun find(start: OutputChannel<*>): T = value
+    override fun find(start: PushOutputChannel<*>): T = value
 }
 
 sealed interface MutableBasicTag<T> : BasicTag<T> {
@@ -20,7 +20,7 @@ fun <T> newTag(): MutableBasicTag<T> = BasicTagImpl()
 
 fun <T> newTag(value: T): BasicTag<T> = BasicTagImpl(value)
 
-fun <T> newDynamicTag(supplier: (OutputChannel<*>) -> T): Tag<T> = DynamicTagImpl(supplier)
+fun <T> newDynamicTag(supplier: (PushOutputChannel<*>) -> T): Tag<T> = DynamicTagImpl(supplier)
 
 private class BasicTagImpl<T>() : MutableBasicTag<T> {
     private var isBound = false
@@ -45,11 +45,11 @@ private class BasicTagImpl<T>() : MutableBasicTag<T> {
     }
 }
 
-private class DynamicTagImpl<out T>(private val supplier: (OutputChannel<*>) -> T) : Tag<T> {
-    private var previousStart: OutputChannel<*>? = null
+private class DynamicTagImpl<out T>(private val supplier: (PushOutputChannel<*>) -> T) : Tag<T> {
+    private var previousStart: PushOutputChannel<*>? = null
     private var cached: T? = null
 
-    override fun find(start: OutputChannel<*>): T {
+    override fun find(start: PushOutputChannel<*>): T {
         if (start === previousStart) {
             @Suppress("UNCHECKED_CAST")
             return cached as T

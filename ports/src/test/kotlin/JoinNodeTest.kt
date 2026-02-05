@@ -1,5 +1,7 @@
 package com.group7
 
+import com.group7.channels.ClosedChannelException
+import com.group7.channels.newPushChannel
 import com.group7.dsl.buildScenario
 import com.group7.dsl.thenJoin
 import com.group7.dsl.thenSink
@@ -53,7 +55,7 @@ class JoinNodeTest :
                     Presets.generateSourcesWithGenerators(
                         List(numSources) { Presets.defaultFixedGenerator(numVehiclesPerSource, obj = TestVehicle) }
                     )
-                val (joinOut, deadIn) = newChannel<TestVehicle>()
+                val (joinOut, deadIn) = newPushChannel<TestVehicle>()
 
                 // Define nodes
                 JoinNode("Join", inputChannels, joinOut)

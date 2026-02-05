@@ -1,30 +1,29 @@
 package com.group7.compound
 
+import com.group7.channels.ChannelType
 import com.group7.dsl.*
 import com.group7.policies.queue.Token
 import com.group7.policies.queue.TokenQueuePolicy
 import com.group7.properties.BoundedContainer
 import com.group7.properties.Container
-import com.group7.properties.Match
 
-class BoundedSubnetwork<InputT, OutputT>(
+class BoundedSubnetwork<InputT, OutputT, ChannelT : ChannelType<ChannelT>>(
     label: String,
     override val capacity: Int,
-    input: NodeBuilder<InputT>,
+    input: Connection<out InputT, ChannelT>,
     inner:
         context(GroupScope)
-        (NodeBuilder<InputT>) -> NodeBuilder<OutputT>,
-    output: OutputRef<OutputT>,
-) : CompoundNode(label, listOf(output)), BoundedContainer {
+        (NodeBuilder<InputT, ChannelT>) -> NodeBuilder<OutputT, ChannelT>,
+    output: OutputRef<OutputT, ChannelT>,
+) : CompoundNode(label, listOf(input), listOf(output)), BoundedContainer {
     private val tokens: Container
-    private val match: Match
 
     init {
-        val tokenBackEdge = newConnection<Token>()
+        val tokenBackEdge = newConnection<Token, _>(ChannelType.Push)
         val tokenQueue = tokenBackEdge.thenQueue("Token Queue", TokenQueuePolicy(capacity)).saveNode { tokens = it }
 
-        match("Token Match", input, tokenQueue) { input, _ -> input }
-            .saveNode { match = it }
+        input
+            .thenMatch("Token Match", tokenQueue) { input, _ -> input }
             .let { inner(it) }
             .thenSplit("Token Split") { output -> output to Token }
             .let { (outputs, tokens) ->
@@ -34,5 +33,5 @@ class BoundedSubnetwork<InputT, OutputT>(
     }
 
     override val occupants
-        get() = capacity - (tokens.occupants + if (match.hasRight) 1 else 0)
+        get() = capacity - tokens.occupants
 }

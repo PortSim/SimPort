@@ -1,40 +1,35 @@
 package com.group7.nodes
 
-import com.group7.InputChannel
-import com.group7.Node
-import com.group7.OutputChannel
 import com.group7.Simulator
+import com.group7.channels.*
 
-class SplitNode<T, A, B>(
+class SplitNode<InputT, MainOutputT, SideOutputT, ChannelT : ChannelType<ChannelT>>(
     label: String,
-    source: InputChannel<T>,
-    private val destinationA: OutputChannel<A>,
-    private val destinationB: OutputChannel<B>,
-    private val splitter: (T) -> Pair<A, B>,
-) : Node(label, listOf(destinationA, destinationB)) {
+    source: InputChannel<InputT, ChannelT>,
+    mainDestination: OutputChannel<MainOutputT, ChannelT>,
+    private val sideDestination: PushOutputChannel<SideOutputT>,
+    private val splitter: (InputT) -> Pair<MainOutputT, SideOutputT>,
+) :
+    PassthroughNode<InputT, MainOutputT, ChannelT>(
+        label,
+        source,
+        mainDestination,
+        listOf(source),
+        listOf(mainDestination, sideDestination),
+    ) {
 
     init {
-        source.onReceive { onArrive(it) }
-
-        destinationA.whenClosed { source.close() }
-        destinationB.whenClosed { source.close() }
-
-        destinationA.whenOpened {
-            if (destinationB.isOpen()) {
-                source.open()
-            }
-        }
-        destinationB.whenOpened {
-            if (destinationA.isOpen()) {
-                source.open()
-            }
-        }
+        sideDestination.whenOpened { updateReadiness() }
+        sideDestination.whenClosed { updateReadiness() }
     }
 
     context(_: Simulator)
-    private fun onArrive(obj: T) {
-        val (a, b) = splitter(obj)
-        destinationA.send(a)
-        destinationB.send(b)
+    override fun isReady() = sideDestination.isOpen()
+
+    context(_: Simulator)
+    override fun process(input: InputT): MainOutputT {
+        val (main, side) = splitter(input)
+        sideDestination.send(side)
+        return main
     }
 }

@@ -1,30 +1,29 @@
 package com.group7.nodes
 
-import com.group7.InputChannel
 import com.group7.Node
-import com.group7.OutputChannel
 import com.group7.Simulator
+import com.group7.channels.*
 import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import com.group7.properties.Queue
 
 class QueueNode<T>(
     label: String,
-    source: InputChannel<T>,
-    private val destination: OutputChannel<T>,
+    source: PushInputChannel<T>,
+    private val destination: PullOutputChannel<T>,
     private val policy: QueuePolicy<T> = FIFOQueuePolicy(),
-) : Node(label, listOf(destination)), Queue {
-
-    private var scheduled = false
+) : Node(label, listOf(source), listOf(destination)), Queue {
 
     init {
         source.onReceive { onArrive(it) }
-        destination.whenOpened { scheduleDrain() }
+        destination.onPull { emit() }
     }
 
     context(_: Simulator)
     override fun onStart() {
-        scheduleDrain()
+        if (policy.reportOccupancy() > 0) {
+            destination.markReady()
+        }
     }
 
     override val occupants
@@ -33,25 +32,15 @@ class QueueNode<T>(
     context(_: Simulator)
     private fun onArrive(obj: T) {
         policy.enqueue(obj)
-        scheduleDrain()
+        destination.markReady()
     }
 
     context(_: Simulator)
-    private fun drain() {
-        while (policy.reportOccupancy() > 0 && destination.isOpen()) {
-            destination.send(policy.dequeue())
+    private fun emit(): T {
+        val result = policy.dequeue()
+        if (policy.reportOccupancy() == 0) {
+            destination.markNotReady()
         }
-    }
-
-    context(_: Simulator)
-    private fun scheduleDrain() {
-        if (scheduled || policy.reportOccupancy() == 0) {
-            return
-        }
-        schedule {
-            drain()
-            scheduled = false
-        }
-        scheduled = true
+        return result
     }
 }

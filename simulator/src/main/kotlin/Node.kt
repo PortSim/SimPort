@@ -1,23 +1,16 @@
 package com.group7
 
+import com.group7.channels.*
 import kotlin.time.Duration
 
-abstract class Node(label: String, final override val outgoing: List<OutputChannel<*>>) : NodeGroup(label) {
-    private val _incoming = mutableListOf<InputChannel<*>>()
-    val incoming: List<InputChannel<*>>
-        get() = _incoming
-
+abstract class Node(
+    label: String,
+    final override val incoming: List<InputChannel<*, *>>,
+    final override val outgoing: List<OutputChannel<*, *>>,
+) : NodeGroup(label) {
     init {
-        outgoing.forEach { it.asImpl().setUpstreamNode(this) }
-    }
-
-    protected fun <T> InputChannel<T>.onReceive(
-        callback:
-            context(Simulator)
-            (T) -> Unit
-    ) {
-        _incoming.add(this)
-        this.asImpl().setDownstreamNode(this@Node, callback)
+        incoming.forEach { it.setDownstreamNode(this) }
+        outgoing.forEach { it.setUpstreamNode(this) }
     }
 
     context(_: Simulator)
@@ -38,7 +31,7 @@ abstract class Node(label: String, final override val outgoing: List<OutputChann
     }
 }
 
-abstract class SourceNode(label: String, outgoing: List<OutputChannel<*>>) : Node(label, outgoing) {
+abstract class SourceNode(label: String, outgoing: List<PushOutputChannel<*>>) : Node(label, emptyList(), outgoing) {
 
     context(_: Simulator)
     abstract override fun onStart()

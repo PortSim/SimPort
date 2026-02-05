@@ -1,9 +1,9 @@
 package com.group7.utils
 
 import com.group7.NodeGroup
-import com.group7.OutputChannel
+import com.group7.channels.OutputChannel
 
-fun OutputChannel<*>.walkDownstream() = sequence {
+fun OutputChannel<*, *>.walkDownstream() = sequence {
     var current = this@walkDownstream
     while (true) {
         var next: NodeGroup = current.downstream.downstreamNode

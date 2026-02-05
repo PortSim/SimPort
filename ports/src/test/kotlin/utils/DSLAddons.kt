@@ -1,5 +1,6 @@
 package com.group7.utils
 
+import com.group7.channels.ChannelType
 import com.group7.dsl.GroupScope
 import com.group7.dsl.RegularNodeBuilder
 import com.group7.dsl.ScenarioBuilderScope
@@ -15,7 +16,7 @@ internal object DSLAddons {
     context(_: ScenarioBuilderScope, _: GroupScope)
     fun <T, R> arrivalLanes(
         generators: List<Generator<T>>,
-        laneAction: (Int, RegularNodeBuilder<ArrivalNode<T>, T>) -> R,
+        laneAction: (Int, RegularNodeBuilder<ArrivalNode<T>, T, ChannelType.Push>) -> R,
     ): List<R> {
         return generators.mapIndexed { index, generator -> laneAction(index, arrivals("Arrival $index", generator)) }
     }

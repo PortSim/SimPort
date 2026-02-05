@@ -1,22 +1,22 @@
 package com.group7.policies.fork
 
-import com.group7.OutputChannel
+import com.group7.channels.PushOutputChannel
 import java.util.*
 
 class RandomForkPolicy<T> : ForkPolicy<T> {
-    private val destinationIndices = IdentityHashMap<OutputChannel<T>, Int>()
-    private val openDestinations = mutableListOf<OutputChannel<T>>()
+    private val destinationIndices = IdentityHashMap<PushOutputChannel<T>, Int>()
+    private val openDestinations = mutableListOf<PushOutputChannel<T>>()
 
-    override fun selectChannel(obj: T): OutputChannel<T> {
+    override fun selectChannel(obj: T): PushOutputChannel<T> {
         return openDestinations.random()
     }
 
-    override fun onChannelOpen(channel: OutputChannel<T>) {
+    override fun onChannelOpen(channel: PushOutputChannel<T>) {
         openDestinations.add(channel)
         destinationIndices[channel] = openDestinations.lastIndex
     }
 
-    override fun onChannelClose(channel: OutputChannel<T>) {
+    override fun onChannelClose(channel: PushOutputChannel<T>) {
         val index = destinationIndices.remove(channel)!!
         if (index == openDestinations.lastIndex) {
             openDestinations.removeLast()

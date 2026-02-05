@@ -1,8 +1,10 @@
 package com.group7.nodes
 
-import com.group7.InputChannel
 import com.group7.Node
-import com.group7.OutputChannel
+import com.group7.channels.PushInputChannel
+import com.group7.channels.PushOutputChannel
+import com.group7.channels.onReceive
+import com.group7.channels.send
 import com.group7.generators.DelayProvider
 import com.group7.properties.Delay
 
@@ -12,10 +14,10 @@ import com.group7.properties.Delay
  */
 class DelayNode<T>(
     label: String,
-    source: InputChannel<T>,
-    destination: OutputChannel<T>,
+    source: PushInputChannel<T>,
+    destination: PushOutputChannel<T>,
     delayProvider: DelayProvider,
-) : Node(label, listOf(destination)), Delay {
+) : Node(label, listOf(source), listOf(destination)), Delay {
 
     override var occupants = 0
         private set
