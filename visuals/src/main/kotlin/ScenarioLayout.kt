@@ -37,7 +37,7 @@ internal class ScenarioGraph {
             if (setOfNodes.add(node)) {
                 nodesOrdered.add(node)
                 for (channel in node.outgoing) {
-                    val downstream = channel.downstreamNode
+                    val downstream = channel.downstream.downstreamNode
                     if (downstream !in setOfNodes) {
                         queue.addLast(downstream)
                     }

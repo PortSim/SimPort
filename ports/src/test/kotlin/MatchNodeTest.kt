@@ -88,7 +88,7 @@ class MatchNodeTest :
 
             runSimulation(Scenario(sources))
 
-            sink.reportMetrics().occupants shouldBe 0
+            sink.occupants shouldBe 0
         }
 
         test("Stores one of input B") {
@@ -114,7 +114,7 @@ class MatchNodeTest :
 
             runSimulation(Scenario(sources))
 
-            sink.reportMetrics().occupants shouldBe 0
+            sink.occupants shouldBe 0
         }
 
         test("Processes inputs correctly") {
@@ -144,6 +144,6 @@ class MatchNodeTest :
 
             runSimulation(Scenario(sources))
 
-            sink.reportMetrics().occupants shouldBe 1
+            sink.occupants shouldBe 1
         }
     })

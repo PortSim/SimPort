@@ -16,7 +16,8 @@ fun <T> newConnectableInputChannel(): ConnectableInputChannel<T> = InputChannelI
 fun <T> newConnectableOutputChannel(): ConnectableOutputChannel<T> = OutputChannelImpl()
 
 sealed interface InputChannel<out T> {
-    val upstreamNode: Node
+    val upstream: OutputChannel<*>
+    val downstreamNode: Node
 
     context(_: Simulator)
     fun open()
@@ -28,7 +29,8 @@ sealed interface InputChannel<out T> {
 sealed interface ConnectableInputChannel<out T> : InputChannel<T>
 
 sealed interface OutputChannel<in T> {
-    val downstreamNode: Node
+    val upstreamNode: Node
+    val downstream: InputChannel<*>
 
     fun isOpen(): Boolean
 
@@ -57,13 +59,10 @@ internal class InputChannelImpl<T> : ConnectableInputChannel<T> {
         context(Simulator)
         (T) -> Unit
 
-    lateinit var upstream: OutputChannelImpl<T>
+    override lateinit var upstream: OutputChannelImpl<T>
         private set
 
-    override val upstreamNode
-        get() = upstream.upstreamNode
-
-    lateinit var downstreamNode: Node
+    override lateinit var downstreamNode: Node
         private set
 
     fun setUpstream(channel: OutputChannel<T>) {
@@ -117,14 +116,11 @@ internal class OutputChannelImpl<T> : ConnectableOutputChannel<T> {
             () -> Unit
         >()
 
-    lateinit var upstreamNode: Node
+    override lateinit var upstreamNode: Node
         private set
 
-    lateinit var downstream: InputChannelImpl<T>
+    override lateinit var downstream: InputChannelImpl<T>
         private set
-
-    override val downstreamNode
-        get() = downstream.downstreamNode
 
     fun setUpstreamNode(node: Node) {
         require(!::upstreamNode.isInitialized) { "Channel already has an upstream node" }

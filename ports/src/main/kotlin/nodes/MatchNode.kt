@@ -4,6 +4,7 @@ import com.group7.InputChannel
 import com.group7.Node
 import com.group7.OutputChannel
 import com.group7.Simulator
+import com.group7.properties.Match
 
 class MatchNode<A, B, R>(
     label: String,
@@ -11,7 +12,7 @@ class MatchNode<A, B, R>(
     private val sourceB: InputChannel<B>,
     private val destination: OutputChannel<R>,
     private val combiner: (A, B) -> R,
-) : Node(label, listOf(destination)) {
+) : Node(label, listOf(destination)), Match {
 
     private var valueA: Value<A>? = null
     private var valueB: Value<B>? = null
@@ -36,6 +37,12 @@ class MatchNode<A, B, R>(
             sourceB.close()
         }
     }
+
+    override val hasLeft
+        get() = valueA != null
+
+    override val hasRight
+        get() = valueB != null
 
     context(_: Simulator)
     private fun onArriveA(a: A) {

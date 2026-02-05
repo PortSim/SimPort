@@ -28,7 +28,7 @@ class ArrivalNodeTest :
                     }
                 )
 
-            sink.reportMetrics().occupants shouldBe numTrucks
+            sink.occupants shouldBe numTrucks
             delays.runningReduce { l, r -> l + r }.map { startTime + it } shouldBe log.timeLog
         }
     })

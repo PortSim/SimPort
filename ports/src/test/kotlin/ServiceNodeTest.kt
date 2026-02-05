@@ -36,7 +36,7 @@ class ServiceNodeTest :
                     QueryLog(),
                 )
 
-            sink.reportMetrics().occupants shouldBe NUM_VEHICLES
+            sink.occupants shouldBe NUM_VEHICLES
             qlog.query("Sink", VehicleTravelDirection.INBOUND) shouldBe
                 List(NUM_VEHICLES) { startTime + ((it + 1) * SERVICE_TIME) + SEPARATION_TIME }
         }

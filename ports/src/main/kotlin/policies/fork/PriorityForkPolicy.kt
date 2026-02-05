@@ -2,6 +2,7 @@ package com.group7.policies.fork
 
 import com.group7.InputChannel
 import com.group7.OutputChannel
+import com.group7.Simulator
 import java.util.*
 
 sealed class PriorityForkPolicy<T>(comparator: Comparator<Int>) : ForkPolicy<T> {
@@ -27,6 +28,7 @@ sealed class PriorityForkPolicy<T>(comparator: Comparator<Int>) : ForkPolicy<T> 
         return openDestinations.isEmpty()
     }
 
+    context(_: Simulator)
     override fun initialize(source: InputChannel<T>, destinations: List<OutputChannel<T>>) {
         destinations.asSequence().mapIndexed { i, it -> it to i }.toMap(destinationIndices)
         super.initialize(source, destinations)
