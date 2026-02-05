@@ -74,7 +74,7 @@ class TimeWeightedData(private val ciInterval: Int = 1) {
     val stddev: Double
         get() =
             if (count > 1) {
-                sqrt((sumSq - (sum / count) * (sum / count)) / (count - 1))
+                sqrt((sumSq - (sum * sum / count)) / (count - 1))
             } else {
                 0.0
             }

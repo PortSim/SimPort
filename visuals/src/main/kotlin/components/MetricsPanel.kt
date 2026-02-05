@@ -158,8 +158,6 @@ fun MetricsPanel(metricsPanelState: MetricsPanelState) {
                             lowerBound = lowerBound,
                             upperBound = upperBound,
                             dataColor = color,
-                            avgColor = color.copy(alpha = 0.7f),
-                            boundsColor = color.copy(alpha = 0.4f),
                         )
                     }
                 }

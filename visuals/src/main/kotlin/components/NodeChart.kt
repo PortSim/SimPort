@@ -18,11 +18,8 @@ import androidx.compose.ui.unit.dp
 import com.group7.CISnapshot
 import com.group7.Node
 import ir.ehsannarmani.compose_charts.LineChart
-import ir.ehsannarmani.compose_charts.models.DrawStyle
-import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
-import ir.ehsannarmani.compose_charts.models.LabelProperties
+import ir.ehsannarmani.compose_charts.models.*
 import ir.ehsannarmani.compose_charts.models.LabelProperties.Rotation
-import ir.ehsannarmani.compose_charts.models.Line
 
 @Composable
 fun ChartLegend(items: List<Pair<String, Color>>) {
@@ -36,6 +33,10 @@ fun ChartLegend(items: List<Pair<String, Color>>) {
     }
 }
 
+private fun Color.complementary(): Color {
+    return Color(red = 1f - red, green = 1f - green, blue = 1f - blue, alpha = alpha)
+}
+
 @Composable
 fun NodeChart(
     node: Node,
@@ -44,11 +45,10 @@ fun NodeChart(
     lowerBound: List<Double>,
     upperBound: List<Double>,
     dataColor: Color,
-    avgColor: Color,
-    boundsColor: Color,
 ) {
     val values = data.map { it.value.toDouble() }
     val timeLabels = generateTimeLabels(data)
+    val complementaryColor = dataColor.complementary()
 
     var showValues by remember { mutableStateOf(true) }
 
@@ -61,7 +61,14 @@ fun NodeChart(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(text = node.label, style = MaterialTheme.typography.titleSmall)
-            ChartLegend(items = listOf("Occupancy" to dataColor, "Avg" to avgColor, "CI" to boundsColor))
+            ChartLegend(
+                items =
+                    listOf(
+                        "Occupancy" to dataColor,
+                        "Avg" to complementaryColor,
+                        "CI" to complementaryColor.copy(alpha = 0.4f),
+                    )
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Occupancy Values", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                 Switch(checked = showValues, onCheckedChange = { showValues = it }, modifier = Modifier.scale(0.6f))
@@ -86,7 +93,7 @@ fun NodeChart(
                     Line(
                         label = "Average",
                         values = avgData,
-                        color = SolidColor(avgColor),
+                        color = SolidColor(complementaryColor),
                         drawStyle = DrawStyle.Stroke(width = 2.dp),
                         strokeAnimationSpec = snap(),
                         gradientAnimationSpec = snap(),
@@ -96,8 +103,8 @@ fun NodeChart(
                     Line(
                         label = "Upper CI",
                         values = lowerBound,
-                        color = SolidColor(boundsColor),
-                        drawStyle = DrawStyle.Stroke(width = 1.dp),
+                        color = SolidColor(complementaryColor.copy(alpha = 0.6f)),
+                        drawStyle = DrawStyle.Stroke(width = 1.5.dp, strokeStyle = StrokeStyle.Dashed()),
                         strokeAnimationSpec = snap(),
                         gradientAnimationSpec = snap(),
                     )
@@ -106,8 +113,8 @@ fun NodeChart(
                     Line(
                         label = "Lower CI",
                         values = upperBound,
-                        color = SolidColor(boundsColor),
-                        drawStyle = DrawStyle.Stroke(width = 1.dp),
+                        color = SolidColor(complementaryColor.copy(alpha = 0.6f)),
+                        drawStyle = DrawStyle.Stroke(width = 1.5.dp, strokeStyle = StrokeStyle.Dashed()),
                         strokeAnimationSpec = snap(),
                         gradientAnimationSpec = snap(),
                     )
