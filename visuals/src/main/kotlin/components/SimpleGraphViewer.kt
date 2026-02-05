@@ -55,23 +55,25 @@ fun ElkNodeRenderer(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metric
         contentAlignment = Alignment.TopStart,
     ) {
         if (node.parent != null) {
+            val metricsString = nodeMetrics.getValue(node).value.toString().let { if (it.isEmpty()) it else "\n$it" }
             if (node.children.isNotEmpty()) {
                 Box(
                     modifier = Modifier.matchParentSize().background(Color.Transparent).padding(5.dp),
                     contentAlignment = Alignment.TopStart,
                 ) {
                     if (node.identifier != null) {
-                        Text(text = node.identifier, fontSize = 24.sp)
+                        Text(text = "${node.identifier}$metricsString", fontSize = 24.sp)
                     }
                 }
             } else {
                 val nameStr = node.identifier ?: "Unnamed Node"
-                val occupancyStr = "Occ: ${nodeMetrics[node]?.value?.occupants?.toString() ?: "N/A"}"
-                Box(Modifier.matchParentSize().padding(5.dp)) {
+
+                Box(Modifier.matchParentSize().padding(5.dp), contentAlignment = Alignment.Center) {
                     AutoSizedText(
-                        text = "${nameStr}\n${occupancyStr}",
+                        text = "$nameStr$metricsString",
                         color = Color.Black,
-                        textAlign = TextAlign.Start,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
