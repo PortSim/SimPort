@@ -29,7 +29,6 @@ class ServiceNodeTest :
                                     ),
                             )
                             .thenQueue("Queue")
-                            .thenDrain()
                             .thenService("Service", Delays.fixed(SERVICE_TIME))
                             .thenSink("Sink")
                             .let { sink = it }

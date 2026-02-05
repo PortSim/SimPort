@@ -44,7 +44,6 @@ fun generatePort(
                 },
             )
             .thenQueue("Truck Arrival Queue")
-            .thenDrain()
             .thenSubnetwork(capacity = numTokens) { entrance ->
                 entrance
                     .thenQueueAndGates("Entrance", entryGateLanes, averageGateServiceTime)
@@ -52,7 +51,6 @@ fun generatePort(
                     .thenFork("ASC Split", numStackBlocks) { i, lane ->
                         lane
                             .thenQueue("ASC Queue $i")
-                            .thenDrain()
                             .thenService("ASC $i", Delays.exponentialWithMean(averageHandlingTimeAtStack))
                     }
                     .thenJoin("ASC Join")
@@ -67,7 +65,7 @@ fun generatePort(
 }
 
 context(_: GroupScope)
-private fun <T> NodeBuilder<T, ChannelType.Push>.thenQueueAndGates(
+private fun <T> NodeBuilder<T, *>.thenQueueAndGates(
     description: String,
     numLanes: Int,
     averageServiceTime: Duration,

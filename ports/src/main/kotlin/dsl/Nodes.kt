@@ -8,17 +8,18 @@ import com.group7.policies.fork.ForkPolicy
 import com.group7.policies.fork.RandomForkPolicy
 import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
+import kotlin.contracts.contract
 
 context(_: ScenarioBuilderScope, _: GroupScope)
 fun <T> arrivals(label: String, generator: Generator<T>): RegularNodeBuilder<ArrivalNode<T>, T, ChannelType.Push> =
     sourceBuilder(ChannelType.Push) { ArrivalNode(label, it, generator) }
 
 context(_: GroupScope)
-fun <T> NodeBuilder<T, ChannelType.Push>.thenDelay(
+fun <T> NodeBuilder<T, *>.thenDelay(
     label: String,
     delayProvider: DelayProvider,
 ): RegularNodeBuilder<DelayNode<T>, T, ChannelType.Push> =
-    then(ChannelType.Push) { input, output -> DelayNode(label, input, output, delayProvider) }
+    asPush().then(ChannelType.Push) { input, output -> DelayNode(label, input, output, delayProvider) }
 
 context(_: GroupScope)
 fun <T> NodeBuilder<T, ChannelType.Pull>.thenDrain(
@@ -59,18 +60,18 @@ fun <MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT>> NodeBuil
     zip(this.channelType, this, side) { inputA, inputB, output -> MatchNode(label, inputA, inputB, output, combiner) }
 
 context(_: GroupScope)
-fun <T> NodeBuilder<T, ChannelType.Push>.thenQueue(
+fun <T> NodeBuilder<T, *>.thenQueue(
     label: String,
     policy: QueuePolicy<T> = FIFOQueuePolicy(),
 ): RegularNodeBuilder<QueueNode<T>, T, ChannelType.Pull> =
-    then(ChannelType.Pull) { input, output -> QueueNode(label, input, output, policy) }
+    asPush().then(ChannelType.Pull) { input, output -> QueueNode(label, input, output, policy) }
 
 context(_: GroupScope)
-fun <T> NodeBuilder<T, ChannelType.Push>.thenService(
+fun <T> NodeBuilder<T, *>.thenService(
     label: String,
     delayProvider: DelayProvider,
 ): RegularNodeBuilder<ServiceNode<T>, T, ChannelType.Push> =
-    then(ChannelType.Push) { input, output -> ServiceNode(label, input, output, delayProvider) }
+    asPush().then(ChannelType.Push) { input, output -> ServiceNode(label, input, output, delayProvider) }
 
 context(_: GroupScope)
 fun <InputT, MainOutputT, SideOutputT, ChannelT : ChannelType<ChannelT>> NodeBuilder<InputT, ChannelT>.thenSplit(
@@ -85,11 +86,27 @@ fun <InputT, MainOutputT, SideOutputT, ChannelT : ChannelType<ChannelT>> NodeBui
     }
 
 context(_: GroupScope)
-fun <T> NodeBuilder<T, ChannelType.Push>.thenSink(label: String): SinkNode<T> = thenTerminal { input ->
-    SinkNode(label, input)
+fun <T> NodeBuilder<T, *>.thenSink(label: String): SinkNode<T> =
+    asPush().thenTerminal { input -> SinkNode(label, input) }
+
+context(_: GroupScope)
+fun <T> NodeBuilder<T, *>.thenDeadEnd(label: String): DeadEndNode<T> = thenTerminal { input ->
+    DeadEndNode(label, input)
 }
 
 context(_: GroupScope)
-fun <T, ChannelT : ChannelType<ChannelT>> NodeBuilder<T, ChannelT>.thenDeadEnd(
-    label: String
-): DeadEndNode<T, ChannelT> = thenTerminal { input -> DeadEndNode(label, input) }
+private fun <T> NodeBuilder<T, *>.asPush(): NodeBuilder<T, ChannelType.Push> =
+    if (this.isPush()) {
+        this
+    } else {
+        this.thenDrain()
+    }
+
+@Suppress("KotlinConstantConditions")
+private fun <T> NodeBuilder<T, *>.isPush(): Boolean {
+    contract {
+        returns(true) implies (this@isPush is NodeBuilder<T, ChannelType.Push>)
+        returns(false) implies (this@isPush is NodeBuilder<T, ChannelType.Pull>)
+    }
+    return channelType == ChannelType.Push
+}

@@ -22,12 +22,10 @@ class BoundedSubnetworkTest :
                         generator = Generators.constant(TestVehicle, Delays.fixed(5.seconds)).take(numVehicles),
                     )
                     .thenQueue("Inbound Queue")
-                    .thenDrain()
                     .thenSubnetwork("Bounded Subnetwork 1", subnetworkCapacity) {
-                        it.thenQueue("Internal Queue").thenDrain().thenService("Service", Delays.fixed(60.seconds))
+                        it.thenQueue("Internal Queue").thenService("Service", Delays.fixed(60.seconds))
                     }
                     .thenQueue("Outbound Queue")
-                    .thenDrain()
                     .thenSink("Sink")
             }
             val (qlog, startTime) = runSimulation(scenario, log = QueryLog())
@@ -49,9 +47,7 @@ class BoundedSubnetworkTest :
                 arrivals("Arrivals", generator = Generators.constant(TestVehicle, Delays.fixed(5.seconds)).take(20))
                     .thenQueue("Inbound Queue")
                     .thenSubnetwork("Bounded Subnetwork", capacity = 1) { it }
-                    .thenDrain()
                     .thenQueue("Outbound Queue")
-                    .thenDrain()
                     .thenSink("Sink")
             }
 

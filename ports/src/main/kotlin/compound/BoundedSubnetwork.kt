@@ -7,14 +7,19 @@ import com.group7.policies.queue.TokenQueuePolicy
 import com.group7.properties.BoundedContainer
 import com.group7.properties.Container
 
-class BoundedSubnetwork<InputT, OutputT, ChannelT : ChannelType<ChannelT>>(
+class BoundedSubnetwork<
+    InputT,
+    OutputT,
+    InputChannelT : ChannelType<InputChannelT>,
+    OutputChannelT : ChannelType<OutputChannelT>,
+>(
     label: String,
     override val capacity: Int,
-    input: Connection<out InputT, ChannelT>,
+    input: Connection<out InputT, InputChannelT>,
     inner:
         context(GroupScope)
-        (NodeBuilder<InputT, ChannelT>) -> NodeBuilder<OutputT, ChannelT>,
-    output: OutputRef<OutputT, ChannelT>,
+        (NodeBuilder<InputT, InputChannelT>) -> NodeBuilder<OutputT, OutputChannelT>,
+    output: OutputRef<OutputT, OutputChannelT>,
 ) : CompoundNode(label, listOf(input), listOf(output)), BoundedContainer {
     private val tokens: Container
 
