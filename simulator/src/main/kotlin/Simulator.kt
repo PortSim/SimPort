@@ -17,6 +17,9 @@ sealed interface Simulator {
 
 fun Simulator(log: EventLog, scenario: Scenario): Simulator = SimulatorImpl(log, scenario)
 
+fun Simulator(log: EventLog, scenario: Scenario, sampler: Sampler): Simulator =
+    SimulatorImpl(log, scenario, sampler = sampler)
+
 internal fun Simulator.asImpl() =
     when (this) {
         is SimulatorImpl -> this

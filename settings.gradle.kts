@@ -9,3 +9,5 @@ include("simulator")
 include("visuals")
 
 include("ports")
+
+include("stats")
