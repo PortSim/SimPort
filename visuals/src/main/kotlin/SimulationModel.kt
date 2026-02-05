@@ -26,8 +26,8 @@ class SimulationModel(private val simulator: Simulator) {
     private var runToken by mutableIntStateOf(0)
     private var runJob: Job? = null
 
-    val isStepping
-        get() = stepJob != null
+    var isStepping: Boolean by mutableStateOf(false)
+        private set
 
     val currentTime
         get() =
@@ -77,8 +77,9 @@ class SimulationModel(private val simulator: Simulator) {
     }
 
     suspend fun step(scope: CoroutineScope) {
-        runJob?.cancelAndJoin()
         val duration = stepDuration ?: return
+        isStepping = true
+        runJob?.cancelAndJoin()
         // this leads to an exception in run
         updateBaseTime()
         val endTime = Instant.fromEpochMilliseconds(currentBaseTime) + duration
@@ -98,10 +99,9 @@ class SimulationModel(private val simulator: Simulator) {
                     if (!simulator.isFinished) {
                         runToken++
                     }
+                    isStepping = false
                 }
             }
-        stepJob?.join()
-        stepJob = null
     }
 
     suspend fun stopStepping() {
