@@ -1,8 +1,8 @@
-package com.group7
+package com.group7.nodes
 
+import com.group7.Scenario
 import com.group7.channels.newPullChannel
 import com.group7.channels.newPushChannel
-import com.group7.nodes.*
 import com.group7.utils.NUM_VEHICLES
 import com.group7.utils.Presets
 import com.group7.utils.TestVehicle

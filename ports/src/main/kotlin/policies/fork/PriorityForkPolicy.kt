@@ -11,7 +11,7 @@ sealed class PriorityForkPolicy<T>(comparator: Comparator<Int>) : ForkPolicy<T> 
     private var bestOpenChannel: PushOutputChannel<T>? = null
 
     override fun selectChannel(obj: T): PushOutputChannel<T> {
-        return bestOpenChannel!!
+        return bestOpenChannel ?: throw NoSuchElementException("No channels are open")
     }
 
     override fun onChannelOpen(channel: PushOutputChannel<T>) {
