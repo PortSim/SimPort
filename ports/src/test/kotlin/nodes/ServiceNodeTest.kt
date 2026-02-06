@@ -1,8 +1,7 @@
-package com.group7
+package com.group7.nodes
 
 import com.group7.dsl.*
 import com.group7.generators.Delays
-import com.group7.nodes.SinkNode
 import com.group7.utils.*
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
