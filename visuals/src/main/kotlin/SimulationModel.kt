@@ -83,8 +83,8 @@ class SimulationModel(private val simulator: Simulator) {
         // this leads to an exception in run
         updateBaseTime()
         val endTime = Instant.fromEpochMilliseconds(currentBaseTime) + duration
-        stepJob =
-            scope.launch(Dispatchers.Default) {
+        scope
+            .launch(Dispatchers.Default) {
                 try {
                     while (!simulator.isFinished) {
                         if (simulator.nextEventTime!! > endTime) {
@@ -101,6 +101,10 @@ class SimulationModel(private val simulator: Simulator) {
                     }
                     isStepping = false
                 }
+            }
+            .let {
+                stepJob = it
+                it.join()
             }
     }
 
