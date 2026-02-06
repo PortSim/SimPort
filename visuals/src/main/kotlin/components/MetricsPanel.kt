@@ -13,38 +13,37 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.group7.CISnapshot
-import com.group7.Node
-import com.group7.Sampler
-import com.group7.TimeWeightedData
+import com.group7.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import reportMetrics
+import utils.metricsNodes
 
 /** Samples metrics from nodes at regular intervals, storing data as Compose-observable mutable state. */
 class MetricsPanelState(
-    val nodes: Set<Node>,
+    scenario: Scenario,
     override val sampleInterval: Duration = 10.minutes,
     private val redrawEveryNSamples: Int = 10,
 ) : Sampler {
+    val nodes = scenario.metricsNodes()
     /** Per-node time series data using Compose-observable SnapshotStateLists */
-    private val nodeData: Map<Node, SnapshotStateList<CISnapshot>> = nodes.associateWith { mutableStateListOf() }
+    private val nodeData: Map<NodeGroup, SnapshotStateList<CISnapshot>> = nodes.associateWith { mutableStateListOf() }
 
     /** Per-node incremental stats collector */
-    private val stats: Map<Node, TimeWeightedData> = nodes.associateWith { TimeWeightedData() }
+    private val stats: Map<NodeGroup, TimeWeightedData> = nodes.associateWith { TimeWeightedData() }
 
     /** Get the TimeWeightedData for a specific node */
-    fun getStats(node: Node): TimeWeightedData? = stats[node]
+    fun getStats(node: NodeGroup): TimeWeightedData? = stats[node]
 
     /** Buffer for collecting samples before flushing to UI */
-    private val buffer: MutableMap<Node, MutableList<CISnapshot>> =
+    private val buffer: MutableMap<NodeGroup, MutableList<CISnapshot>> =
         nodes.associateWith { mutableListOf<CISnapshot>() }.toMutableMap()
     private var isBatching = false
     private var samplesSinceRedraw = 0
 
     /** Get time series data for a specific node */
-    fun getNodeData(node: Node): List<CISnapshot> = nodeData[node] ?: emptyList()
+    fun getNodeData(node: NodeGroup): List<CISnapshot> = nodeData[node] ?: emptyList()
 
     /** Start batch mode - samples will be buffered without triggering UI updates */
     fun beginBatch() {
