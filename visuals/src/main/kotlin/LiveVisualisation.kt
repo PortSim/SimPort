@@ -29,8 +29,8 @@ import kotlinx.coroutines.launch
 private val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS yyyy-MM-dd").withZone(ZoneOffset.UTC)
 
 @Composable
-fun Visualisation(scenario: Scenario) {
-    val metricsPanelState = remember { MetricsPanelState(ScenarioGraph(scenario).nodesOrderedByBFS.toSet()) }
+fun LiveVisualisation(scenario: Scenario) {
+    val metricsPanelState = remember { MetricsPanelState(scenario) }
     val simulation = remember { SimulationModel(Simulator(EventLog.noop(), scenario, metricsPanelState)) }
     val scenarioLayout = remember { ScenarioLayout(scenario) }
     val scope = rememberCoroutineScope()

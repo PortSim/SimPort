@@ -2,6 +2,7 @@ package com.group7
 
 import kotlin.math.sqrt
 import kotlin.time.Instant
+import kotlinx.collections.immutable.persistentListOf
 
 data class ConfidenceInterval(
     val mean: Double,
@@ -66,7 +67,7 @@ class TimeWeightedData(private val ciInterval: Int = 1) {
     private var sumSq = 0.0
 
     /** Stored snapshots of running statistics at each CI interval */
-    private val _ciSnapshots = mutableListOf<CISnapshot>()
+    private var _ciSnapshots = persistentListOf<CISnapshot>()
 
     val mean
         get() = if (count > 0) sum / count else 0.0
@@ -91,7 +92,7 @@ class TimeWeightedData(private val ciInterval: Int = 1) {
 
         // Store CI snapshot at each interval
         if (count % ciInterval == 0) {
-            _ciSnapshots.add(CISnapshot(time, value, mean, stddev, count))
+            _ciSnapshots = _ciSnapshots.add(CISnapshot(time, value, mean, stddev, count))
         }
     }
 
@@ -120,6 +121,6 @@ class TimeWeightedData(private val ciInterval: Int = 1) {
         count = 0
         sum = 0.0
         sumSq = 0.0
-        _ciSnapshots.clear()
+        _ciSnapshots = _ciSnapshots.clear()
     }
 }

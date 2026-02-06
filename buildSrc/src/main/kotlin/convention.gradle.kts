@@ -17,6 +17,8 @@ repositories {
 val kotestVersion = "6.0.7"
 
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.4.0")
+
     testImplementation(kotlin("test"))
 
     // JUnit 5

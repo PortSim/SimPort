@@ -14,6 +14,8 @@ sealed interface Simulator {
 
     fun nextStep()
 
+    fun runFor(duration: Duration)
+
     fun log(message: () -> String)
 }
 
@@ -55,6 +57,13 @@ internal class SimulatorImpl(
         val nextEvent = diary.poll() ?: return
         currentTime = nextEvent.time
         nextEvent.action()
+    }
+
+    override fun runFor(duration: Duration) {
+        val endTime = currentTime + duration
+        while (!isFinished && (nextEventTime ?: Instant.DISTANT_FUTURE) < endTime) {
+            nextStep()
+        }
     }
 
     fun scheduleDelayed(delay: Duration, callback: () -> Unit) {

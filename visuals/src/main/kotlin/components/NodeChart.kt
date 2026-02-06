@@ -16,14 +16,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import com.group7.CISnapshot
-import com.group7.Node
+import com.group7.NodeGroup
 import ir.ehsannarmani.compose_charts.LineChart
 import ir.ehsannarmani.compose_charts.models.*
 import ir.ehsannarmani.compose_charts.models.LabelProperties.Rotation
 
 @Composable
 fun ChartLegend(items: List<Pair<String, Color>>) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.Center) {
         items.forEach { (label, color) ->
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(8.dp).background(color, shape = CircleShape))
@@ -39,7 +39,7 @@ private fun Color.complementary(): Color {
 
 @Composable
 fun NodeChart(
-    node: Node,
+    node: NodeGroup,
     data: List<CISnapshot>,
     avgData: List<Double>,
     lowerBound: List<Double>,
