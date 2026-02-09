@@ -1,9 +1,7 @@
 import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -201,9 +199,7 @@ private fun SummaryChart(
             if (data.size >= 2) generateTimeLabels(data) else null
         } ?: emptyList()
 
-    Column(
-        modifier = Modifier.fillMaxWidth().background(Color.White, shape = RoundedCornerShape(8.dp)).padding(12.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().background(Color.White, shape = RoundedCornerShape(8.dp)).padding(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -215,7 +211,7 @@ private fun SummaryChart(
 
         if (lines.isNotEmpty()) {
             LineChart(
-                modifier = Modifier.fillMaxWidth().height(700.dp).padding(bottom = 16.dp),
+                modifier = Modifier.fillMaxSize().padding(bottom = 16.dp),
                 data = lines,
                 animationDelay = 0,
                 labelProperties =
@@ -330,10 +326,7 @@ fun SummaryVisualisation(simulations: List<Triple<String, Scenario, MetricsPanel
             )
         }
 
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (selectedNodeLabel != null && selectedScenarios.isNotEmpty() && selectedMetrics.isNotEmpty()) {
                 SummaryChart(
                     nodeLabel = selectedNodeLabel!!,
