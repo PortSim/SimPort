@@ -1,6 +1,7 @@
 package components
 
 import DefaultColorPalette
+import EdgeStatus
 import Metrics
 import ScenarioLayout
 import androidx.compose.foundation.Canvas
@@ -19,6 +20,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -27,24 +30,75 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.group7.channels.ChannelType
 import kotlin.math.atan2
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 
-fun DrawScope.drawArrowHead(end: Offset, angleDegrees: Float, size: Float = 10f, color: Color = Color.Black) {
-    val arrowPath =
-        Path().apply {
-            moveTo(end.x, end.y)
-            lineTo(end.x - size, end.y - (size / 2f))
-            lineTo(end.x - size, end.y + (size / 2f))
-            close()
-        }
+fun DrawScope.drawArrowHead(
+    end: Offset,
+    angleDegrees: Float,
+    width: Float = 6f,
+    height: Float = 10f,
+    color: Color = Color.Black,
+    channelType: ChannelType<*>,
+) {
+    when (channelType) {
+        ChannelType.Pull -> {
+            withTransform({ rotate(degrees = angleDegrees, pivot = end) }) {
+                // We cut the circle into 4 layers, the inner 2 are the circle, the outermost layer is the hand
+                val ringThickness = width / 4
+                // offset the circle so that it ends slightly before the box, making the shape of a hand
+                val circleCenter = Offset(end.x - width - 2.0f, end.y)
 
-    withTransform({ rotate(degrees = angleDegrees, pivot = end) }) { drawPath(path = arrowPath, color = color) }
+                run {
+                    val arcDiameter = (ringThickness * 4) * 2
+                    val arcSize = Size(arcDiameter - ringThickness, arcDiameter - ringThickness)
+                    drawArc(
+                        brush = SolidColor(color),
+                        startAngle = -120f,
+                        sweepAngle = 240f,
+                        useCenter = false,
+                        topLeft = circleCenter - Offset(arcSize.width / 2, arcSize.height / 2),
+                        size = arcSize,
+                        style = Stroke(width = ringThickness, cap = StrokeCap.Butt),
+                    )
+                }
+                run {
+                    val arcDiameter = (ringThickness * 3) * 2
+                    val arcSize = Size(arcDiameter - ringThickness, arcDiameter - ringThickness)
+                    drawArc(
+                        brush = SolidColor(Color.White),
+                        startAngle = -120f,
+                        sweepAngle = 240f,
+                        useCenter = false,
+                        topLeft = circleCenter - Offset(arcSize.width / 2, arcSize.height / 2),
+                        size = arcSize,
+                        style = Stroke(width = ringThickness, cap = StrokeCap.Butt),
+                    )
+                }
+                drawCircle(color = color, radius = ringThickness * 2, center = circleCenter)
+            }
+        }
+        ChannelType.Push -> {
+            withTransform({ rotate(degrees = angleDegrees, pivot = end) }) {
+                val rectTopLeft = Offset(end.x - width * 1.5f, end.y - height / 2)
+                val rectSize = Size(width / 4, height)
+                drawRect(color = color, topLeft = rectTopLeft, size = rectSize)
+
+                val rectWhiteTopLeft = Offset(end.x - width * 1.25f, end.y - height / 2)
+                drawRect(color = Color.White, topLeft = rectWhiteTopLeft, size = rectSize)
+
+                val radius = width / 2f
+                val circleCenter = Offset(end.x - radius, end.y)
+                drawCircle(color = color, radius = radius, center = circleCenter)
+            }
+        }
+    }
 }
 
 @Composable
-fun ElkNodeRenderer(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metrics>>) {
+fun drawElkNodes(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metrics>>) {
     Box(
         modifier =
             Modifier.wrapContentSize(unbounded = true)
@@ -79,11 +133,11 @@ fun ElkNodeRenderer(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metric
             }
         }
 
-        node.children.forEach { ElkNodeRenderer(it, nodeMetrics) }
+        node.children.forEach { drawElkNodes(it, nodeMetrics) }
     }
 }
 
-fun DrawScope.ElkEdgesRenderer(node: ElkNode, edgeStatuses: Map<ElkEdge, MutableState<Boolean>>) {
+fun DrawScope.drawElkEdges(node: ElkNode, edgeStatuses: Map<ElkEdge, MutableState<EdgeStatus>>) {
     val tx = node.x.toFloat().dp.toPx()
     val ty = node.y.toFloat().dp.toPx()
     withTransform({ translate(tx, ty) }) {
@@ -98,7 +152,7 @@ fun DrawScope.ElkEdgesRenderer(node: ElkNode, edgeStatuses: Map<ElkEdge, Mutable
         /* Draw each edge */
         node.containedEdges.forEach { edge ->
             val edgeColor =
-                when (edgeStatuses[edge]?.value) {
+                when (edgeStatuses[edge]?.value?.openStatus) {
                     null -> Color.Black
                     true -> DefaultColorPalette.greens._4
                     false -> DefaultColorPalette.reds._4
@@ -112,16 +166,22 @@ fun DrawScope.ElkEdgesRenderer(node: ElkNode, edgeStatuses: Map<ElkEdge, Mutable
                         lineTo(section.endX.toFloat().dp.toPx(), section.endY.toFloat().dp.toPx())
                     }
                 drawPath(path, edgeColor, style = Stroke(width = 2.dp.toPx()))
+
                 val end = Offset(section.endX.toFloat().dp.toPx(), section.endY.toFloat().dp.toPx())
                 val prevX =
                     section.bendPoints.lastOrNull()?.x?.toFloat()?.dp?.toPx() ?: section.startX.toFloat().dp.toPx()
                 val prevY =
                     section.bendPoints.lastOrNull()?.y?.toFloat()?.dp?.toPx() ?: section.startY.toFloat().dp.toPx()
-                val angle = Math.toDegrees(atan2(end.y - prevY, end.x - prevX).toDouble()).toFloat()
-                drawArrowHead(end = end, angleDegrees = angle, size = 12f, color = edgeColor)
+                drawArrowHead(
+                    end = end,
+                    angleDegrees = Math.toDegrees(atan2(end.y - prevY, end.x - prevX).toDouble()).toFloat(),
+                    height = 12f,
+                    channelType = edgeStatuses[edge]!!.value.channelType,
+                    color = edgeColor,
+                )
             }
         }
-        node.children.forEach { child -> ElkEdgesRenderer(node = child, edgeStatuses) }
+        node.children.forEach { child -> drawElkEdges(node = child, edgeStatuses) }
     }
 }
 
@@ -140,6 +200,8 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
                         rememberScrollableState { delta ->
                             val zoomFactor = (1 + delta * 0.005f)
                             scale *= zoomFactor
+                            val scaleMaximum = 20f
+                            scale = scale.coerceIn(1 / scaleMaximum, scaleMaximum)
                             viewOffset = Offset(viewOffset.x * zoomFactor, viewOffset.y * zoomFactor)
                             delta // Return the delta to indicate scroll amount consumed
                         },
@@ -154,8 +216,8 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
             Modifier.wrapContentSize(unbounded = true)
                 .graphicsLayer(translationX = viewOffset.x, translationY = viewOffset.y, scaleX = scale, scaleY = scale)
         ) {
-            Canvas(Modifier.matchParentSize()) { ElkEdgesRenderer(elkGraph.elkGraphRoot, elkGraph.edgeStatuses) }
-            ElkNodeRenderer(elkGraph.elkGraphRoot, elkGraph.nodeMetrics)
+            Canvas(Modifier.matchParentSize()) { drawElkEdges(elkGraph.elkGraphRoot, elkGraph.edgeStatuses) }
+            drawElkNodes(elkGraph.elkGraphRoot, elkGraph.nodeMetrics)
         }
     }
 }
