@@ -128,21 +128,27 @@ fun policyDemoPort(queuePolicy: DemoQueuePolicy, forkPolicy: DemoForkPolicy) = b
                 .thenFork("Lane Fork", policy = forkPolicy.make(largeQueues, smallQueues), numLanes = 3) { i, lane ->
                     lane
                         .thenFork(
-                            "Size Fork $i",
+                            "Size Fork ${i + 1}",
                             policy = BySizeForkPolicy(),
                             lanes =
                                 listOf(
                                     { large ->
                                         large
-                                            .thenQueue("Large Queue $i")
+                                            .thenQueue("Large Queue ${i + 1}")
                                             .saveNode(largeQueues::add)
-                                            .thenService("Large Service $i", Delays.exponentialWithMean(1.3.minutes))
+                                            .thenService(
+                                                "Large Service ${i + 1}",
+                                                Delays.exponentialWithMean(1.3.minutes),
+                                            )
                                     },
                                     { small ->
                                         small
-                                            .thenQueue("Small Queue $i")
+                                            .thenQueue("Small Queue ${i + 1}")
                                             .saveNode(smallQueues::add)
-                                            .thenService("Small Service $i", Delays.exponentialWithMean(15.seconds))
+                                            .thenService(
+                                                "Small Service ${i + 1}",
+                                                Delays.exponentialWithMean(15.seconds),
+                                            )
                                     },
                                 ),
                         )
