@@ -2,6 +2,7 @@ import androidx.compose.runtime.mutableStateOf
 import com.group7.Node
 import com.group7.NodeGroup
 import com.group7.Scenario
+import com.group7.channels.ChannelType
 import com.group7.channels.OutputChannel
 import com.group7.channels.isOpen
 import com.group7.channels.isPush
@@ -63,6 +64,7 @@ class ScenarioLayout(scenario: Scenario) {
         elkNode.setProperty(LayeredOptions.NODE_PLACEMENT_BK_FIXED_ALIGNMENT, FixedAlignment.BALANCED)
         elkNode.setProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY, OrderingStrategy.PREFER_EDGES)
         elkNode.setProperty(LayeredOptions.CYCLE_BREAKING_STRATEGY, CycleBreakingStrategy.DFS_NODE_ORDER)
+        elkNode.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, 15.0)
         elkNode.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
     }
 
@@ -130,9 +132,18 @@ class ScenarioLayout(scenario: Scenario) {
     }
 }
 
-private fun OutputChannel<*, *>.openStatus(): Boolean =
-    if (this.isPush()) {
-        this.isOpen()
-    } else {
-        this.downstream.isReady()
-    }
+class EdgeStatus(val openStatus: Boolean = false, val channelType: ChannelType<*>) {}
+
+private fun OutputChannel<*, *>.openStatus(): EdgeStatus =
+    EdgeStatus(
+        if (this.isPush()) {
+            this.isOpen()
+        } else {
+            this.downstream.isReady()
+        },
+        if (this.isPush()) {
+            ChannelType.Push
+        } else {
+            ChannelType.Pull
+        },
+    )
