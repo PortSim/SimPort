@@ -24,6 +24,7 @@ import components.*
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.time.toJavaInstant
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.launch
 
 private val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS yyyy-MM-dd").withZone(ZoneOffset.UTC)
@@ -66,7 +67,7 @@ fun LiveVisualisation(scenario: Scenario) {
         Box(Modifier.weight(1f).clipToBounds()) {
             when (selectedTab) {
                 0 -> SimpleGraphViewer(scenarioLayout)
-                1 -> MetricsPanel(metricsPanelState)
+                1 -> SummaryVisualisation(persistentMapOf("Simulation" to metricsPanelState))
             }
         }
 

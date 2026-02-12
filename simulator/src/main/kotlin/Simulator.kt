@@ -1,5 +1,6 @@
 package com.group7
 
+import com.group7.Simulator.Companion.START_TIME
 import com.group7.channels.PullInputChannel
 import com.group7.channels.PushOutputChannel
 import java.util.*
@@ -17,34 +18,34 @@ sealed interface Simulator {
     fun runFor(duration: Duration)
 
     fun log(message: () -> String)
+
+    companion object {
+        val START_TIME = Instant.parse("2000-01-01T00:00:00Z")
+    }
 }
 
 fun Simulator(log: EventLog, scenario: Scenario): Simulator = SimulatorImpl(log, scenario)
 
-fun Simulator(log: EventLog, scenario: Scenario, sampler: Sampler): Simulator =
-    SimulatorImpl(log, scenario, sampler = sampler)
+fun Simulator(log: EventLog, scenario: Scenario, metricReporter: MetricReporter): Simulator =
+    SimulatorImpl(log, scenario, metricReporter = metricReporter)
 
 internal fun Simulator.asImpl() =
     when (this) {
         is SimulatorImpl -> this
     }
 
-private val defaultStartTime = Instant.parse("2000-01-01T00:00:00Z")
-
 internal class SimulatorImpl(
     private val log: EventLog,
     private val scenario: Scenario,
-    startTime: Instant = defaultStartTime,
-    private val sampler: Sampler? = null,
+    private val metricReporter: MetricReporter? = null,
 ) : Simulator {
     private val diary = PriorityQueue<Event>()
 
-    override var currentTime = startTime
+    override var currentTime = START_TIME
         private set
 
     init {
         startNodes()
-        scheduleSampling()
     }
 
     override val isFinished
@@ -54,9 +55,14 @@ internal class SimulatorImpl(
         get() = diary.peek()?.time
 
     override fun nextStep() {
-        val nextEvent = diary.poll() ?: return
-        currentTime = nextEvent.time
-        nextEvent.action()
+        val startTime = diary.peek()?.time ?: return
+        currentTime = startTime
+        do {
+            val nextEvent = diary.poll()
+            nextEvent.action()
+        } while (diary.peek()?.time == startTime)
+
+        metricReporter?.report(currentTime)
     }
 
     override fun runFor(duration: Duration) {
@@ -68,16 +74,6 @@ internal class SimulatorImpl(
 
     fun scheduleDelayed(delay: Duration, callback: () -> Unit) {
         diary.add(Event(currentTime + delay, callback))
-    }
-
-    /** Schedules a sample event according to the sampler provided to the simulator */
-    fun scheduleSampling() {
-        if (sampler != null) {
-            scheduleDelayed(sampler.sampleInterval) {
-                sampler.sample(currentTime)
-                scheduleSampling()
-            }
-        }
     }
 
     fun <T> notifySend(from: Node, to: Node, data: T) {
@@ -128,14 +124,6 @@ private data class Event(val time: Instant, val action: () -> Unit) : Comparable
     override fun compareTo(other: Event): Int = time.compareTo(other.time)
 }
 
-/**
- * Sampler handles collection of data at an instantaneous point in time when called by the simulator, with separation
- * between sample collections defined by ```sampleInterval```
- */
-interface Sampler {
-    /** Time between samples */
-    val sampleInterval: Duration
-
-    /** Function to run every ```sampleInterval``` to collect and log data. */
-    fun sample(currentTime: Instant)
+interface MetricReporter {
+    fun report(currentTime: Instant)
 }

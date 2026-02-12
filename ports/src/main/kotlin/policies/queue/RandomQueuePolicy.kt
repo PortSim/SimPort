@@ -1,21 +1,24 @@
 package com.group7.policies.queue
 
 class RandomQueuePolicy<T>(initialContents: Collection<T> = emptyList()) : QueuePolicy<T> {
-    private val contents = initialContents.toMutableList()
+    private val _contents = initialContents.toMutableList()
+
+    override val contents
+        get() = _contents.asSequence()
 
     override fun enqueue(obj: T) {
-        contents.add(obj)
+        _contents.add(obj)
     }
 
     override fun dequeue(): T {
-        val i = contents.indices.random()
-        if (i == contents.lastIndex) {
-            return contents.removeLast()
+        val i = _contents.indices.random()
+        if (i == _contents.lastIndex) {
+            return _contents.removeLast()
         }
-        return contents[i].also { contents[i] = contents.removeLast() }
+        return _contents[i].also { _contents[i] = _contents.removeLast() }
     }
 
     override fun reportOccupancy(): Int {
-        return contents.size
+        return _contents.size
     }
 }

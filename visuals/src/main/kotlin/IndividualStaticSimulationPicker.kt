@@ -10,6 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import components.MetricsPanelState
+import kotlinx.collections.immutable.ImmutableMap
 
 private object SimPickerDimensions {
     val dividerHeight = 32.dp
@@ -17,18 +19,19 @@ private object SimPickerDimensions {
 }
 
 @Composable
-fun IndividualStaticSimulationPicker(simulations: List<SimulationResult>) {
+fun IndividualStaticSimulationPicker(simulations: ImmutableMap<String, MetricsPanelState>) {
+    val simulationNames = simulations.keys.sorted()
     var simulationTab by remember { mutableStateOf(0) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f)) {
-            StaticVisualisation(simulations[simulationTab].scenario, simulations[simulationTab].metricsState)
+            StaticVisualisation(simulations.getValue(simulationNames[simulationTab]))
         }
 
         HorizontalDivider()
 
         SimulationPickerBar(
-            simulations = simulations,
+            simulations = simulationNames,
             selectedIndex = simulationTab,
             onSelectionChange = { simulationTab = it },
         )
@@ -36,11 +39,7 @@ fun IndividualStaticSimulationPicker(simulations: List<SimulationResult>) {
 }
 
 @Composable
-private fun SimulationPickerBar(
-    simulations: List<SimulationResult>,
-    selectedIndex: Int,
-    onSelectionChange: (Int) -> Unit,
-) {
+private fun SimulationPickerBar(simulations: List<String>, selectedIndex: Int, onSelectionChange: (Int) -> Unit) {
     Surface(tonalElevation = SimPickerDimensions.surfaceElevation) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -65,11 +64,7 @@ private fun SimulationPickerBar(
 }
 
 @Composable
-private fun SimulationDropdownMenu(
-    simulations: List<SimulationResult>,
-    selectedIndex: Int,
-    onSelectionChange: (Int) -> Unit,
-) {
+private fun SimulationDropdownMenu(simulations: List<String>, selectedIndex: Int, onSelectionChange: (Int) -> Unit) {
     var menuExpanded by remember { mutableStateOf(false) }
 
     Box {
@@ -81,7 +76,7 @@ private fun SimulationDropdownMenu(
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             simulations.forEachIndexed { index, simulation ->
                 DropdownMenuItem(
-                    text = { Text(simulation.name) },
+                    text = { Text(simulation) },
                     onClick = {
                         onSelectionChange(index)
                         menuExpanded = false
@@ -108,18 +103,14 @@ private fun PickerVerticalDivider() {
 
 @Composable
 private fun SimulationChipRow(
-    simulations: List<SimulationResult>,
+    simulations: List<String>,
     selectedIndex: Int,
     onSelectionChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
         simulations.forEachIndexed { index, simulation ->
-            SimulationChip(
-                name = simulation.name,
-                selected = selectedIndex == index,
-                onClick = { onSelectionChange(index) },
-            )
+            SimulationChip(name = simulation, selected = selectedIndex == index, onClick = { onSelectionChange(index) })
         }
     }
 }

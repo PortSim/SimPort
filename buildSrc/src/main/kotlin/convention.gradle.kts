@@ -39,7 +39,7 @@ dependencies {
 kotlin {
     jvmToolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
     compilerOptions {
-        freeCompilerArgs.addAll("-Xcontext-parameters", "-Xopt-in=kotlin.contracts.ExperimentalContracts")
+        freeCompilerArgs.addAll("-Xcontext-parameters", "-opt-in=kotlin.contracts.ExperimentalContracts")
     }
 }
 

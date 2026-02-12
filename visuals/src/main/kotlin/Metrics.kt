@@ -14,4 +14,4 @@ data class Metrics(val occupants: Int?, val capacity: Int?) {
 }
 
 fun NodeGroup.reportMetrics() =
-    Metrics(occupants = (this as? Container)?.occupants, capacity = (this as? BoundedContainer)?.capacity)
+    Metrics(occupants = (this as? Container<*>)?.occupants, capacity = (this as? BoundedContainer<*>)?.capacity)

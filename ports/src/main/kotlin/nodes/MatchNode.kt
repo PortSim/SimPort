@@ -2,6 +2,8 @@ package com.group7.nodes
 
 import com.group7.Simulator
 import com.group7.channels.*
+import com.group7.properties.Match
+import com.group7.utils.andThen
 
 class MatchNode<MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT>>(
     label: String,
@@ -16,7 +18,13 @@ class MatchNode<MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT
         destination,
         listOf(mainSource, sideSource),
         listOf(destination),
-    ) {
+    ),
+    Match<MainInputT, SideInputT, OutputT> {
+
+    private var matchCallback:
+        (context(Simulator)
+        (MainInputT, SideInputT, OutputT) -> Unit)? =
+        null
 
     init {
         sideSource.whenReady { updateReadiness() }
@@ -27,5 +35,18 @@ class MatchNode<MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT
     override fun isReady() = sideSource.isReady()
 
     context(_: Simulator)
-    override fun process(input: MainInputT) = combiner(input, sideSource.receive())
+    override fun process(input: MainInputT): OutputT {
+        val sideInput = sideSource.receive()
+        val result = combiner(input, sideInput)
+        matchCallback?.let { it(input, sideInput, result) }
+        return result
+    }
+
+    override fun onMatch(
+        callback:
+            context(Simulator)
+            (MainInputT, SideInputT, OutputT) -> Unit
+    ) {
+        matchCallback = matchCallback.andThen(callback)
+    }
 }

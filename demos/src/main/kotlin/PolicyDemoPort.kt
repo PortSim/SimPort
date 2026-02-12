@@ -5,6 +5,7 @@ import com.group7.channels.PushOutputChannel
 import com.group7.dsl.*
 import com.group7.generators.Delays
 import com.group7.generators.Generators
+import com.group7.metrics.Occupancy
 import com.group7.policies.fork.ForkPolicy
 import com.group7.policies.fork.RandomForkPolicy
 import com.group7.policies.fork.RoundRobinForkPolicy
@@ -29,6 +30,11 @@ enum class DemoQueuePolicy(private val description: String) {
             object : QueuePolicy<Vehicle> {
                 private var large = 0
                 private var small = 0
+
+                override val contents
+                    get() =
+                        generateSequence { Vehicle(isLarge = true) }.take(large) +
+                            generateSequence { Vehicle(isLarge = false) }.take(small)
 
                 override fun enqueue(obj: Vehicle) {
                     if (obj.isLarge) {
@@ -56,6 +62,11 @@ enum class DemoQueuePolicy(private val description: String) {
             object : QueuePolicy<Vehicle> {
                 private var large = 0
                 private var small = 0
+
+                override val contents
+                    get() =
+                        generateSequence { Vehicle(isLarge = false) }.take(small) +
+                            generateSequence { Vehicle(isLarge = true) }.take(large)
 
                 override fun enqueue(obj: Vehicle) {
                     if (obj.isLarge) {
@@ -86,23 +97,23 @@ enum class DemoQueuePolicy(private val description: String) {
 
 enum class DemoForkPolicy(private val description: String) {
     RANDOM("Random") {
-        override fun make(largeQueues: List<Queue>, smallQueues: List<Queue>) = RandomForkPolicy<Vehicle>()
+        override fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>) = RandomForkPolicy<Vehicle>()
     },
     ROUND_ROBIN("Round Robin") {
-        override fun make(largeQueues: List<Queue>, smallQueues: List<Queue>) = RoundRobinForkPolicy<Vehicle>()
+        override fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>) = RoundRobinForkPolicy<Vehicle>()
     },
     LEAST_FULL("Least Full") {
-        override fun make(largeQueues: List<Queue>, smallQueues: List<Queue>) =
+        override fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>) =
             SmartForkPolicy(true, largeQueues, smallQueues)
     },
     MOST_FULL("Most Full") {
-        override fun make(largeQueues: List<Queue>, smallQueues: List<Queue>) =
+        override fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>) =
             SmartForkPolicy(false, largeQueues, smallQueues)
     };
 
     override fun toString() = description
 
-    abstract fun make(largeQueues: List<Queue>, smallQueues: List<Queue>): ForkPolicy<Vehicle>
+    abstract fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>): ForkPolicy<Vehicle>
 }
 
 data class Vehicle(val isLarge: Boolean)
@@ -120,10 +131,11 @@ fun policyDemoPort(queuePolicy: DemoQueuePolicy, forkPolicy: DemoForkPolicy) = b
         )
         .thenJoin("Arrivals Join")
         .thenQueue("Arrivals Queue", policy = queuePolicy.make())
+        .track(Occupancy)
         .thenPump()
         .thenSubnetwork(capacity = 5) { entry ->
-            val largeQueues = mutableListOf<Queue>()
-            val smallQueues = mutableListOf<Queue>()
+            val largeQueues = mutableListOf<Queue<*>>()
+            val smallQueues = mutableListOf<Queue<*>>()
             entry
                 .thenFork("Lane Fork", policy = forkPolicy.make(largeQueues, smallQueues), numLanes = 3) { i, lane ->
                     lane
@@ -159,13 +171,13 @@ fun policyDemoPort(queuePolicy: DemoQueuePolicy, forkPolicy: DemoForkPolicy) = b
         .thenSink("Departures")
 }
 
-private class SmartForkPolicy(val good: Boolean, val largeQueues: List<Queue>, val smallQueues: List<Queue>) :
+private class SmartForkPolicy(val good: Boolean, val largeQueues: List<Queue<*>>, val smallQueues: List<Queue<*>>) :
     ForkPolicy<Vehicle> {
-    private val containers = IdentityHashMap<PushOutputChannel<Vehicle>, Pair<Queue, Queue>>()
+    private val containers = IdentityHashMap<PushOutputChannel<Vehicle>, Pair<Queue<*>, Queue<*>>>()
     private val openDestinations = Collections.newSetFromMap<PushOutputChannel<Vehicle>>(IdentityHashMap())
 
     override fun selectChannel(obj: Vehicle): PushOutputChannel<Vehicle> {
-        val getQueue: Pair<Queue, Queue>.() -> Queue =
+        val getQueue: Pair<Queue<*>, Queue<*>>.() -> Queue<*> =
             if (obj.isLarge) {
                 { first }
             } else {

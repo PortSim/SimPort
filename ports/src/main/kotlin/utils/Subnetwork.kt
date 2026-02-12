@@ -8,18 +8,17 @@ import com.group7.dsl.RegularNodeBuilder
 import com.group7.dsl.thenCompound
 
 context(_: GroupScope)
-fun <
-    InputT,
-    OutputT,
-    InputChannelT : ChannelType<InputChannelT>,
-    OutputChannelT : ChannelType<OutputChannelT>,
-> NodeBuilder<InputT, InputChannelT>.thenSubnetwork(
+fun <ItemT, InputChannelT : ChannelType<InputChannelT>, OutputChannelT : ChannelType<OutputChannelT>> NodeBuilder<
+    ItemT,
+    InputChannelT,
+>
+    .thenSubnetwork(
     networkName: String = "Bounded Subnetwork",
     capacity: Int,
     inner:
         context(GroupScope)
-        (NodeBuilder<InputT, InputChannelT>) -> NodeBuilder<OutputT, OutputChannelT>,
-): RegularNodeBuilder<BoundedSubnetwork<InputT, OutputT, InputChannelT, OutputChannelT>, OutputT, OutputChannelT> =
+        (NodeBuilder<ItemT, InputChannelT>) -> NodeBuilder<ItemT, OutputChannelT>,
+): RegularNodeBuilder<BoundedSubnetwork<ItemT, InputChannelT, OutputChannelT>, ItemT, OutputChannelT> =
     thenCompound { input, output ->
         BoundedSubnetwork(networkName, capacity, input, inner, output)
     }

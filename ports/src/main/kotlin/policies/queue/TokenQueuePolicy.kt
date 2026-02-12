@@ -3,6 +3,9 @@ package com.group7.policies.queue
 data object Token
 
 class TokenQueuePolicy(private var count: Int) : QueuePolicy<Token> {
+    override val contents
+        get() = generateSequence { Token }.take(count)
+
     override fun enqueue(obj: Token) {
         count++
     }

@@ -1,6 +1,5 @@
 package com.group7.nodes
 
-import com.group7.Node
 import com.group7.channels.PushInputChannel
 import com.group7.channels.PushOutputChannel
 import com.group7.channels.onReceive
@@ -17,17 +16,19 @@ class DelayNode<T>(
     source: PushInputChannel<T>,
     destination: PushOutputChannel<T>,
     delayProvider: DelayProvider,
-) : Node(label, listOf(source), listOf(destination)), Delay {
+) : ContainerNode<T>(label, listOf(source), listOf(destination)), Delay<T> {
 
     override var occupants = 0
         private set
 
     init {
-        source.onReceive {
+        source.onReceive { obj ->
             occupants++
+            notifyEnter(obj)
             scheduleDelayed(delayProvider.nextDelay()) {
                 occupants--
-                destination.send(it)
+                notifyLeave(obj)
+                destination.send(obj)
             }
         }
     }

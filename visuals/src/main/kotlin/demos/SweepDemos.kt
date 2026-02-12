@@ -1,10 +1,10 @@
 package demos
 
-import SimulationResult
 import com.group7.*
 import components.MetricsPanelState
 import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.minutes
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.toImmutableMap
 
 fun demoCraneNumberSweep() = sweep((1..20).map { "$it Cranes" to generatePort(6, 6, it).first })
 
@@ -20,16 +20,18 @@ fun demoPolicySweep() =
         }
     )
 
-private fun sweep(scenarios: List<Pair<String, Scenario>>): List<SimulationResult> {
+private fun sweep(scenarios: List<Pair<String, Scenario>>): ImmutableMap<String, MetricsPanelState> {
     // Run simulations
     val runFor = 5.days
-    return scenarios.map { (name, scenario) ->
-        val metricsPanelState = MetricsPanelState(scenario, 5.minutes)
-        val simulator = Simulator(EventLog.noop(), scenario, metricsPanelState)
-        metricsPanelState.beginBatch()
-        simulator.runFor(runFor)
-        metricsPanelState.endBatch()
+    return scenarios
+        .associate { (name, scenario) ->
+            val metricsPanelState = MetricsPanelState(scenario)
+            val simulator = Simulator(EventLog.noop(), scenario, metricsPanelState)
+            metricsPanelState.beginBatch()
+            simulator.runFor(runFor)
+            metricsPanelState.endBatch()
 
-        SimulationResult(name, scenario, metricsPanelState)
-    }
+            name to metricsPanelState
+        }
+        .toImmutableMap()
 }

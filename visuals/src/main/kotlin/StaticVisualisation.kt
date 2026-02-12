@@ -11,19 +11,18 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
-import com.group7.Scenario
-import components.MetricsPanel
 import components.MetricsPanelState
 import components.SimpleGraphViewer
 import components.debugPanel
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlinx.collections.immutable.persistentMapOf
 
 private val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS yyyy-MM-dd").withZone(ZoneOffset.UTC)
 
 @Composable
-fun StaticVisualisation(scenario: Scenario, metricsPanelState: MetricsPanelState) {
-    val scenarioLayout = remember(scenario) { ScenarioLayout(scenario) }
+fun StaticVisualisation(metricsPanelState: MetricsPanelState) {
+    val scenarioLayout = remember(metricsPanelState) { ScenarioLayout(metricsPanelState.scenario) }
 
     var selectedTab by remember { mutableStateOf(0) }
     var showDebug by remember { mutableStateOf(false) }
@@ -53,7 +52,7 @@ fun StaticVisualisation(scenario: Scenario, metricsPanelState: MetricsPanelState
         Box(Modifier.weight(1f).clipToBounds()) {
             when (selectedTab) {
                 0 -> SimpleGraphViewer(scenarioLayout)
-                1 -> MetricsPanel(metricsPanelState)
+                1 -> SummaryVisualisation(persistentMapOf("Simulation" to metricsPanelState))
             }
         }
     }
