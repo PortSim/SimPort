@@ -1,21 +1,14 @@
 package components
 
+import Dimensions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlin.math.min
 import kotlinx.coroutines.isActive
 
@@ -62,15 +55,24 @@ fun debugPanel() {
 
 @Composable
 fun DebugPanel(fps: Int, minFps: Int) {
-    Box(modifier = Modifier.padding(8.dp).background(Color.Black.copy(alpha = 0.7f)).padding(8.dp)) {
+    Box(
+        modifier =
+            Modifier.padding(Dimensions.spacingSm)
+                .background(Color.Black.copy(alpha = 0.7f))
+                .padding(Dimensions.spacingSm)
+    ) {
         Column {
             Text(
                 text = "Debug Mode",
                 color = Color.Green,
-                fontSize = 12.sp,
+                fontSize = Dimensions.fontSizeSmall,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             )
-            Text(text = "FPS: $fps, min FPS this second: $minFps", color = Color.White, fontSize = 12.sp)
+            Text(
+                text = "FPS: $fps, min FPS this second: $minFps",
+                color = Color.White,
+                fontSize = Dimensions.fontSizeSmall,
+            )
         }
     }
 }

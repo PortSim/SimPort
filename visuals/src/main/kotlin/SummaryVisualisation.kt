@@ -12,7 +12,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.group7.CISnapshot
 import com.group7.NodeGroup
-import com.group7.Scenario
 import com.group7.properties.Container
 import components.ChartLegend
 import components.MetricsPanelState
@@ -20,6 +19,8 @@ import ir.ehsannarmani.compose_charts.LineChart
 import ir.ehsannarmani.compose_charts.extensions.format
 import ir.ehsannarmani.compose_charts.models.*
 import utils.metricsNodes
+
+private val EmptyStateHeight = 300.dp
 
 private enum class MetricOption(val displayName: String) {
     OCCUPANCY("Occupancy"),
@@ -48,7 +49,7 @@ private fun <T> MultiSelectDropdown(
                     text = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingSm),
                         ) {
                             Checkbox(checked = isSelected, onCheckedChange = null)
                             Text(optionLabel(option))
@@ -130,7 +131,7 @@ private fun SummaryChart(
     val filteredData = nodeDataBySimulation.filter { it.first in selectedScenarios }
 
     if (filteredData.isEmpty()) {
-        Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().height(EmptyStateHeight), contentAlignment = Alignment.Center) {
             Text("No data available for selected scenarios")
         }
         return
@@ -173,7 +174,9 @@ private fun SummaryChart(
                         color = SolidColor(color),
                         drawStyle =
                             DrawStyle.Stroke(
-                                width = if (metric == MetricOption.OCCUPANCY) 2.dp else 1.5.dp,
+                                width =
+                                    if (metric == MetricOption.OCCUPANCY) Dimensions.strokeWidth
+                                    else Dimensions.strokeWidthThin,
                                 strokeStyle =
                                     if (metric == MetricOption.CI_LOWER || metric == MetricOption.CI_UPPER)
                                         StrokeStyle.Dashed()
@@ -199,9 +202,14 @@ private fun SummaryChart(
             if (data.size >= 2) generateTimeLabels(data) else null
         } ?: emptyList()
 
-    Column(modifier = Modifier.fillMaxSize().background(Color.White, shape = RoundedCornerShape(8.dp)).padding(12.dp)) {
+    Column(
+        modifier =
+            Modifier.fillMaxSize()
+                .background(Color.White, shape = RoundedCornerShape(Dimensions.cardCornerRadius))
+                .padding(Dimensions.spacingMd)
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.spacingSm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -211,7 +219,7 @@ private fun SummaryChart(
 
         if (lines.isNotEmpty()) {
             LineChart(
-                modifier = Modifier.fillMaxSize().padding(bottom = 16.dp),
+                modifier = Modifier.fillMaxSize().padding(bottom = Dimensions.spacingLg),
                 data = lines,
                 animationDelay = 0,
                 labelProperties =
@@ -226,7 +234,7 @@ private fun SummaryChart(
             Text(
                 text = "Insufficient data points for chart",
                 color = Color.Gray,
-                modifier = Modifier.height(150.dp).wrapContentHeight(Alignment.CenterVertically),
+                modifier = Modifier.height(Dimensions.chartMinHeight).wrapContentHeight(Alignment.CenterVertically),
             )
         }
     }
@@ -251,7 +259,7 @@ private fun generateTimeLabels(data: List<CISnapshot>, labelCount: Int = 5): Lis
     }
 
 @Composable
-fun SummaryVisualisation(simulations: List<Triple<String, Scenario, MetricsPanelState>>) {
+fun SummaryVisualisation(simulations: List<SimulationResult>) {
     if (simulations.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No simulations to display") }
         return
@@ -282,7 +290,7 @@ fun SummaryVisualisation(simulations: List<Triple<String, Scenario, MetricsPanel
 
     val allNodeLabels = remember(nodeLabelToSimulationData) { nodeLabelToSimulationData.keys.sorted() }
 
-    val allSimulationNames = remember(simulations) { simulations.map { it.first } }
+    val allSimulationNames = remember(simulations) { simulations.map { it.name } }
 
     var selectedNodeLabel by remember { mutableStateOf(allNodeLabels.firstOrNull()) }
     var selectedScenarios by remember { mutableStateOf(allSimulationNames.toSet()) }
@@ -290,12 +298,12 @@ fun SummaryVisualisation(simulations: List<Triple<String, Scenario, MetricsPanel
     var confidenceLevel by remember { mutableStateOf(0.95) }
 
     Column(
-        Modifier.fillMaxSize().background(Color(0xFFF5F5F5)).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        Modifier.fillMaxSize().background(Color(0xFFF5F5F5)).padding(Dimensions.spacingLg),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.spacingLg),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingLg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             NodeDropdown(
@@ -326,7 +334,7 @@ fun SummaryVisualisation(simulations: List<Triple<String, Scenario, MetricsPanel
             )
         }
 
-        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(Dimensions.spacingLg)) {
             if (selectedNodeLabel != null && selectedScenarios.isNotEmpty() && selectedMetrics.isNotEmpty()) {
                 SummaryChart(
                     nodeLabel = selectedNodeLabel!!,
@@ -336,7 +344,7 @@ fun SummaryVisualisation(simulations: List<Triple<String, Scenario, MetricsPanel
                     confidenceLevel = confidenceLevel,
                 )
             } else {
-                Box(modifier = Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxWidth().height(EmptyStateHeight), contentAlignment = Alignment.Center) {
                     Text("Select a node, at least one scenario, and at least one metric to display chart")
                 }
             }

@@ -72,7 +72,7 @@ fun LiveVisualisation(scenario: Scenario) {
 
         // Playback controls at bottom - fixed height
         Row(
-            modifier = Modifier.fillMaxWidth().background(Color.White).border(1.dp, Color.Black),
+            modifier = Modifier.fillMaxWidth().background(Color.White).border(Dimensions.borderWidth, Color.Black),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Button(
