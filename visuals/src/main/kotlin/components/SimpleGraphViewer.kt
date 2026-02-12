@@ -27,9 +27,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.toSize
 import com.group7.channels.ChannelType
 import kotlin.math.atan2
 import org.eclipse.elk.graph.ElkEdge
@@ -185,11 +187,45 @@ fun DrawScope.drawElkEdges(
 fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
     var viewOffset by remember { mutableStateOf(Offset.Zero) }
     var scale by remember { mutableStateOf(1f) }
+    var mouseOffset by remember { mutableStateOf(Offset.Zero) }
+
+    var innerElementSize by remember { mutableStateOf(Size.Zero) }
+    var outerElementSize by remember { mutableStateOf(Size.Zero) }
+
+    fun clampOffsetToKeepCanvasOnScreen() {
+        // Keep 20% of the canvas on screen or keep the screen 20% canvas whichever is possible
+        val visibilityPercentage = 0.20f
+        fun calcClampValues(innerSize: Float, outerSize: Float): ClosedFloatingPointRange<Float> =
+            if (scale * innerSize >= outerSize) {
+                val max = innerSize * scale / 2.0f - 2.0f * (visibilityPercentage - 0.5f) * outerSize / 2.0f
+                (-max)..(max)
+            } else {
+                val min = 2.0f * (visibilityPercentage - 0.5f) * (innerSize * scale / 2.0f) - outerSize / 2.0f
+                (min)..(-min)
+            }
+        val innerWidthWithPadding = innerElementSize.width + 10.0f
+        val xRange = calcClampValues(innerWidthWithPadding, outerElementSize.width)
+        val outerHeightWithPadding = innerElementSize.height + 10.0f
+        val yRange = calcClampValues(outerHeightWithPadding, outerElementSize.height)
+        viewOffset = Offset(viewOffset.x.coerceIn(xRange), viewOffset.y.coerceIn(yRange))
+    }
 
     // We use a Box with no size constraints to act as a coordinate plane
     Box(
         modifier =
             Modifier.fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull()
+                            if (change != null) {
+                                val center = Offset(size.width / 2f, size.height / 2f)
+                                mouseOffset = change.position - center
+                            }
+                        }
+                    }
+                }
                 .scrollable(
                     orientation = Orientation.Vertical,
                     state =
@@ -198,6 +234,8 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
                             val scaleMaximum = 20f
                             if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
                                 scale *= zoomFactor
+                                viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
+                                clampOffsetToKeepCanvasOnScreen()
                             }
                             delta // Return the delta to indicate scroll amount consumed
                         },
@@ -205,12 +243,18 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, _, _ ->
                         viewOffset = Offset(viewOffset.x + pan.x, viewOffset.y + pan.y)
+                        clampOffsetToKeepCanvasOnScreen()
                     }
                 }
                 .background(Color.White)
                 .graphicsLayer(translationX = viewOffset.x, translationY = viewOffset.y, scaleX = scale, scaleY = scale)
+                .onSizeChanged { size -> outerElementSize = size.toSize() },
+        contentAlignment = Alignment.Center,
     ) {
-        Box(modifier = Modifier.wrapContentSize(unbounded = true).fillMaxSize()) {
+        Box(
+            modifier =
+                Modifier.wrapContentSize(unbounded = true).onSizeChanged { size -> innerElementSize = size.toSize() }
+        ) {
             Canvas(Modifier.matchParentSize()) {
                 drawElkEdges(elkGraph.elkGraphRoot, Color.White, elkGraph.edgeStatuses)
             }
