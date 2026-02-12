@@ -38,9 +38,10 @@ import org.eclipse.elk.graph.ElkNode
 fun DrawScope.drawArrowHead(
     end: Offset,
     angleDegrees: Float,
-    width: Float = 6f,
-    height: Float = 10f,
-    color: Color = Color.Black,
+    width: Float,
+    height: Float,
+    color: Color,
+    backgroundColor: Color,
     channelType: ChannelType<*>,
 ) {
     when (channelType) {
@@ -51,8 +52,7 @@ fun DrawScope.drawArrowHead(
                 // offset the circle so that it ends slightly before the box, making the shape of a hand
                 val circleCenter = Offset(end.x - width - 2.0f, end.y)
 
-                run {
-                    val arcDiameter = (ringThickness * 4) * 2
+                fun drawTwoThirdsArc(color: Color, arcDiameter: Float) {
                     val arcSize = Size(arcDiameter - ringThickness, arcDiameter - ringThickness)
                     drawArc(
                         brush = SolidColor(color),
@@ -64,19 +64,9 @@ fun DrawScope.drawArrowHead(
                         style = Stroke(width = ringThickness, cap = StrokeCap.Butt),
                     )
                 }
-                run {
-                    val arcDiameter = (ringThickness * 3) * 2
-                    val arcSize = Size(arcDiameter - ringThickness, arcDiameter - ringThickness)
-                    drawArc(
-                        brush = SolidColor(Color.White),
-                        startAngle = -120f,
-                        sweepAngle = 240f,
-                        useCenter = false,
-                        topLeft = circleCenter - Offset(arcSize.width / 2, arcSize.height / 2),
-                        size = arcSize,
-                        style = Stroke(width = ringThickness, cap = StrokeCap.Butt),
-                    )
-                }
+                drawTwoThirdsArc(color, (ringThickness * 4) * 2)
+                drawTwoThirdsArc(backgroundColor, (ringThickness * 3) * 2)
+
                 drawCircle(color = color, radius = ringThickness * 2, center = circleCenter)
             }
         }
@@ -87,7 +77,7 @@ fun DrawScope.drawArrowHead(
                 drawRect(color = color, topLeft = rectTopLeft, size = rectSize)
 
                 val rectWhiteTopLeft = Offset(end.x - width * 1.25f, end.y - height / 2)
-                drawRect(color = Color.White, topLeft = rectWhiteTopLeft, size = rectSize)
+                drawRect(color = backgroundColor, topLeft = rectWhiteTopLeft, size = rectSize)
 
                 val radius = width / 2f
                 val circleCenter = Offset(end.x - radius, end.y)
@@ -137,7 +127,11 @@ fun drawElkNodes(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metrics>>
     }
 }
 
-fun DrawScope.drawElkEdges(node: ElkNode, edgeStatuses: Map<ElkEdge, MutableState<EdgeStatus>>) {
+fun DrawScope.drawElkEdges(
+    node: ElkNode,
+    backgroundColor: Color,
+    edgeStatuses: Map<ElkEdge, MutableState<EdgeStatus>>,
+) {
     val tx = node.x.toFloat().dp.toPx()
     val ty = node.y.toFloat().dp.toPx()
     withTransform({ translate(tx, ty) }) {
@@ -175,13 +169,15 @@ fun DrawScope.drawElkEdges(node: ElkNode, edgeStatuses: Map<ElkEdge, MutableStat
                 drawArrowHead(
                     end = end,
                     angleDegrees = Math.toDegrees(atan2(end.y - prevY, end.x - prevX).toDouble()).toFloat(),
-                    height = 12f,
+                    height = 12f.dp.toPx(),
+                    width = 6f.dp.toPx(),
                     channelType = edgeStatuses[edge]!!.value.channelType,
                     color = edgeColor,
+                    backgroundColor = backgroundColor,
                 )
             }
         }
-        node.children.forEach { child -> drawElkEdges(node = child, edgeStatuses) }
+        node.children.forEach { child -> drawElkEdges(node = child, backgroundColor, edgeStatuses) }
     }
 }
 
@@ -199,10 +195,10 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
                     state =
                         rememberScrollableState { delta ->
                             val zoomFactor = (1 + delta * 0.005f)
-                            scale *= zoomFactor
                             val scaleMaximum = 20f
-                            scale = scale.coerceIn(1 / scaleMaximum, scaleMaximum)
-                            viewOffset = Offset(viewOffset.x * zoomFactor, viewOffset.y * zoomFactor)
+                            if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
+                                scale *= zoomFactor
+                            }
                             delta // Return the delta to indicate scroll amount consumed
                         },
                 )
@@ -211,12 +207,13 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
                         viewOffset = Offset(viewOffset.x + pan.x, viewOffset.y + pan.y)
                     }
                 }
-    ) {
-        Box(
-            Modifier.wrapContentSize(unbounded = true)
+                .background(Color.White)
                 .graphicsLayer(translationX = viewOffset.x, translationY = viewOffset.y, scaleX = scale, scaleY = scale)
-        ) {
-            Canvas(Modifier.matchParentSize()) { drawElkEdges(elkGraph.elkGraphRoot, elkGraph.edgeStatuses) }
+    ) {
+        Box(modifier = Modifier.wrapContentSize(unbounded = true).fillMaxSize()) {
+            Canvas(Modifier.matchParentSize()) {
+                drawElkEdges(elkGraph.elkGraphRoot, Color.White, elkGraph.edgeStatuses)
+            }
             drawElkNodes(elkGraph.elkGraphRoot, elkGraph.nodeMetrics)
         }
     }
