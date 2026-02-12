@@ -1,5 +1,6 @@
 package components
 
+import Dimensions
 import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.unit.dp
 import com.group7.CISnapshot
 import com.group7.NodeGroup
 import ir.ehsannarmani.compose_charts.LineChart
@@ -23,10 +23,16 @@ import ir.ehsannarmani.compose_charts.models.LabelProperties.Rotation
 
 @Composable
 fun ChartLegend(items: List<Pair<String, Color>>) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.Center) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingMd),
+        verticalArrangement = Arrangement.Center,
+    ) {
         items.forEach { (label, color) ->
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(8.dp).background(color, shape = CircleShape))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingXs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.size(Dimensions.spacingSm).background(color, shape = CircleShape))
                 Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
             }
         }
@@ -53,10 +59,13 @@ fun NodeChart(
     var showValues by remember { mutableStateOf(true) }
 
     Column(
-        modifier = Modifier.fillMaxWidth().background(Color.White, shape = RoundedCornerShape(8.dp)).padding(12.dp)
+        modifier =
+            Modifier.fillMaxWidth()
+                .background(Color.White, shape = RoundedCornerShape(Dimensions.cardCornerRadius))
+                .padding(Dimensions.spacingMd)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.spacingSm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -83,7 +92,7 @@ fun NodeChart(
                             label = node.label,
                             values = values,
                             color = SolidColor(dataColor),
-                            drawStyle = DrawStyle.Stroke(width = 2.dp),
+                            drawStyle = DrawStyle.Stroke(width = Dimensions.strokeWidth),
                             strokeAnimationSpec = snap(),
                             gradientAnimationSpec = snap(),
                         )
@@ -94,7 +103,7 @@ fun NodeChart(
                         label = "Average",
                         values = avgData,
                         color = SolidColor(complementaryColor),
-                        drawStyle = DrawStyle.Stroke(width = 2.dp),
+                        drawStyle = DrawStyle.Stroke(width = Dimensions.strokeWidth),
                         strokeAnimationSpec = snap(),
                         gradientAnimationSpec = snap(),
                     )
@@ -104,7 +113,8 @@ fun NodeChart(
                         label = "Upper CI",
                         values = lowerBound,
                         color = SolidColor(complementaryColor.copy(alpha = 0.6f)),
-                        drawStyle = DrawStyle.Stroke(width = 1.5.dp, strokeStyle = StrokeStyle.Dashed()),
+                        drawStyle =
+                            DrawStyle.Stroke(width = Dimensions.strokeWidthThin, strokeStyle = StrokeStyle.Dashed()),
                         strokeAnimationSpec = snap(),
                         gradientAnimationSpec = snap(),
                     )
@@ -114,14 +124,16 @@ fun NodeChart(
                         label = "Lower CI",
                         values = upperBound,
                         color = SolidColor(complementaryColor.copy(alpha = 0.6f)),
-                        drawStyle = DrawStyle.Stroke(width = 1.5.dp, strokeStyle = StrokeStyle.Dashed()),
+                        drawStyle =
+                            DrawStyle.Stroke(width = Dimensions.strokeWidthThin, strokeStyle = StrokeStyle.Dashed()),
                         strokeAnimationSpec = snap(),
                         gradientAnimationSpec = snap(),
                     )
                 )
             }
             LineChart(
-                modifier = Modifier.fillMaxWidth().height(250.dp).padding(bottom = 16.dp),
+                modifier =
+                    Modifier.fillMaxWidth().height(Dimensions.chartHeight).padding(bottom = Dimensions.spacingLg),
                 data = lines,
                 animationDelay = 0,
                 labelProperties =
@@ -132,7 +144,7 @@ fun NodeChart(
             Text(
                 text = "Collecting data... (${values.size} points)",
                 color = Color.Gray,
-                modifier = Modifier.height(150.dp).wrapContentHeight(Alignment.CenterVertically),
+                modifier = Modifier.height(Dimensions.chartMinHeight).wrapContentHeight(Alignment.CenterVertically),
             )
         }
     }

@@ -1,20 +1,16 @@
 package components
 
+import Dimensions
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -25,7 +21,7 @@ fun PlaybackSpeedSlider(currentSpeed: Float, onSpeedChange: (Float) -> Unit, mod
     // We clamp the input to avoid log10(0) errors
     val sliderValue = remember(currentSpeed) { log10(currentSpeed.coerceAtLeast(0.01f)) }
 
-    Column(modifier = modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = modifier.padding(Dimensions.spacingLg), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "0.01x", style = MaterialTheme.typography.bodySmall)
 
@@ -38,7 +34,7 @@ fun PlaybackSpeedSlider(currentSpeed: Float, onSpeedChange: (Float) -> Unit, mod
                     onSpeedChange(convertedSpeed)
                 },
                 valueRange = -2f..2f, // -2 is 0.01, 0 is 1.0, 2 is 100
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                modifier = Modifier.weight(1f).padding(horizontal = Dimensions.spacingSm),
             )
 
             Text(text = "100x", style = MaterialTheme.typography.bodySmall)

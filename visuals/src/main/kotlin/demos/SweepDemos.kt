@@ -1,5 +1,6 @@
 package demos
 
+import SimulationResult
 import com.group7.*
 import components.MetricsPanelState
 import kotlin.time.Duration.Companion.days
@@ -19,7 +20,7 @@ fun demoPolicySweep() =
         }
     )
 
-private fun sweep(scenarios: List<Pair<String, Scenario>>): List<Triple<String, Scenario, MetricsPanelState>> {
+private fun sweep(scenarios: List<Pair<String, Scenario>>): List<SimulationResult> {
     // Run simulations
     val runFor = 5.days
     return scenarios.map { (name, scenario) ->
@@ -29,6 +30,6 @@ private fun sweep(scenarios: List<Pair<String, Scenario>>): List<Triple<String, 
         simulator.runFor(runFor)
         metricsPanelState.endBatch()
 
-        Triple(name, scenario, metricsPanelState)
+        SimulationResult(name, scenario, metricsPanelState)
     }
 }

@@ -12,7 +12,7 @@ fun main() {
             title = "SimPort",
             state = rememberWindowState(placement = WindowPlacement.Maximized),
         ) {
-            MultiVisualisation(demoPolicySweep())
+            SimPortTheme { MultiVisualisation(demoPolicySweep()) }
             //            LiveVisualisation(policyDemoPort(DemoQueuePolicy.FIFO, DemoForkPolicy.RANDOM))
         }
     }

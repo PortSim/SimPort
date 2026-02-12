@@ -1,6 +1,7 @@
 package components
 
 import DefaultColorPalette
+import Dimensions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,7 +13,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import com.group7.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -110,8 +110,8 @@ fun MetricsPanel(metricsPanelState: MetricsPanelState) {
             }
         } else {
             Column(
-                modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize().padding(Dimensions.spacingLg).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Dimensions.spacingLg),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
