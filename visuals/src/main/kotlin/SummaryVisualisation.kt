@@ -1,40 +1,29 @@
-import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import com.group7.CISnapshot
-import com.group7.NodeGroup
-import com.group7.properties.Container
-import components.ChartLegend
+import com.group7.metrics.MetricGroup
 import components.MetricsPanelState
-import ir.ehsannarmani.compose_charts.LineChart
-import ir.ehsannarmani.compose_charts.extensions.format
-import ir.ehsannarmani.compose_charts.models.*
-import utils.metricsNodes
+import components.SummaryChart
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.PersistentSet
+import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.collections.immutable.toPersistentSet
+import utils.assignNodeNames
 
 private val EmptyStateHeight = 300.dp
-
-private enum class MetricOption(val displayName: String) {
-    OCCUPANCY("Occupancy"),
-    AVERAGE("Average"),
-    CI_LOWER("CI Lower"),
-    CI_UPPER("CI Upper"),
-}
 
 @Composable
 private fun <T> MultiSelectDropdown(
     label: String,
     options: List<T>,
-    selectedOptions: Set<T>,
-    onSelectionChange: (Set<T>) -> Unit,
+    selectedOptions: PersistentSet<T>,
+    onSelectionChange: (PersistentSet<T>) -> Unit,
     optionLabel: (T) -> String,
     modifier: Modifier = Modifier,
 ) {
@@ -43,7 +32,7 @@ private fun <T> MultiSelectDropdown(
     Box(modifier = modifier) {
         Button(onClick = { expanded = true }) { Text("$label (${selectedOptions.size})") }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { option ->
+            for (option in options) {
                 val isSelected = option in selectedOptions
                 DropdownMenuItem(
                     text = {
@@ -58,9 +47,9 @@ private fun <T> MultiSelectDropdown(
                     onClick = {
                         val newSelection =
                             if (isSelected) {
-                                selectedOptions - option
+                                selectedOptions.remove(option)
                             } else {
-                                selectedOptions + option
+                                selectedOptions.add(option)
                             }
                         onSelectionChange(newSelection)
                     },
@@ -72,21 +61,32 @@ private fun <T> MultiSelectDropdown(
 
 @Composable
 private fun NodeDropdown(
-    nodes: List<String>,
+    nodes: Iterable<String?>,
     selectedNode: String?,
-    onNodeSelected: (String) -> Unit,
+    onNodeSelected: (String?) -> Unit,
     modifier: Modifier = Modifier,
+) {
+    Dropdown(nodes, selectedNode, onNodeSelected, modifier) { option -> Text(option ?: "<no associated node>") }
+}
+
+@Composable
+private fun <T> Dropdown(
+    options: Iterable<T>,
+    selected: T,
+    onSelected: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    preview: @Composable (T) -> Unit = { Text(it?.toString() ?: "Select...") },
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
-        Button(onClick = { expanded = true }) { Text(selectedNode ?: "Select Node") }
+        Button(onClick = { expanded = true }) { preview(selected) }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            nodes.forEach { nodeLabel ->
+            for (option in options) {
                 DropdownMenuItem(
-                    text = { Text(nodeLabel) },
+                    text = { preview(option) },
                     onClick = {
-                        onNodeSelected(nodeLabel)
+                        onSelected(option)
                         expanded = false
                     },
                 )
@@ -96,206 +96,44 @@ private fun NodeDropdown(
 }
 
 @Composable
-private fun ConfidenceLevelDropdown(
-    confidenceLevel: Double,
-    onConfidenceLevelChange: (Double) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val levels = listOf(0.90 to "90%", 0.95 to "95%", 0.99 to "99%")
-
-    Box(modifier = modifier) {
-        Button(onClick = { expanded = true }) { Text("CI: ${levels.first { it.first == confidenceLevel }.second}") }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            levels.forEach { (level, label) ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = {
-                        onConfidenceLevelChange(level)
-                        expanded = false
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryChart(
-    nodeLabel: String,
-    nodeDataBySimulation: List<Triple<String, NodeGroup, MetricsPanelState>>,
-    selectedScenarios: Set<String>,
-    selectedMetrics: Set<MetricOption>,
-    confidenceLevel: Double,
-) {
-    val filteredData = nodeDataBySimulation.filter { it.first in selectedScenarios }
-
-    if (filteredData.isEmpty()) {
-        Box(Modifier.fillMaxWidth().height(EmptyStateHeight), contentAlignment = Alignment.Center) {
-            Text("No data available for selected scenarios")
-        }
-        return
-    }
-
-    val scenarioColors =
-        filteredData
-            .mapIndexed { index, (simName, _, _) ->
-                simName to DefaultColorPalette.chartColors[index % DefaultColorPalette.chartColors.size]
-            }
-            .toMap()
-
-    val lines = mutableListOf<Line>()
-    val legendItems = mutableListOf<Pair<String, Color>>()
-
-    filteredData.forEach { (simName, node, metricsState) ->
-        val stats = metricsState.getStats(node) ?: return@forEach
-        val data = metricsState.getNodeData(node)
-        if (data.size < 2) return@forEach
-
-        val baseColor = scenarioColors[simName] ?: Color.Gray
-
-        selectedMetrics.forEach { metric ->
-            val (values, lineLabel, color) =
-                when (metric) {
-                    MetricOption.OCCUPANCY ->
-                        Triple(data.map { it.value.toDouble() }, "$simName - Occupancy", baseColor)
-                    MetricOption.AVERAGE -> Triple(stats.meanVals(), "$simName - Avg", baseColor.copy(alpha = 0.8f))
-                    MetricOption.CI_LOWER ->
-                        Triple(stats.lowerBounds(confidenceLevel), "$simName - Lower CI", baseColor.copy(alpha = 0.5f))
-                    MetricOption.CI_UPPER ->
-                        Triple(stats.upperBounds(confidenceLevel), "$simName - Upper CI", baseColor.copy(alpha = 0.5f))
-                }
-
-            if (values.size >= 2) {
-                lines.add(
-                    Line(
-                        label = lineLabel,
-                        values = values,
-                        color = SolidColor(color),
-                        drawStyle =
-                            DrawStyle.Stroke(
-                                width =
-                                    if (metric == MetricOption.OCCUPANCY) Dimensions.strokeWidth
-                                    else Dimensions.strokeWidthThin,
-                                strokeStyle =
-                                    if (metric == MetricOption.CI_LOWER || metric == MetricOption.CI_UPPER)
-                                        StrokeStyle.Dashed()
-                                    else StrokeStyle.Normal,
-                            ),
-                        strokeAnimationSpec = snap(),
-                        gradientAnimationSpec = snap(),
-                        popupProperties =
-                            PopupProperties(
-                                contentBuilder = { "$lineLabel: ${it.format(1)}" },
-                                textStyle = TextStyle(color = Color.White),
-                            ),
-                    )
-                )
-                legendItems.add(lineLabel to color)
-            }
-        }
-    }
-
-    val timeLabels =
-        filteredData.firstNotNullOfOrNull { (_, node, metricsState) ->
-            val data = metricsState.getNodeData(node)
-            if (data.size >= 2) generateTimeLabels(data) else null
-        } ?: emptyList()
-
-    Column(
-        modifier =
-            Modifier.fillMaxSize()
-                .background(Color.White, shape = RoundedCornerShape(Dimensions.cardCornerRadius))
-                .padding(Dimensions.spacingMd)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.spacingSm),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = "Node: $nodeLabel", style = MaterialTheme.typography.titleSmall)
-            ChartLegend(items = legendItems)
-        }
-
-        if (lines.isNotEmpty()) {
-            LineChart(
-                modifier = Modifier.fillMaxSize().padding(bottom = Dimensions.spacingLg),
-                data = lines,
-                animationDelay = 0,
-                labelProperties =
-                    LabelProperties(
-                        enabled = true,
-                        labels = timeLabels,
-                        rotation = LabelProperties.Rotation(degree = 0f),
-                    ),
-                labelHelperProperties = LabelHelperProperties(enabled = false),
-            )
-        } else {
-            Text(
-                text = "Insufficient data points for chart",
-                color = Color.Gray,
-                modifier = Modifier.height(Dimensions.chartMinHeight).wrapContentHeight(Alignment.CenterVertically),
-            )
-        }
-    }
-}
-
-private fun formatDuration(seconds: Long): String =
-    when {
-        seconds < 60 -> "${seconds}s"
-        seconds < 3600 -> "${seconds / 60}m${seconds % 60}s"
-        else -> "${seconds / 3600}h${(seconds % 3600) / 60}m"
-    }
-
-private fun generateTimeLabels(data: List<CISnapshot>, labelCount: Int = 5): List<String> =
-    if (data.size >= 2) {
-        val totalDuration = (data.last().time - data.first().time).inWholeSeconds
-        (0 until labelCount).map { i ->
-            val elapsed = (i * totalDuration) / (labelCount - 1)
-            formatDuration(elapsed)
-        }
-    } else {
-        emptyList()
-    }
-
-@Composable
-fun SummaryVisualisation(simulations: List<SimulationResult>) {
+fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
     if (simulations.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No simulations to display") }
         return
     }
 
-    val nodeLabelToSimulationData: Map<String, List<Triple<String, NodeGroup, MetricsPanelState>>> =
+    val metricIndex =
         remember(simulations) {
-            buildMap<_, MutableList<Triple<String, NodeGroup, MetricsPanelState>>> {
-                simulations.forEach { (simName, scenario, metricsState) ->
-                    val nodesByName = mutableMapOf<String, NodeGroup>()
-                    for (node in scenario.metricsNodes()) {
-                        if (node !is Container) {
-                            continue
-                        }
-                        var label = node.label
-                        var i = 2
-                        while (label in nodesByName) {
-                            label = "${node.label} (${i++})"
-                        }
-                        nodesByName[label] = node
-                    }
-                    for ((name, node) in nodesByName) {
-                        getOrPut(name) { mutableListOf() }.add(Triple(simName, node, metricsState))
+            val result = mutableMapOf<String, MutableMap<String?, MutableMap<String, MetricGroup>>>()
+
+            for ((simulationName, metricsState) in simulations) {
+                val nodeNames = assignNodeNames(metricsState.scenario)
+
+                for ((metricName, metricGroups) in metricsState.metricGroups) {
+                    for (metricGroup in metricGroups) {
+                        result
+                            .getOrPut(metricName) { sortedMapOf(nullsFirst()) }
+                            .getOrPut(metricGroup.associatedNode?.let(nodeNames::getValue), ::sortedMapOf)[
+                                simulationName] = metricGroup
                     }
                 }
             }
+
+            result as Map<String, Map<String?, Map<String, MetricGroup>>>
         }
 
-    val allNodeLabels = remember(nodeLabelToSimulationData) { nodeLabelToSimulationData.keys.sorted() }
+    val allSimulationNames = remember(simulations) { simulations.keys.sorted() }
 
-    val allSimulationNames = remember(simulations) { simulations.map { it.name } }
-
-    var selectedNodeLabel by remember { mutableStateOf(allNodeLabels.firstOrNull()) }
-    var selectedScenarios by remember { mutableStateOf(allSimulationNames.toSet()) }
-    var selectedMetrics by remember { mutableStateOf(setOf(MetricOption.AVERAGE)) }
-    var confidenceLevel by remember { mutableStateOf(0.95) }
+    var selectedMetric by remember(metricIndex) { mutableStateOf(metricIndex.keys.first()) }
+    var selectedNodeLabel by
+        remember(metricIndex, selectedMetric) { mutableStateOf(metricIndex.getValue(selectedMetric).keys.first()) }
+    var selectedScenarios by
+        remember(metricIndex, selectedMetric, selectedNodeLabel) {
+            mutableStateOf(metricIndex.getValue(selectedMetric).getValue(selectedNodeLabel).keys.toPersistentSet())
+        }
+    val groups = metricIndex.getValue(selectedMetric).getValue(selectedNodeLabel)
+    var showRaw by remember(metricIndex, selectedMetric) { mutableStateOf(false) }
+    val hasMoments = groups.values.any { it.moments != null }
 
     Column(
         Modifier.fillMaxSize().background(Color(0xFFF5F5F5)).padding(Dimensions.spacingLg),
@@ -306,46 +144,50 @@ fun SummaryVisualisation(simulations: List<SimulationResult>) {
             horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingLg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Dropdown(options = metricIndex.keys, selected = selectedMetric, onSelected = { selectedMetric = it }) {
+                option ->
+                Text(option)
+            }
+
             NodeDropdown(
-                nodes = allNodeLabels,
+                nodes = metricIndex.getValue(selectedMetric).keys,
                 selectedNode = selectedNodeLabel,
                 onNodeSelected = { selectedNodeLabel = it },
             )
 
-            MultiSelectDropdown(
-                label = "Scenarios",
-                options = allSimulationNames,
-                selectedOptions = selectedScenarios,
-                onSelectionChange = { selectedScenarios = it },
-                optionLabel = { it },
-            )
+            if (allSimulationNames.size >= 2) {
+                MultiSelectDropdown(
+                    label = "Scenarios",
+                    options = allSimulationNames,
+                    selectedOptions = selectedScenarios,
+                    onSelectionChange = { selectedScenarios = it },
+                    optionLabel = { it },
+                )
+            }
 
-            MultiSelectDropdown(
-                label = "Metrics",
-                options = MetricOption.entries.toList(),
-                selectedOptions = selectedMetrics,
-                onSelectionChange = { selectedMetrics = it },
-                optionLabel = { it.displayName },
-            )
-
-            ConfidenceLevelDropdown(
-                confidenceLevel = confidenceLevel,
-                onConfidenceLevelChange = { confidenceLevel = it },
-            )
+            if (hasMoments) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Show Raw", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Switch(checked = showRaw, onCheckedChange = { showRaw = it }, modifier = Modifier.scale(0.6f))
+                }
+            }
         }
 
         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(Dimensions.spacingLg)) {
-            if (selectedNodeLabel != null && selectedScenarios.isNotEmpty() && selectedMetrics.isNotEmpty()) {
+            if (selectedScenarios.isNotEmpty()) {
                 SummaryChart(
-                    nodeLabel = selectedNodeLabel!!,
-                    nodeDataBySimulation = nodeLabelToSimulationData[selectedNodeLabel].orEmpty(),
-                    selectedScenarios = selectedScenarios,
-                    selectedMetrics = selectedMetrics,
-                    confidenceLevel = confidenceLevel,
+                    metricByScenario =
+                        metricIndex
+                            .getValue(selectedMetric)
+                            .getValue(selectedNodeLabel)
+                            .filterKeys { it in selectedScenarios }
+                            .toImmutableMap(),
+                    simulations = simulations,
+                    showRaw = showRaw || !hasMoments,
                 )
             } else {
                 Box(modifier = Modifier.fillMaxWidth().height(EmptyStateHeight), contentAlignment = Alignment.Center) {
-                    Text("Select a node, at least one scenario, and at least one metric to display chart")
+                    Text("Select at least one scenario to display chart")
                 }
             }
         }

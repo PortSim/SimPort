@@ -1,12 +1,12 @@
 package com.group7.nodes
 
-import com.group7.Node
+import com.group7.Simulator
 import com.group7.channels.PushInputChannel
 import com.group7.channels.onReceive
 import com.group7.properties.Sink
 
 class SinkNode<InputT>(label: String, source: PushInputChannel<InputT>) :
-    Node(label, listOf(source), emptyList()), Sink {
+    ContainerNode<InputT>(label, listOf(source), emptyList()), Sink<InputT> {
     private val results = mutableMapOf<InputT, Int>()
 
     override var occupants = 0
@@ -16,6 +16,13 @@ class SinkNode<InputT>(label: String, source: PushInputChannel<InputT>) :
         source.onReceive {
             results.compute(it) { _, count -> (count ?: 0) + 1 }
             occupants++
+            notifyEnter(it)
         }
     }
+
+    override fun onLeave(
+        callback:
+            context(Simulator)
+            (InputT) -> Unit
+    ) {}
 }

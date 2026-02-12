@@ -1,49 +1,49 @@
 package components
 
-import DefaultColorPalette
-import Dimensions
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import com.group7.*
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.minutes
+import com.group7.MetricReporter
+import com.group7.Scenario
+import com.group7.metrics.ContinuousMetric
+import com.group7.metrics.InstantaneousMetric
+import com.group7.metrics.Metric
+import kotlin.math.abs
 import kotlin.time.Instant
-import reportMetrics
-import utils.metricsNodes
 
 /** Samples metrics from nodes at regular intervals, storing data as Compose-observable mutable state. */
-class MetricsPanelState(
-    scenario: Scenario,
-    override val sampleInterval: Duration = 10.minutes,
-    private val redrawEveryNSamples: Int = 10,
-) : Sampler {
-    val nodes = scenario.metricsNodes()
-    /** Per-node time series data using Compose-observable SnapshotStateLists */
-    private val nodeData: Map<NodeGroup, SnapshotStateList<CISnapshot>> = nodes.associateWith { mutableStateListOf() }
+class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples: Int = 10) : MetricReporter {
+    val metricGroups = scenario.metrics.groupBy { it.name }
 
-    /** Per-node incremental stats collector */
-    private val stats: Map<NodeGroup, TimeWeightedData> = nodes.associateWith { TimeWeightedData() }
+    private val allMetrics = metricGroups.values.asSequence().flatten().flatMap { it.allMetrics }.toList()
 
-    /** Get the TimeWeightedData for a specific node */
-    fun getStats(node: NodeGroup): TimeWeightedData? = stats[node]
+    /** Per-metric time series data using Compose-observable SnapshotStateLists */
+    private val metricData: Map<Metric, SnapshotStateList<Pair<Instant, Double>>> =
+        allMetrics.associateWith { mutableStateListOf() }
 
     /** Buffer for collecting samples before flushing to UI */
-    private val buffer: MutableMap<NodeGroup, MutableList<CISnapshot>> =
-        nodes.associateWith { mutableListOf<CISnapshot>() }.toMutableMap()
+    private val buffer: Map<Metric, MutableList<Pair<Instant, Double>>> = allMetrics.associateWith { mutableListOf() }
     private var isBatching = false
     private var samplesSinceRedraw = 0
+    var latestTimeSeen = Instant.DISTANT_PAST
+        private set
+
+    private var samplesSeen = 0
+
+    init {
+        for (metric in allMetrics) {
+            if (metric is InstantaneousMetric) {
+                metric.onFire { currentTime, value ->
+                    if (!value.isNaN()) {
+                        buffer.getValue(metric).add(currentTime to value)
+                    }
+                }
+            }
+        }
+    }
 
     /** Get time series data for a specific node */
-    fun getNodeData(node: NodeGroup): List<CISnapshot> = nodeData[node] ?: emptyList()
+    fun getMetricData(metric: Metric): List<Pair<Instant, Double>> = downsample(metricData.getValue(metric))
 
     /** Start batch mode - samples will be buffered without triggering UI updates */
     fun beginBatch() {
@@ -60,21 +60,27 @@ class MetricsPanelState(
 
     private fun flushBuffer() {
         Snapshot.withMutableSnapshot {
-            for (node in nodes) {
-                nodeData[node]?.addAll(buffer[node] ?: emptyList())
+            for (metric in allMetrics) {
+                val buffered = buffer[metric]
+                if (buffered.isNullOrEmpty()) {
+                    continue
+                }
+                if (metric is ContinuousMetric) {
+                    if (buffered.last().first < latestTimeSeen) {
+                        // End final sample if needed
+                        buffered.add(latestTimeSeen to buffered.last().second)
+                    }
+                }
+                metricData.getValue(metric).addAll(buffered)
             }
         }
         buffer.values.forEach { it.clear() }
         samplesSinceRedraw = 0
     }
 
-    override fun sample(currentTime: Instant) {
-        for (node in nodes) {
-            val metrics = node.reportMetrics()
-            val occupants = metrics.occupants ?: 0
-            val snapshot = stats[node]!!.addAndSnapshot(currentTime, occupants)
-            buffer[node]?.add(snapshot)
-        }
+    override fun report(currentTime: Instant) {
+        samplesSeen++
+        updateMetrics(currentTime)
 
         if (!isBatching) {
             samplesSinceRedraw++
@@ -84,83 +90,52 @@ class MetricsPanelState(
         }
     }
 
-    fun clear() {
-        Snapshot.withMutableSnapshot { nodeData.values.forEach { it.clear() } }
-        buffer.values.forEach { it.clear() }
-        stats.values.forEach { it.clear() }
-        samplesSinceRedraw = 0
+    private fun updateMetrics(currentTime: Instant) {
+        for (metric in allMetrics) {
+            if (metric is ContinuousMetric) {
+                val value = metric.report(currentTime)
+                if (value.isNaN()) {
+                    continue
+                }
+                val data = buffer.getValue(metric)
+                if (data.isEmpty()) {
+                    data.add(currentTime to value)
+                    continue
+                }
+                if (abs(data.last().second - value) < 1e-2) {
+                    continue
+                }
+                if (data.last().first < latestTimeSeen) {
+                    // End old value
+                    data.add(latestTimeSeen to data.last().second)
+                }
+                data.add(currentTime to value)
+            }
+        }
+
+        latestTimeSeen = currentTime
     }
 }
 
-@Composable
-fun MetricsPanel(metricsPanelState: MetricsPanelState) {
-    val nodes = metricsPanelState.nodes.toList()
-    // Reading the first node's data size subscribes to changes (SnapshotStateList is observable)
-    val sampleCount = nodes.firstOrNull()?.let { metricsPanelState.getNodeData(it).size } ?: 0
+private const val DESIRED_SAMPLES = 2000
 
-    // Confidence level picker state
-    var confidenceLevel by remember { mutableStateOf(0.95) }
-    var dropdownExpanded by remember { mutableStateOf(false) }
-    val confidenceLevels = listOf(0.90 to "90%", 0.95 to "95%", 0.99 to "99%")
-
-    Box(Modifier.fillMaxSize().background(Color(0xFFF5F5F5))) {
-        if (nodes.isEmpty() || sampleCount == 0) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No metrics data yet. Start playback to collect metrics.")
-            }
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(Dimensions.spacingLg).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Dimensions.spacingLg),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Metrics - $sampleCount samples collected", style = MaterialTheme.typography.titleMedium)
-
-                    // Confidence interval picker
-                    Box {
-                        Button(onClick = { dropdownExpanded = true }) {
-                            Text("CI: ${confidenceLevels.first { it.first == confidenceLevel }.second}")
-                        }
-                        DropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                            confidenceLevels.forEach { (level, label) ->
-                                DropdownMenuItem(
-                                    text = { Text(label) },
-                                    onClick = {
-                                        confidenceLevel = level
-                                        dropdownExpanded = false
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-
-                nodes.forEachIndexed { index, node ->
-                    val data = metricsPanelState.getNodeData(node)
-                    val stats = metricsPanelState.getStats(node)
-                    if (data.isNotEmpty() && stats != null) {
-                        val color = DefaultColorPalette.chartColors[index % DefaultColorPalette.chartColors.size]
-
-                        // Get pre-calculated CI bounds from TimeWeightedData
-                        val avgData = stats.meanVals()
-                        val lowerBound = stats.lowerBounds(confidenceLevel)
-                        val upperBound = stats.upperBounds(confidenceLevel)
-
-                        NodeChart(
-                            node = node,
-                            data = data,
-                            avgData = avgData,
-                            lowerBound = lowerBound,
-                            upperBound = upperBound,
-                            dataColor = color,
-                        )
-                    }
-                }
-            }
+private fun downsample(samples: List<Pair<Instant, Double>>): MutableList<Pair<Instant, Double>> {
+    val result = samples.toMutableList()
+    while (result.size >= 2 * DESIRED_SAMPLES) {
+        val newCount = result.size / 2
+        for (i in 0..<newCount) {
+            val b1 = result[2 * i]
+            val b2 = result[2 * i + 1]
+            result[i] =
+                Pair(
+                    Instant.fromEpochMilliseconds(
+                        (b1.first.toEpochMilliseconds() + b2.first.toEpochMilliseconds()) / 2
+                    ),
+                    (b1.second + b2.second) / 2,
+                )
         }
+
+        result.subList(newCount, result.size).clear()
     }
+    return result
 }

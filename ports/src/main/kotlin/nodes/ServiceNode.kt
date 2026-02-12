@@ -1,6 +1,5 @@
 package com.group7.nodes
 
-import com.group7.Node
 import com.group7.Simulator
 import com.group7.channels.*
 import com.group7.generators.DelayProvider
@@ -11,7 +10,7 @@ class ServiceNode<T>(
     private val source: PushInputChannel<T>,
     private val destination: PushOutputChannel<T>,
     private val delayProvider: DelayProvider,
-) : Node(label, listOf(source), listOf(destination)), Service {
+) : ContainerNode<T>(label, listOf(source), listOf(destination)), Service<T> {
 
     override var isServing = false
         private set
@@ -23,6 +22,7 @@ class ServiceNode<T>(
     context(_: Simulator)
     private fun startServing(obj: T) {
         isServing = true
+        notifyEnter(obj)
         source.close()
         scheduleDelayed(delayProvider.nextDelay()) { finishServing(obj) }
     }
@@ -30,6 +30,7 @@ class ServiceNode<T>(
     context(_: Simulator)
     private fun finishServing(obj: T) {
         isServing = false
+        notifyLeave(obj)
         source.open()
         destination.send(obj)
     }

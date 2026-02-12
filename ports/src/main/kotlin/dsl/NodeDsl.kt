@@ -70,7 +70,7 @@ internal fun <NodeT : SourceNode, OutputT, OutputChannelT : ChannelType<OutputCh
 ): RegularNodeBuilder<NodeT, OutputT, OutputChannelT> {
     val output = newConnectableOutputChannel<OutputT, _>(outputChannelType)
     val source = node(output).withGroup(groupScope)
-    scenarioScope.sources.add(source)
+    scenarioScope.asImpl().sources.add(source)
     return NodeBuilderImpl(source, output)
 }
 

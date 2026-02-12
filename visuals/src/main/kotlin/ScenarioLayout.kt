@@ -1,12 +1,7 @@
 import androidx.compose.runtime.mutableStateOf
-import com.group7.Node
 import com.group7.NodeGroup
 import com.group7.Scenario
-import com.group7.channels.ChannelType
-import com.group7.channels.OutputChannel
-import com.group7.channels.isOpen
-import com.group7.channels.isPush
-import com.group7.channels.isReady
+import com.group7.channels.*
 import org.eclipse.elk.alg.layered.options.*
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
 import org.eclipse.elk.core.data.LayoutMetaDataService
@@ -20,35 +15,14 @@ import org.eclipse.elk.graph.util.ElkGraphUtil
    The scenario graph figures out the nodes and channels in a scenario.
    It might be simpler to have a function in scenario instead, i am undecided.
 */
-internal class ScenarioGraph {
-    val sources: List<Node>
-    val nodesOrderedByBFS: List<Node>
-    val edgesWithChannels: List<Triple<Node, Node, OutputChannel<*, *>>>
-
-    constructor(scenario: Scenario) {
-        /* Enumerate all nodes and channels between them */
-        val setOfNodes = mutableSetOf<Node>()
-        val nodesOrdered = mutableListOf<Node>()
-        val channels = mutableListOf<Triple<Node, Node, OutputChannel<*, *>>>()
-        val queue = ArrayDeque<Node>(scenario.sources)
-        while (queue.isNotEmpty()) {
-            val node = queue.removeFirst()
-            if (setOfNodes.add(node)) {
-                nodesOrdered.add(node)
-                for (channel in node.outgoing) {
-                    val downstream = channel.downstream.downstreamNode
-                    if (downstream !in setOfNodes) {
-                        queue.addLast(downstream)
-                    }
-                    channels.add(Triple(node, downstream, channel))
-                }
+internal class ScenarioGraph(scenario: Scenario) {
+    val nodesOrderedByBFS = scenario.bfs()
+    val edgesWithChannels =
+        nodesOrderedByBFS.flatMap { upstream ->
+            upstream.outgoing.asSequence().map { channel ->
+                Triple(upstream, channel.downstream.downstreamNode, channel)
             }
         }
-
-        sources = scenario.sources
-        nodesOrderedByBFS = nodesOrdered
-        edgesWithChannels = channels
-    }
 }
 
 class ScenarioLayout(scenario: Scenario) {

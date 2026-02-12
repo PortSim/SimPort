@@ -1,10 +1,28 @@
 package com.group7.properties
 
-interface Delay : Container
+import com.group7.Simulator
 
-interface Queue : Container
+interface Source<out T> {
+    fun onEmit(
+        callback:
+            context(Simulator)
+            (T) -> Unit
+    )
+}
 
-interface Service : BoundedContainer {
+interface Delay<out T> : Container<T>
+
+interface Match<out MainInputT, out SideInputT, out OutputT> {
+    fun onMatch(
+        callback:
+            context(Simulator)
+            (MainInputT, SideInputT, OutputT) -> Unit
+    )
+}
+
+interface Queue<out T> : Container<T>
+
+interface Service<out T> : BoundedContainer<T> {
     val isServing: Boolean
 
     override val occupants
@@ -14,4 +32,18 @@ interface Service : BoundedContainer {
         get() = 1
 }
 
-interface Sink : Container
+interface Sink<out T> : Container<T> {
+    override fun onLeave(
+        callback:
+            context(Simulator)
+            (T) -> Unit
+    ) {}
+}
+
+interface Split<out InputT, out MainOutputT, out SideOutputT> {
+    fun onSplit(
+        callback:
+            context(Simulator)
+            (InputT, MainOutputT, SideOutputT) -> Unit
+    )
+}

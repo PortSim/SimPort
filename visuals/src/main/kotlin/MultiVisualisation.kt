@@ -6,14 +6,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import components.MetricsPanelState
+import kotlinx.collections.immutable.ImmutableMap
 
 /** MultiVisualisation displays multiple completed simulations. */
 @Composable
-fun MultiVisualisation(simulations: List<SimulationResult>) {
+fun MultiVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
 
     var individualOrSummaryTab by remember { mutableStateOf(0) }
 
-    Column() {
+    Column {
         PrimaryTabRow(selectedTabIndex = individualOrSummaryTab) {
             Tab(
                 selected = individualOrSummaryTab == 0,
