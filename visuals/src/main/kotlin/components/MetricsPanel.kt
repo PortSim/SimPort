@@ -45,6 +45,18 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
     /** Get time series data for a specific node */
     fun getMetricData(metric: Metric): List<Pair<Instant, Double>> = downsample(metricData.getValue(metric))
 
+    fun getMetricSample(metric: Metric, time: Instant): Pair<Instant, Double>? {
+        val data = metricData.getValue(metric)
+        var index = data.binarySearch(time to Double.NaN, compareBy { it.first })
+        if (index < 0) {
+            index = (-(index + 1) - 1)
+        }
+        if (index < 0) {
+            return null
+        }
+        return data[index]
+    }
+
     /** Start batch mode - samples will be buffered without triggering UI updates */
     fun beginBatch() {
         isBatching = true
