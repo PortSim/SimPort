@@ -101,7 +101,7 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No simulations to display") }
         return
     }
-
+    // metricName -> nodeName? (could be global metric) -> simulationName: metricGroup
     val metricIndex =
         remember(simulations) {
             val result = mutableMapOf<String, MutableMap<String?, MutableMap<String, MetricGroup>>>()
