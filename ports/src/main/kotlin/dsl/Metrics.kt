@@ -1,6 +1,7 @@
 package com.group7.dsl
 
 import com.group7.NodeGroup
+import com.group7.metrics.GlobalMetricFactory
 import com.group7.metrics.MetricFactory
 import com.group7.metrics.MetricGroup
 
@@ -18,6 +19,11 @@ fun <BuilderT : RegularNodeBuilder<NodeT, *, *>, NodeT : NodeGroup> BuilderT.tra
 context(metricsScope: MetricsBuilderScope)
 inline fun <reified NodeT> trackAll(metricFactory: MetricFactory<NodeT>) {
     trackNotNull({ (it as? NodeT)?.let(metricFactory::createGroup) })
+}
+
+context(metricsScope: MetricsBuilderScope)
+fun trackGlobal(metricFactory: GlobalMetricFactory) {
+    metricsScope.asImpl().metrics.add(metricFactory.createGroup(metricsScope.asImpl().scenario))
 }
 
 @PublishedApi
