@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.power-assert")
     id("io.kotest")
     id("com.ncorti.ktfmt.gradle")
+    `maven-publish`
 }
 
 group = "com.group7"
