@@ -31,6 +31,8 @@ class QueueNode<T>(
     override val occupants
         get() = policy.reportOccupancy()
 
+    override fun supportsResidenceTime() = policy.supportsResidenceTime()
+
     context(_: Simulator)
     private fun onArrive(obj: T) {
         policy.enqueue(obj)

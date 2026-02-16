@@ -21,4 +21,6 @@ class TokenQueuePolicy(private var count: Int) : QueuePolicy<Token> {
     }
 
     override fun reportOccupancy() = count
+
+    override fun supportsResidenceTime() = false
 }
