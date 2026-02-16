@@ -1,8 +1,13 @@
 package com.group7.utils
 
 import com.group7.Scenario
+import com.group7.channels.ChannelType
 import com.group7.channels.PushInputChannel
 import com.group7.channels.newPushChannels
+import com.group7.dsl.GroupScope
+import com.group7.dsl.RegularNodeBuilder
+import com.group7.dsl.ScenarioBuilderScope
+import com.group7.dsl.arrivals
 import com.group7.generators.*
 import com.group7.nodes.ArrivalNode
 import kotlin.time.Duration
@@ -34,6 +39,20 @@ internal object Presets {
      */
     fun <T> defaultFixedGenerator(numCars: Int, obj: T, separationTime: Duration = 10.seconds): Generator<T> =
         Generators.constant(obj, Delays.fixed(separationTime)).take(numCars)
+
+    /**
+     * Generates a default arrivals node at the beginning of a buildScenario chain, and abstracts away the Generators
+     * and Delays configuration
+     */
+    context(_: ScenarioBuilderScope, _: GroupScope)
+    fun <T> defaultArrivals(
+        obj: T,
+        label: String = "Arrivals",
+        numVehicles: Int = NUM_VEHICLES,
+        separationTime: Duration = 10.seconds,
+    ): RegularNodeBuilder<ArrivalNode<T>, T, ChannelType.Push> {
+        return arrivals<T>(label, defaultFixedGenerator(numVehicles, obj, separationTime))
+    }
 }
 
 internal object TestDelays {

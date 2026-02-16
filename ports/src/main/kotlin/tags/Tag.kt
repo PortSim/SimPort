@@ -1,15 +1,28 @@
 package com.group7.tags
 
+import com.group7.channels.PullInputChannel
 import com.group7.channels.PushOutputChannel
 
-sealed interface Tag<out T> {
+/*
+Currently used for forward walks to find containers following a fork node
+ */
+sealed interface OutputTag<out T> {
     fun find(start: PushOutputChannel<*>): T
 }
 
-sealed interface BasicTag<out T> : Tag<T> {
+/*
+Currently used for backward walks to find containers supplying a join node
+ */
+sealed interface InputTag<out T> {
+    fun find(start: PullInputChannel<*>): T
+}
+
+sealed interface BasicTag<out T> : OutputTag<T>, InputTag<T> {
     val value: T
 
     override fun find(start: PushOutputChannel<*>): T = value
+
+    override fun find(start: PullInputChannel<*>): T = value
 }
 
 sealed interface MutableBasicTag<T> : BasicTag<T> {
@@ -20,7 +33,9 @@ fun <T> newTag(): MutableBasicTag<T> = BasicTagImpl()
 
 fun <T> newTag(value: T): BasicTag<T> = BasicTagImpl(value)
 
-fun <T> newDynamicTag(supplier: (PushOutputChannel<*>) -> T): Tag<T> = DynamicTagImpl(supplier)
+fun <T> newDynamicOutputTag(supplier: (PushOutputChannel<*>) -> T): OutputTag<T> = DynamicOutputTagImpl(supplier)
+
+fun <T> newDynamicInputTag(supplier: (PullInputChannel<*>) -> T): InputTag<T> = DynamicInputTagImpl(supplier)
 
 private class BasicTagImpl<T>() : MutableBasicTag<T> {
     private var isBound = false
@@ -45,11 +60,25 @@ private class BasicTagImpl<T>() : MutableBasicTag<T> {
     }
 }
 
-private class DynamicTagImpl<out T>(private val supplier: (PushOutputChannel<*>) -> T) : Tag<T> {
+private class DynamicOutputTagImpl<out T>(private val supplier: (PushOutputChannel<*>) -> T) : OutputTag<T> {
     private var previousStart: PushOutputChannel<*>? = null
     private var cached: T? = null
 
     override fun find(start: PushOutputChannel<*>): T {
+        if (start === previousStart) {
+            @Suppress("UNCHECKED_CAST")
+            return cached as T
+        }
+        previousStart = start
+        return supplier(start).also { cached = it }
+    }
+}
+
+private class DynamicInputTagImpl<out T>(private val supplier: (PullInputChannel<*>) -> T) : InputTag<T> {
+    private var previousStart: PullInputChannel<*>? = null
+    private var cached: T? = null
+
+    override fun find(start: PullInputChannel<*>): T {
         if (start === previousStart) {
             @Suppress("UNCHECKED_CAST")
             return cached as T

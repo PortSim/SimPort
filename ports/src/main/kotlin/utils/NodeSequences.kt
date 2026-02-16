@@ -1,9 +1,10 @@
 package com.group7.utils
 
 import com.group7.NodeGroup
+import com.group7.channels.InputChannel
 import com.group7.channels.OutputChannel
 
-fun OutputChannel<*, *>.walkDownstream() = sequence {
+fun OutputChannel<*, *>.walkDownstream(): Sequence<NodeGroup> = sequence {
     var current = this@walkDownstream
     while (true) {
         var next: NodeGroup = current.downstream.downstreamNode
@@ -23,6 +24,29 @@ fun OutputChannel<*, *>.walkDownstream() = sequence {
         }
         yield(next)
         current = next.outgoing.singleOrNull() ?: break
+    }
+}
+
+fun InputChannel<*, *>.walkUpstream(): Sequence<NodeGroup> = sequence {
+    var current = this@walkUpstream
+    while (true) {
+        var next: NodeGroup = current.upstream.upstreamNode
+        val currentGroup = current.downstreamNode.parent
+        when (val nextGroup = next.parent) {
+            currentGroup -> {
+                // Same group, carry on
+            }
+            in currentGroup -> {
+                // The new group is strictly contained within the current group, so it can't be null
+                // Treat the group as a whole
+                next = nextGroup!!
+            }
+            else -> {
+                // Exit this group but carry on
+            }
+        }
+        yield(next)
+        current = next.incoming.singleOrNull() ?: break
     }
 }
 

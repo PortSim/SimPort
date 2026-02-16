@@ -4,8 +4,15 @@ import com.group7.channels.ChannelType
 import com.group7.generators.DelayProvider
 import com.group7.generators.Generator
 import com.group7.nodes.*
+import com.group7.nodes.forks.PullForkNode
+import com.group7.nodes.forks.PushForkNode
+import com.group7.nodes.joins.PullJoinNode
+import com.group7.nodes.joins.PushJoinNode
 import com.group7.policies.fork.ForkPolicy
-import com.group7.policies.fork.RandomForkPolicy
+import com.group7.policies.generic_fj.RandomPolicy
+import com.group7.policies.generic_fj.forkPolicy
+import com.group7.policies.generic_fj.joinPolicy
+import com.group7.policies.join.JoinPolicy
 import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import kotlin.contracts.contract
@@ -30,10 +37,10 @@ fun <T> NodeBuilder<T, ChannelType.Pull>.thenPump(
 context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Push>.thenFork(
     label: String,
-    lanes: List<(RegularNodeBuilder<ForkNode<ItemT>, ItemT, ChannelType.Push>) -> R>,
-    policy: ForkPolicy<ItemT> = RandomForkPolicy(),
+    lanes: List<(RegularNodeBuilder<PushForkNode<ItemT>, ItemT, ChannelType.Push>) -> R>,
+    policy: ForkPolicy<ItemT> = forkPolicy(RandomPolicy()),
 ): List<R> {
-    return thenDiverge(ChannelType.Push, lanes.size) { input, outputs -> ForkNode(label, input, outputs, policy) }
+    return thenDiverge(ChannelType.Push, lanes.size) { input, outputs -> PushForkNode(label, input, outputs, policy) }
         .zip(lanes) { node, lane -> lane(node) }
 }
 
@@ -41,15 +48,57 @@ context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Push>.thenFork(
     label: String,
     numLanes: Int,
-    policy: ForkPolicy<ItemT> = RandomForkPolicy(),
-    laneAction: (Int, RegularNodeBuilder<ForkNode<ItemT>, ItemT, ChannelType.Push>) -> R,
+    policy: ForkPolicy<ItemT> = forkPolicy(RandomPolicy()),
+    laneAction: (Int, RegularNodeBuilder<PushForkNode<ItemT>, ItemT, ChannelType.Push>) -> R,
 ): List<R> = thenFork(label, List(numLanes) { i -> { node -> laneAction(i, node) } }, policy)
+
+context(_: GroupScope)
+fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Pull>.thenFork(
+    label: String,
+    lanes: List<(RegularNodeBuilder<PullForkNode<ItemT>, ItemT, ChannelType.Pull>) -> R>,
+): List<R> {
+    return thenDiverge(ChannelType.Pull, lanes.size) { input, outputs -> PullForkNode(label, input, outputs) }
+        .zip(lanes) { node, lane -> lane(node) }
+}
+
+context(_: GroupScope)
+fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Pull>.thenFork(
+    label: String,
+    numLanes: Int,
+    laneAction: (Int, RegularNodeBuilder<PullForkNode<ItemT>, ItemT, ChannelType.Pull>) -> R,
+): List<R> = thenFork(label, List(numLanes) { i -> { node -> laneAction(i, node) } })
+
+context(_: GroupScope)
+fun <ItemT, R> NodeBuilder<ItemT, *>.thenPushFork(
+    label: String,
+    lanes: List<(RegularNodeBuilder<PushForkNode<ItemT>, ItemT, ChannelType.Push>) -> R>,
+    policy: ForkPolicy<ItemT> = forkPolicy(RandomPolicy()),
+): List<R> = asPush().thenFork(label, lanes, policy)
+
+context(_: GroupScope)
+fun <ItemT, R> NodeBuilder<ItemT, *>.thenPushFork(
+    label: String,
+    numLanes: Int,
+    policy: ForkPolicy<ItemT> = forkPolicy(RandomPolicy()),
+    laneAction: (Int, RegularNodeBuilder<PushForkNode<ItemT>, ItemT, ChannelType.Push>) -> R,
+): List<R> = asPush().thenFork(label, List(numLanes) { i -> { node -> laneAction(i, node) } }, policy)
 
 context(_: GroupScope)
 fun <T> List<NodeBuilder<T, ChannelType.Push>>.thenJoin(
     label: String
-): RegularNodeBuilder<JoinNode<T>, T, ChannelType.Push> =
-    thenConverge(ChannelType.Push) { inputs, output -> JoinNode(label, inputs, output) }
+): RegularNodeBuilder<PushJoinNode<T>, T, ChannelType.Push> =
+    thenConverge(ChannelType.Push) { inputs, output -> PushJoinNode(label, inputs, output) }
+
+context(_: GroupScope)
+fun <T> List<NodeBuilder<T, ChannelType.Pull>>.thenJoin(
+    label: String,
+    policy: JoinPolicy<T> = joinPolicy(RandomPolicy()),
+): RegularNodeBuilder<PullJoinNode<T>, T, ChannelType.Pull> =
+    thenConverge(ChannelType.Pull) { inputs, output -> PullJoinNode(label, inputs, output, policy) }
+
+context(_: GroupScope)
+fun <T> List<NodeBuilder<T, *>>.thenPushJoin(label: String): RegularNodeBuilder<PushJoinNode<T>, T, ChannelType.Push> =
+    this.map { it.asPush() }.thenJoin(label)
 
 context(_: GroupScope)
 fun <MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT>> NodeBuilder<MainInputT, ChannelT>.thenMatch(

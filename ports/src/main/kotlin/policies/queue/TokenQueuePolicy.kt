@@ -15,6 +15,7 @@ class TokenQueuePolicy(private var count: Int) : QueuePolicy<Token> {
         if (count == 0) {
             throw NoSuchElementException("The queue is empty")
         }
+
         count--
         return Token
     }
