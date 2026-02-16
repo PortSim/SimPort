@@ -22,7 +22,7 @@ class DelayNodeTest :
 
             val sink: SinkNode<TestVehicle>
             val scenario = buildScenario {
-                arrivals("Source", Generators.constant(TestVehicle, Delays.fixed(10.seconds)).take(numCars))
+                arrivals("Source", Generators.constant({ TestVehicle }, Delays.fixed(10.seconds)).take(numCars))
                     .thenDelay("Road", Delays.fixed(1.minutes))
                     .thenSink("Sink")
                     .let { sink = it }

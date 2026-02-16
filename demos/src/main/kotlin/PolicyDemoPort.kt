@@ -119,17 +119,17 @@ enum class DemoForkPolicy(private val description: String) {
     abstract fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>): ForkPolicy<Vehicle>
 }
 
-data class Vehicle(val isLarge: Boolean)
+class Vehicle(val isLarge: Boolean)
 
 fun policyDemoPort(queuePolicy: DemoQueuePolicy, forkPolicy: DemoForkPolicy) = buildScenario {
     listOf(
             arrivals(
                 "Large Arrivals",
-                Generators.constant(Vehicle(isLarge = true), Delays.exponentialWithMean(1.minutes)),
+                Generators.constant({ Vehicle(isLarge = true) }, Delays.exponentialWithMean(1.minutes)),
             ),
             arrivals(
                 "Small Arrivals",
-                Generators.constant(Vehicle(isLarge = false), Delays.exponentialWithMean(10.seconds)),
+                Generators.constant({ Vehicle(isLarge = false) }, Delays.exponentialWithMean(10.seconds)),
             ),
         )
         .thenJoin("Arrivals Join")

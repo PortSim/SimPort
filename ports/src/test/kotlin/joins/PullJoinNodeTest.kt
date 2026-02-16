@@ -26,7 +26,8 @@ class PullJoinNodeTest :
                     buildScenario {
                         arrivalLanes(
                                 List(numLanes) {
-                                    Generators.constant(TestVehicle, Delays.fixed(delay)).take(NUM_VEHICLES / numLanes)
+                                    Generators.constant({ TestVehicle }, Delays.fixed(delay))
+                                        .take(NUM_VEHICLES / numLanes)
                                 }
                             ) { i, lane ->
                                 lane.thenQueue("Queue $i")
@@ -47,7 +48,8 @@ class PullJoinNodeTest :
                     buildScenario {
                         arrivalLanes(
                                 List(numLanes) {
-                                    Generators.constant(TestVehicle, Delays.fixed(delay)).take(NUM_VEHICLES / numLanes)
+                                    Generators.constant({ TestVehicle }, Delays.fixed(delay))
+                                        .take(NUM_VEHICLES / numLanes)
                                 }
                             ) { _, lane ->
                                 lane

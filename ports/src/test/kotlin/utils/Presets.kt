@@ -37,8 +37,8 @@ internal object Presets {
      * Generates a fixed generator of vehicles. The type of vehicle to emit by the generator has to be passed in
      * manually, but separation time between vehicle dispatches are by default 10 seconds
      */
-    fun <T> defaultFixedGenerator(numCars: Int, obj: T, separationTime: Duration = 10.seconds): Generator<T> =
-        Generators.constant(obj, Delays.fixed(separationTime)).take(numCars)
+    fun <T> defaultFixedGenerator(numCars: Int, factory: () -> T, separationTime: Duration = 10.seconds): Generator<T> =
+        Generators.constant(factory, Delays.fixed(separationTime)).take(numCars)
 
     /**
      * Generates a default arrivals node at the beginning of a buildScenario chain, and abstracts away the Generators
@@ -46,12 +46,12 @@ internal object Presets {
      */
     context(_: ScenarioBuilderScope, _: GroupScope)
     fun <T> defaultArrivals(
-        obj: T,
+        factory: () -> T,
         label: String = "Arrivals",
         numVehicles: Int = NUM_VEHICLES,
         separationTime: Duration = 10.seconds,
     ): RegularNodeBuilder<ArrivalNode<T>, T, ChannelType.Push> {
-        return arrivals<T>(label, defaultFixedGenerator(numVehicles, obj, separationTime))
+        return arrivals(label, defaultFixedGenerator(numVehicles, factory, separationTime))
     }
 }
 

@@ -23,7 +23,7 @@ class ServiceNodeTest :
                                 generator =
                                     Presets.defaultFixedGenerator(
                                         NUM_VEHICLES,
-                                        TestVehicle,
+                                        { TestVehicle },
                                         separationTime = SEPARATION_TIME,
                                     ),
                             )
@@ -52,7 +52,7 @@ class ServiceNodeTest :
                                 "Arrival",
                                 Presets.defaultFixedGenerator(
                                     NUM_VEHICLES * NUM_VEHICLES,
-                                    TestVehicle,
+                                    { TestVehicle },
                                     separationTime = SEPARATION_TIME / 2,
                                 ),
                             )
