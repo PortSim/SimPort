@@ -52,3 +52,5 @@ ktfmt {
     kotlinLangStyle()
     maxWidth = 120
 }
+
+publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
