@@ -8,7 +8,10 @@ context(scenarioScope: ScenarioBuilderScope)
 fun <BuilderT : RegularNodeBuilder<NodeT, *, *>, NodeT : NodeGroup> BuilderT.track(
     metricFactory: MetricFactory<NodeT>
 ): BuilderT {
-    scenarioScope.asImpl().metrics.add(metricFactory.createGroup(this.node))
+    scenarioScope
+        .asImpl()
+        .metrics
+        .add(metricFactory.createGroup(this.node) ?: error("Metric $metricFactory does not support node ${this.node}"))
     return this
 }
 
