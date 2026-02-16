@@ -40,12 +40,7 @@ class SojournTime(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS)
         fun createGroup(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS): MetricGroup {
             val raw = SojournTime(scenario, unit)
             val cis = InstantaneousConfidenceIntervals(raw)
-            return MetricGroup(
-                "Sojourn Time (${unit.suffix})",
-                null,
-                raw,
-                Moments(cis.mean, cis.lower, cis.upper, cis.variance),
-            )
+            return MetricGroup("Sojourn Time (${unit.suffix})", null, raw, cis.moments())
         }
     }
 }

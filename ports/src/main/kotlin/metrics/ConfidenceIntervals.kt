@@ -44,6 +44,8 @@ abstract class ConfidenceIntervals(
 
     fun batchVariance() = batchMeans.batchVariance()
 
+    fun moments() = Moments(mean, lower, upper, variance)
+
     private fun reportIntervals(currentTime: Instant): Intervals? {
         if (lastTime == currentTime) {
             return lastIntervals

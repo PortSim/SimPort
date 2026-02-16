@@ -11,12 +11,7 @@ class Occupancy(private val container: Container<*>) : ContinuousMetric() {
         override fun createGroup(node: Container<*>): MetricGroup {
             val raw = Occupancy(node)
             val cis = ContinuousConfidenceIntervals(raw)
-            return MetricGroup(
-                "Occupancy",
-                node as NodeGroup,
-                raw,
-                Moments(cis.mean, cis.lower, cis.upper, cis.variance),
-            )
+            return MetricGroup("Occupancy", node as NodeGroup, raw, cis.moments())
         }
     }
 }

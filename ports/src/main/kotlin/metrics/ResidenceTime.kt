@@ -37,12 +37,7 @@ class ResidenceTime(container: Container<*>, private val unit: DurationUnit = Du
             }
             val raw = ResidenceTime(node, unit)
             val cis = InstantaneousConfidenceIntervals(raw)
-            return MetricGroup(
-                "Residence Time (${unit.suffix})",
-                node as NodeGroup,
-                raw,
-                Moments(cis.mean, cis.lower, cis.upper, cis.variance),
-            )
+            return MetricGroup("Residence Time (${unit.suffix})", node as NodeGroup, raw, cis.moments())
         }
     }
 }
