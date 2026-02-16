@@ -6,8 +6,8 @@ import com.group7.generators.Delays
 import com.group7.generators.Generators
 import com.group7.generators.take
 import com.group7.metrics.Occupancy
-import com.group7.nodes.JoinNode
 import com.group7.nodes.SinkNode
+import com.group7.nodes.joins.PushJoinNode
 import com.group7.properties.Queue
 import com.group7.utils.thenSubnetwork
 import kotlin.time.Duration
@@ -73,7 +73,7 @@ private fun <T> NodeBuilder<T, *>.thenQueueAndGates(
     description: String,
     numLanes: Int,
     averageServiceTime: Duration,
-): RegularNodeBuilder<JoinNode<T>, T, ChannelType.Push> =
+): RegularNodeBuilder<PushJoinNode<T>, T, ChannelType.Push> =
     this.thenQueue("$description Queue")
         .thenPump()
         .thenFork("$description Lane Split", numLanes) { i, lane ->

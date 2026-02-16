@@ -7,8 +7,9 @@ import com.group7.generators.Delays
 import com.group7.generators.Generators
 import com.group7.metrics.Occupancy
 import com.group7.policies.fork.ForkPolicy
-import com.group7.policies.fork.RandomForkPolicy
-import com.group7.policies.fork.RoundRobinForkPolicy
+import com.group7.policies.generic_fj.RandomPolicy
+import com.group7.policies.generic_fj.RoundRobinPolicy
+import com.group7.policies.generic_fj.forkPolicy
 import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import com.group7.policies.queue.RandomQueuePolicy
@@ -97,10 +98,12 @@ enum class DemoQueuePolicy(private val description: String) {
 
 enum class DemoForkPolicy(private val description: String) {
     RANDOM("Random") {
-        override fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>) = RandomForkPolicy<Vehicle>()
+        override fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>) =
+            forkPolicy<Vehicle>(RandomPolicy())
     },
     ROUND_ROBIN("Round Robin") {
-        override fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>) = RoundRobinForkPolicy<Vehicle>()
+        override fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>) =
+            forkPolicy<Vehicle>(RoundRobinPolicy())
     },
     LEAST_FULL("Least Full") {
         override fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>) =
