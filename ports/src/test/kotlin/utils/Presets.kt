@@ -4,7 +4,6 @@ import com.group7.Scenario
 import com.group7.channels.ChannelType
 import com.group7.channels.PushInputChannel
 import com.group7.channels.newPushChannels
-import com.group7.dsl.GroupScope
 import com.group7.dsl.RegularNodeBuilder
 import com.group7.dsl.ScenarioBuilderScope
 import com.group7.dsl.arrivals
@@ -44,7 +43,7 @@ internal object Presets {
      * Generates a default arrivals node at the beginning of a buildScenario chain, and abstracts away the Generators
      * and Delays configuration
      */
-    context(_: ScenarioBuilderScope, _: GroupScope)
+    context(_: ScenarioBuilderScope)
     fun <T> defaultArrivals(
         factory: () -> T,
         label: String = "Arrivals",

@@ -19,9 +19,7 @@ class BoundedSubnetwork<
     label: String,
     override val capacity: Int,
     input: Connection<out ItemT, InputChannelT>,
-    inner:
-        context(GroupScope)
-        (NodeBuilder<ItemT, InputChannelT>) -> NodeBuilder<ItemT, OutputChannelT>,
+    inner: (NodeBuilder<ItemT, InputChannelT>) -> NodeBuilder<ItemT, OutputChannelT>,
     output: OutputRef<ItemT, OutputChannelT>,
 ) : CompoundNode(label, listOf(input), listOf(output)), BoundedContainer<ItemT> {
 

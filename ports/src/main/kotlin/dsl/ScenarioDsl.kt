@@ -1,5 +1,6 @@
 package com.group7.dsl
 
+import com.group7.GroupScope
 import com.group7.Scenario
 import com.group7.SourceNode
 import com.group7.metrics.MetricGroup
@@ -12,12 +13,12 @@ sealed interface MetricsBuilderScope
 
 fun buildScenario(
     builder:
-        context(ScenarioBuilderScope, GroupScope)
+        context(ScenarioBuilderScope)
         () -> Unit
 ): Scenario {
     contract { callsInPlace(builder, InvocationKind.EXACTLY_ONCE) }
     val scenarioScope = ScenarioBuilderScopeImpl()
-    context(scenarioScope, GroupScope.Root) { builder() }
+    GroupScope.withGroup(null) { context(scenarioScope) { builder() } }
     return Scenario(scenarioScope.asImpl().sources, scenarioScope.asImpl().metrics)
 }
 

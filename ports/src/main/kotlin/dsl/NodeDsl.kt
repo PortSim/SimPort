@@ -8,15 +8,6 @@ import com.group7.tags.newTag
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-interface GroupScope {
-    val group: NodeGroup?
-
-    companion object Root : GroupScope {
-        override val group
-            get() = null
-    }
-}
-
 sealed interface NodeBuilder<out ItemT, ChannelT : ChannelType<ChannelT>> {
     val channelType: ChannelT
 }
@@ -63,18 +54,17 @@ private class OutputRefImpl<ItemT, ChannelT : ChannelType<ChannelT>> : OutputRef
     override lateinit var output: ConnectableOutputChannel<ItemT, ChannelT>
 }
 
-context(scenarioScope: ScenarioBuilderScope, groupScope: GroupScope)
+context(scenarioScope: ScenarioBuilderScope)
 internal fun <NodeT : SourceNode, OutputT, OutputChannelT : ChannelType<OutputChannelT>> sourceBuilder(
     outputChannelType: OutputChannelT,
     node: (OutputChannel<OutputT, OutputChannelT>) -> NodeT,
 ): RegularNodeBuilder<NodeT, OutputT, OutputChannelT> {
     val output = newConnectableOutputChannel<OutputT, _>(outputChannelType)
-    val source = node(output).withGroup(groupScope)
+    val source = node(output)
     scenarioScope.asImpl().sources.add(source)
     return NodeBuilderImpl(source, output)
 }
 
-context(groupScope: GroupScope)
 internal fun <
     NodeT : NodeGroup,
     InputT,
@@ -87,10 +77,9 @@ internal fun <
 ): RegularNodeBuilder<NodeT, OutputT, OutputChannelT> {
     val input = nextInput(this.channelType)
     val output = newConnectableOutputChannel<OutputT, _>(outputChannelType)
-    return NodeBuilderImpl(node(input, output).withGroup(groupScope), output)
+    return NodeBuilderImpl(node(input, output), output)
 }
 
-context(groupScope: GroupScope)
 internal fun <
     NodeT : NodeGroup,
     InputT,
@@ -104,11 +93,10 @@ internal fun <
 ): List<RegularNodeBuilder<NodeT, OutputT, OutputChannelT>> {
     val input = nextInput(this.channelType)
     val outputs = List(numLanes) { newConnectableOutputChannel<OutputT, _>(outputChannelType) }
-    val forkNode = node(input, outputs).withGroup(groupScope)
+    val forkNode = node(input, outputs)
     return outputs.map { NodeBuilderImpl(forkNode, it) }
 }
 
-context(groupScope: GroupScope)
 internal fun <
     NodeT : NodeGroup,
     InputT,
@@ -122,10 +110,9 @@ internal fun <
     val inputs = this.map { it.nextInput(it.channelType) }
     val output = newConnectableOutputChannel<OutputT, _>(outputChannelType)
 
-    return NodeBuilderImpl(node(inputs, output).withGroup(groupScope), output)
+    return NodeBuilderImpl(node(inputs, output), output)
 }
 
-context(groupScope: GroupScope)
 internal fun <
     NodeT : NodeGroup,
     InputAT,
@@ -148,10 +135,9 @@ internal fun <
     val inputA = a.nextInput(a.channelType)
     val inputB = b.nextInput(b.channelType)
     val output = newConnectableOutputChannel<OutputT, _>(outputChannelType)
-    return NodeBuilderImpl(node(inputA, inputB, output).withGroup(groupScope), output)
+    return NodeBuilderImpl(node(inputA, inputB, output), output)
 }
 
-context(groupScope: GroupScope)
 internal fun <
     NodeT : NodeGroup,
     InputT,
@@ -173,18 +159,16 @@ internal fun <
     val input = nextInput(this.channelType)
     val outputA = newConnectableOutputChannel<OutputAT, _>(outputAChannelType)
     val outputB = newConnectableOutputChannel<OutputBT, _>(outputBChannelType)
-    val zipNode = node(input, outputA, outputB).withGroup(groupScope)
+    val zipNode = node(input, outputA, outputB)
     return Pair(NodeBuilderImpl(zipNode, outputA), NodeBuilderImpl(zipNode, outputB))
 }
 
-context(groupScope: GroupScope)
 internal fun <NodeT : NodeGroup, InputT, InputChannelT : ChannelType<InputChannelT>> NodeBuilder<InputT, InputChannelT>
     .thenTerminal(node: (InputChannel<InputT, InputChannelT>) -> NodeT): NodeT {
     val input = nextInput(this.channelType)
-    return node(input).withGroup(groupScope)
+    return node(input)
 }
 
-context(groupScope: GroupScope)
 internal fun <
     NodeT : NodeGroup,
     InputT,
@@ -202,7 +186,8 @@ internal fun <
             },
         )
     val output = OutputRefImpl<OutputT, OutputChannelT>()
-    val compoundNode = node(connection, output).withGroup(groupScope)
+    // Preserve the current group scope when the node constructor finishes or throws
+    val compoundNode = GroupScope.withGroup(GroupScope.current) { node(connection, output) }
     return NodeBuilderImpl(compoundNode, output.output)
 }
 
@@ -241,8 +226,6 @@ private fun <T, ChannelT : ChannelType<ChannelT>> NodeBuilder<T, ChannelT>.nextI
             newConnectableInputChannel<T, _>(channelType).also { builder.asImpl().output.connectTo(it) }
         },
     )
-
-private fun <T : NodeGroup> T.withGroup(scope: GroupScope) = this.apply { parent = scope.group }
 
 private fun <NodeT : NodeGroup, ItemT, ChannelT : ChannelType<ChannelT>> RegularNodeBuilder<NodeT, ItemT, ChannelT>
     .asImpl(): NodeBuilderImpl<NodeT, ItemT, ChannelT> =
