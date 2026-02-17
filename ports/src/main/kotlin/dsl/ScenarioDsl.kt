@@ -29,7 +29,7 @@ fun Scenario.withMetrics(builder: MetricsBuilderScope.() -> Unit): Scenario {
 
 internal class ScenarioBuilderScopeImpl : ScenarioBuilderScope {
     val sources = mutableListOf<SourceNode>()
-    val metrics = mutableListOf<MetricGroup>()
+    val metrics = mutableSetOf<MetricGroup>()
 }
 
 internal fun ScenarioBuilderScope.asImpl() =

@@ -2,7 +2,7 @@ package com.group7
 
 import com.group7.metrics.MetricGroup
 
-class Scenario(val sources: List<SourceNode>, val metrics: MutableList<MetricGroup>) {
+class Scenario(val sources: List<SourceNode>, val metrics: MutableSet<MetricGroup>) {
     val allNodes by lazy(::walk)
 
     fun bfs(): List<Node> {

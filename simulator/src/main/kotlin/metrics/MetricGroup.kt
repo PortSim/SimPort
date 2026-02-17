@@ -1,6 +1,7 @@
 package com.group7.metrics
 
 import com.group7.NodeGroup
+import java.util.*
 
 /* Includes the raw metric and its moments. Can have no associatedNode for global metrics */
 open class MetricGroup(val name: String, val associatedNode: NodeGroup?, val raw: Metric, val moments: Moments?) {
@@ -15,6 +16,11 @@ open class MetricGroup(val name: String, val associatedNode: NodeGroup?, val raw
             "Upper CI" to moments?.upperCi,
             "Variance" to moments?.variance,
         )
+
+    override fun equals(other: Any?) =
+        other is MetricGroup && other.name == name && other.associatedNode == associatedNode
+
+    override fun hashCode() = Objects.hash(name, associatedNode)
 }
 
 class Moments(val mean: Metric, val lowerCi: Metric?, val upperCi: Metric?, val variance: Metric?)
