@@ -17,24 +17,21 @@ import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import kotlin.contracts.contract
 
-context(_: ScenarioBuilderScope, _: GroupScope)
+context(_: ScenarioBuilderScope)
 fun <T> arrivals(label: String, generator: Generator<T>): RegularNodeBuilder<ArrivalNode<T>, T, ChannelType.Push> =
     sourceBuilder(ChannelType.Push) { ArrivalNode(label, it, generator) }
 
-context(_: GroupScope)
 fun <T> NodeBuilder<T, *>.thenDelay(
     label: String,
     delayProvider: DelayProvider,
 ): RegularNodeBuilder<DelayNode<T>, T, ChannelType.Push> =
     asPush().then(ChannelType.Push) { input, output -> DelayNode(label, input, output, delayProvider) }
 
-context(_: GroupScope)
 fun <T> NodeBuilder<T, ChannelType.Pull>.thenPump(
     label: String = "Pump"
 ): RegularNodeBuilder<PumpNode<T>, T, ChannelType.Push> =
     then(ChannelType.Push) { input, output -> PumpNode(label, input, output) }
 
-context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Push>.thenFork(
     label: String,
     lanes: List<(RegularNodeBuilder<PushForkNode<ItemT>, ItemT, ChannelType.Push>) -> R>,
@@ -44,7 +41,6 @@ fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Push>.thenFork(
         .zip(lanes) { node, lane -> lane(node) }
 }
 
-context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Push>.thenFork(
     label: String,
     numLanes: Int,
@@ -52,7 +48,6 @@ fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Push>.thenFork(
     laneAction: (Int, RegularNodeBuilder<PushForkNode<ItemT>, ItemT, ChannelType.Push>) -> R,
 ): List<R> = thenFork(label, List(numLanes) { i -> { node -> laneAction(i, node) } }, policy)
 
-context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Pull>.thenFork(
     label: String,
     lanes: List<(RegularNodeBuilder<PullForkNode<ItemT>, ItemT, ChannelType.Pull>) -> R>,
@@ -61,21 +56,18 @@ fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Pull>.thenFork(
         .zip(lanes) { node, lane -> lane(node) }
 }
 
-context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, ChannelType.Pull>.thenFork(
     label: String,
     numLanes: Int,
     laneAction: (Int, RegularNodeBuilder<PullForkNode<ItemT>, ItemT, ChannelType.Pull>) -> R,
 ): List<R> = thenFork(label, List(numLanes) { i -> { node -> laneAction(i, node) } })
 
-context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, *>.thenPushFork(
     label: String,
     lanes: List<(RegularNodeBuilder<PushForkNode<ItemT>, ItemT, ChannelType.Push>) -> R>,
     policy: ForkPolicy<ItemT> = forkPolicy(RandomPolicy()),
 ): List<R> = asPush().thenFork(label, lanes, policy)
 
-context(_: GroupScope)
 fun <ItemT, R> NodeBuilder<ItemT, *>.thenPushFork(
     label: String,
     numLanes: Int,
@@ -83,24 +75,20 @@ fun <ItemT, R> NodeBuilder<ItemT, *>.thenPushFork(
     laneAction: (Int, RegularNodeBuilder<PushForkNode<ItemT>, ItemT, ChannelType.Push>) -> R,
 ): List<R> = asPush().thenFork(label, List(numLanes) { i -> { node -> laneAction(i, node) } }, policy)
 
-context(_: GroupScope)
 fun <T> List<NodeBuilder<T, ChannelType.Push>>.thenJoin(
     label: String
 ): RegularNodeBuilder<PushJoinNode<T>, T, ChannelType.Push> =
     thenConverge(ChannelType.Push) { inputs, output -> PushJoinNode(label, inputs, output) }
 
-context(_: GroupScope)
 fun <T> List<NodeBuilder<T, ChannelType.Pull>>.thenJoin(
     label: String,
     policy: JoinPolicy<T> = joinPolicy(RandomPolicy()),
 ): RegularNodeBuilder<PullJoinNode<T>, T, ChannelType.Pull> =
     thenConverge(ChannelType.Pull) { inputs, output -> PullJoinNode(label, inputs, output, policy) }
 
-context(_: GroupScope)
 fun <T> List<NodeBuilder<T, *>>.thenPushJoin(label: String): RegularNodeBuilder<PushJoinNode<T>, T, ChannelType.Push> =
     this.map { it.asPush() }.thenJoin(label)
 
-context(_: GroupScope)
 fun <MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT>> NodeBuilder<MainInputT, ChannelT>.thenMatch(
     label: String,
     side: NodeBuilder<SideInputT, ChannelType.Pull>,
@@ -108,21 +96,18 @@ fun <MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT>> NodeBuil
 ): RegularNodeBuilder<MatchNode<MainInputT, SideInputT, OutputT, ChannelT>, OutputT, ChannelT> =
     zip(this.channelType, this, side) { inputA, inputB, output -> MatchNode(label, inputA, inputB, output, combiner) }
 
-context(_: GroupScope)
 fun <T> NodeBuilder<T, *>.thenQueue(
     label: String,
     policy: QueuePolicy<T> = FIFOQueuePolicy(),
 ): RegularNodeBuilder<QueueNode<T>, T, ChannelType.Pull> =
     asPush().then(ChannelType.Pull) { input, output -> QueueNode(label, input, output, policy) }
 
-context(_: GroupScope)
 fun <T> NodeBuilder<T, *>.thenService(
     label: String,
     delayProvider: DelayProvider,
 ): RegularNodeBuilder<ServiceNode<T>, T, ChannelType.Push> =
     asPush().then(ChannelType.Push) { input, output -> ServiceNode(label, input, output, delayProvider) }
 
-context(_: GroupScope)
 fun <InputT, MainOutputT, SideOutputT, ChannelT : ChannelType<ChannelT>> NodeBuilder<InputT, ChannelT>.thenSplit(
     label: String,
     splitter: (InputT) -> Pair<MainOutputT, SideOutputT>,
@@ -134,16 +119,13 @@ fun <InputT, MainOutputT, SideOutputT, ChannelT : ChannelType<ChannelT>> NodeBui
         SplitNode(label, input, outputA, outputB, splitter)
     }
 
-context(_: GroupScope)
 fun <T> NodeBuilder<T, *>.thenSink(label: String): SinkNode<T> =
     asPush().thenTerminal { input -> SinkNode(label, input) }
 
-context(_: GroupScope)
 fun <T> NodeBuilder<T, *>.thenDeadEnd(label: String): DeadEndNode<T> = thenTerminal { input ->
     DeadEndNode(label, input)
 }
 
-context(_: GroupScope)
 private fun <T> NodeBuilder<T, *>.asPush(): NodeBuilder<T, ChannelType.Push> =
     if (this.isPush()) {
         this
