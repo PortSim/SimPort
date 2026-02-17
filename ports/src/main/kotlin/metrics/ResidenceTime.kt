@@ -13,9 +13,9 @@ import kotlin.time.Instant
 sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric() {
     private val entryTimes = mutableMapOf<Any?, Instant>()
 
-    abstract fun alreadyEntered(obj: Any?): String
+    protected abstract fun alreadyEntered(obj: Any?): String
 
-    abstract fun neverEntered(obj: Any?): String
+    protected abstract fun neverEntered(obj: Any?): String
 
     context(sim: Simulator)
     protected fun notifyEnter(obj: Any?) {

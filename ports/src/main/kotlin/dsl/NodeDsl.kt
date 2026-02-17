@@ -25,6 +25,10 @@ internal val <ItemT, ChannelT : ChannelType<ChannelT>> Connection<ItemT, Channel
 fun <ItemT, ChannelT : ChannelType<ChannelT>> newConnection(channelType: ChannelT): Connection<ItemT, ChannelT> =
     ConnectionImpl(channelType)
 
+fun <ItemT> newPushConnection(): Connection<ItemT, ChannelType.Push> = newConnection(ChannelType.Push)
+
+fun <ItemT> newPullConnection(): Connection<ItemT, ChannelType.Pull> = newConnection(ChannelType.Pull)
+
 sealed interface OutputRef<ItemT, ChannelT : ChannelType<ChannelT>> {
     val output: OutputChannel<ItemT, ChannelT>
 }

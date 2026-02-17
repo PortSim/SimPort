@@ -37,7 +37,7 @@ class BoundedSubnetwork<
     private val tokenSplit: Split<ItemT, ItemT, Token>
 
     init {
-        val tokenBackEdge = newConnection<Token, _>(ChannelType.Push)
+        val tokenBackEdge = newPushConnection<Token>()
         val tokenQueue = tokenBackEdge.thenQueue("Token Queue", TokenQueuePolicy(capacity)).saveNode { tokens = it }
 
         input
