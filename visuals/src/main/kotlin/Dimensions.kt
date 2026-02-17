@@ -11,10 +11,6 @@ object Dimensions {
     val spacingMd = 12.dp
     val spacingLg = 16.dp
 
-    // Charts
-    val chartHeight = 250.dp
-    val chartMinHeight = 150.dp
-
     // Strokes
     val strokeWidth = 2.dp
     val strokeWidthThin = 1.5.dp
@@ -22,6 +18,8 @@ object Dimensions {
     // Cards & containers
     val cardCornerRadius = 8.dp
     val borderWidth = 1.dp
+    val tonalElevation = 1.dp
+    val shadowElevation = 2.dp
 
     // Typography
     val fontSizeSmall = 12.sp

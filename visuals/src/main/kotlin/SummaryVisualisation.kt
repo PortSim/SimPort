@@ -4,20 +4,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import com.group7.metrics.MetricGroup
+import components.Dropdown
+import components.LabeledSwitch
 import components.MetricsPanelState
 import components.SummaryChart
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toPersistentSet
+import utils.GLOBAL_NODE_LABEL
 import utils.assignNodeNames
 
 private val EmptyStateHeight = 300.dp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun <T> MultiSelectDropdown(
     label: String,
@@ -29,10 +34,28 @@ private fun <T> MultiSelectDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier) {
-        Button(onClick = { expanded = true }) { Text("$label (${selectedOptions.size})") }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            for (option in options) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier) {
+        OutlinedTextField(
+            value = "$label (${selectedOptions.size})",
+            onValueChange = {},
+            readOnly = true,
+            enabled = false,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            modifier =
+                Modifier.menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                    .pointerHoverIcon(PointerIcon.Default, overrideDescendants = true),
+        )
+
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
                 val isSelected = option in selectedOptions
                 DropdownMenuItem(
                     text = {
@@ -52,42 +75,6 @@ private fun <T> MultiSelectDropdown(
                                 selectedOptions.add(option)
                             }
                         onSelectionChange(newSelection)
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun NodeDropdown(
-    nodes: Iterable<String?>,
-    selectedNode: String?,
-    onNodeSelected: (String?) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Dropdown(nodes, selectedNode, onNodeSelected, modifier) { option -> Text(option ?: "<no associated node>") }
-}
-
-@Composable
-private fun <T> Dropdown(
-    options: Iterable<T>,
-    selected: T,
-    onSelected: (T) -> Unit,
-    modifier: Modifier = Modifier,
-    preview: @Composable (T) -> Unit = { Text(it?.toString() ?: "Select...") },
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box(modifier = modifier) {
-        Button(onClick = { expanded = true }) { preview(selected) }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            for (option in options) {
-                DropdownMenuItem(
-                    text = { preview(option) },
-                    onClick = {
-                        onSelected(option)
-                        expanded = false
                     },
                 )
             }
@@ -133,6 +120,7 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
         }
     val groups = metricIndex.getValue(selectedMetric).getValue(selectedNodeLabel)
     var showRaw by remember(metricIndex, selectedMetric) { mutableStateOf(false) }
+    var showCi by remember(metricIndex, selectedMetric) { mutableStateOf(true) }
     val hasMoments = groups.values.any { it.moments != null }
 
     Column(
@@ -144,15 +132,20 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
             horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingLg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Dropdown(options = metricIndex.keys, selected = selectedMetric, onSelected = { selectedMetric = it }) {
-                option ->
-                Text(option)
-            }
+            Dropdown(
+                options = metricIndex.keys,
+                selected = selectedMetric,
+                onSelected = { selectedMetric = it },
+                label = { Text("Metric") },
+            )
 
-            NodeDropdown(
-                nodes = metricIndex.getValue(selectedMetric).keys,
-                selectedNode = selectedNodeLabel,
-                onNodeSelected = { selectedNodeLabel = it },
+            // Node dropdown
+            Dropdown(
+                options = metricIndex.getValue(selectedMetric).keys,
+                selected = selectedNodeLabel,
+                onSelected = { selectedNodeLabel = it },
+                label = { Text("Node") },
+                displayText = { it ?: GLOBAL_NODE_LABEL },
             )
 
             if (allSimulationNames.size >= 2) {
@@ -166,10 +159,8 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
             }
 
             if (hasMoments) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Show Raw", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                    Switch(checked = showRaw, onCheckedChange = { showRaw = it }, modifier = Modifier.scale(0.6f))
-                }
+                LabeledSwitch("Show Raw", checked = showRaw, onCheckedChange = { showRaw = it })
+                LabeledSwitch("Show CI", checked = showCi, onCheckedChange = { showCi = it }, enabled = !showRaw)
             }
         }
 
@@ -184,6 +175,7 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
                             .toImmutableMap(),
                     simulations = simulations,
                     showRaw = showRaw || !hasMoments,
+                    showCi = showCi && !showRaw && hasMoments,
                 )
             } else {
                 Box(modifier = Modifier.fillMaxWidth().height(EmptyStateHeight), contentAlignment = Alignment.Center) {

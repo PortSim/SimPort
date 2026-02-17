@@ -48,6 +48,7 @@ fun SummaryChart(
     metricByScenario: ImmutableMap<String, MetricGroup>,
     simulations: Map<String, MetricsPanelState>,
     showRaw: Boolean,
+    showCi: Boolean = true,
 ) {
     val scenarioColors =
         remember(simulations) {
@@ -69,12 +70,26 @@ fun SummaryChart(
     var lineProvider by remember { mutableStateOf(LineCartesianLayer.LineProvider.series()) }
     var hasData by remember { mutableStateOf(false) }
 
-    LaunchedEffect(metricByScenario, showRaw, simulations.values.map { it.latestTimeSeen }) {
+    LaunchedEffect(metricByScenario, showRaw, showCi, simulations.values.map { it.latestTimeSeen }) {
         val lines = mutableListOf<LineCartesianLayer.Line>()
         val actions = mutableListOf<LineCartesianLayerModel.BuilderScope.() -> Unit>()
         for ((simName, metricGroup) in metricByScenario) {
             val baseColor = scenarioColors.getValue(simName)
             val metricsState = simulations.getValue(simName)
+
+            val ciLines =
+                if (showCi) {
+                    listOfNotNull(
+                        metricGroup.moments?.lowerCi?.let {
+                            it to metricLine(it, baseColor.copy(alpha = 0.6f), LineCartesianLayer.LineStroke.Dashed())
+                        },
+                        metricGroup.moments?.upperCi?.let {
+                            it to metricLine(it, baseColor.copy(alpha = 0.6f), LineCartesianLayer.LineStroke.Dashed())
+                        },
+                    )
+                } else {
+                    emptyList()
+                }
 
             val metrics =
                 if (showRaw) {
@@ -86,14 +101,8 @@ fun SummaryChart(
                     listOfNotNull(
                         metricGroup.moments?.mean?.let {
                             it to metricLine(it, baseColor, LineCartesianLayer.LineStroke.Continuous())
-                        },
-                        metricGroup.moments?.lowerCi?.let {
-                            it to metricLine(it, baseColor.copy(alpha = 0.6f), LineCartesianLayer.LineStroke.Dashed())
-                        },
-                        metricGroup.moments?.upperCi?.let {
-                            it to metricLine(it, baseColor.copy(alpha = 0.6f), LineCartesianLayer.LineStroke.Dashed())
-                        },
-                    )
+                        }
+                    ) + ciLines
                 }
 
             for ((metric, line) in metrics) {

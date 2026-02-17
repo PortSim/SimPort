@@ -57,6 +57,9 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
         return data[index]
     }
 
+    /** Get the most recent value for a metric, or null if no data yet. */
+    fun getLatestValue(metric: Metric): Double? = getMetricSample(metric, latestTimeSeen)?.second
+
     /** Start batch mode - samples will be buffered without triggering UI updates */
     fun beginBatch() {
         isBatching = true
