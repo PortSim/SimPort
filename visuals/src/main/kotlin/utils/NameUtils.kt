@@ -4,6 +4,8 @@ import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.properties.Container
 
+const val GLOBAL_NODE_LABEL = "<global>"
+
 fun assignNodeNames(scenario: Scenario): Map<NodeGroup, String> {
     val usedNames = mutableSetOf<String>()
     val assignedNodeNames = mutableMapOf<NodeGroup, String>()

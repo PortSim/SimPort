@@ -25,7 +25,7 @@ fun IndividualStaticSimulationPicker(simulations: ImmutableMap<String, MetricsPa
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f)) {
-            StaticVisualisation(simulations.getValue(simulationNames[simulationTab]))
+            StaticVisualisation(simulations.getValue(simulationNames[simulationTab]), simulationNames[simulationTab])
         }
 
         HorizontalDivider()
