@@ -8,7 +8,7 @@ class Occupancy(private val container: Container<*>) : ContinuousMetric() {
     override fun reportImpl(previousTime: Instant, currentTime: Instant) = container.occupants.toDouble()
 
     companion object : MetricFactory<Container<*>> {
-        override fun createGroup(node: Container<*>): MetricGroup {
+        override fun create(node: Container<*>): MetricGroup {
             val raw = Occupancy(node)
             val cis = ContinuousConfidenceIntervals(raw)
             return MetricGroup("Occupancy", node as NodeGroup, raw, cis.moments())

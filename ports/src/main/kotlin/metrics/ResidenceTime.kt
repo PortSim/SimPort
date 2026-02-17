@@ -63,9 +63,9 @@ sealed class ResidenceTime(private val unit: DurationUnit = DurationUnit.SECONDS
     }
 
     companion object : MetricFactory<Container<*>>, GlobalMetricFactory {
-        override fun createGroup(node: Container<*>) = createGroup(node, DurationUnit.SECONDS)
+        override fun create(node: Container<*>) = create(node, DurationUnit.SECONDS)
 
-        fun createGroup(node: Container<*>, unit: DurationUnit): MetricGroup? {
+        fun create(node: Container<*>, unit: DurationUnit): MetricGroup? {
             if (!node.supportsResidenceTime()) {
                 return null
             }
@@ -74,9 +74,9 @@ sealed class ResidenceTime(private val unit: DurationUnit = DurationUnit.SECONDS
             return MetricGroup("Residence Time (${unit.suffix})", node as NodeGroup, raw, cis.moments())
         }
 
-        override fun createGroup(scenario: Scenario) = createGroup(scenario, DurationUnit.SECONDS)
+        override fun create(scenario: Scenario) = create(scenario, DurationUnit.SECONDS)
 
-        fun createGroup(scenario: Scenario, unit: DurationUnit): MetricGroup {
+        fun create(scenario: Scenario, unit: DurationUnit): MetricGroup {
             val raw = Global(scenario, unit)
             val cis = InstantaneousConfidenceIntervals(raw)
             return MetricGroup("Residence Time (${unit.suffix})", null, raw, cis.moments())
