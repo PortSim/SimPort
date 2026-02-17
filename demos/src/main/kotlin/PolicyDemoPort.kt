@@ -5,6 +5,7 @@ import com.group7.channels.PushOutputChannel
 import com.group7.dsl.*
 import com.group7.generators.Delays
 import com.group7.generators.Generators
+import com.group7.metrics.Latency
 import com.group7.metrics.Occupancy
 import com.group7.policies.fork.ForkPolicy
 import com.group7.policies.generic_fj.RandomPolicy
@@ -111,58 +112,65 @@ enum class DemoForkPolicy(private val description: String) {
 
 class Vehicle(val isLarge: Boolean)
 
-fun policyDemoPort(queuePolicy: DemoQueuePolicy, forkPolicy: DemoForkPolicy) = buildScenario {
-    listOf(
-            arrivals(
-                "Large Arrivals",
-                Generators.constant({ Vehicle(isLarge = true) }, Delays.exponentialWithMean(1.minutes)),
-            ),
-            arrivals(
-                "Small Arrivals",
-                Generators.constant({ Vehicle(isLarge = false) }, Delays.exponentialWithMean(10.seconds)),
-            ),
-        )
-        .thenJoin("Arrivals Join")
-        .thenQueue("Arrivals Queue", policy = queuePolicy.make())
-        .track(Occupancy)
-        .thenPump()
-        .thenSubnetwork(capacity = 5) { entry ->
-            val largeQueues = mutableListOf<Queue<*>>()
-            val smallQueues = mutableListOf<Queue<*>>()
-            entry
-                .thenFork("Lane Fork", policy = forkPolicy.make(largeQueues, smallQueues), numLanes = 3) { i, lane ->
-                    lane
-                        .thenFork(
-                            "Size Fork ${i + 1}",
-                            policy = BySizeForkPolicy(),
-                            lanes =
-                                listOf(
-                                    { large ->
-                                        large
-                                            .thenQueue("Large Queue ${i + 1}")
-                                            .saveNode(largeQueues::add)
-                                            .thenService(
-                                                "Large Service ${i + 1}",
-                                                Delays.exponentialWithMean(1.3.minutes),
-                                            )
-                                    },
-                                    { small ->
-                                        small
-                                            .thenQueue("Small Queue ${i + 1}")
-                                            .saveNode(smallQueues::add)
-                                            .thenService(
-                                                "Small Service ${i + 1}",
-                                                Delays.exponentialWithMean(15.seconds),
-                                            )
-                                    },
-                                ),
-                        )
-                        .thenJoin("Service Join")
+fun policyDemoPort(queuePolicy: DemoQueuePolicy, forkPolicy: DemoForkPolicy) =
+    buildScenario {
+            listOf(
+                    arrivals(
+                        "Large Arrivals",
+                        Generators.constant({ Vehicle(isLarge = true) }, Delays.exponentialWithMean(1.minutes)),
+                    ),
+                    arrivals(
+                        "Small Arrivals",
+                        Generators.constant({ Vehicle(isLarge = false) }, Delays.exponentialWithMean(10.seconds)),
+                    ),
+                )
+                .thenJoin("Arrivals Join")
+                .thenQueue("Arrivals Queue", policy = queuePolicy.make())
+                .track(Occupancy)
+                .thenPump()
+                .thenSubnetwork(capacity = 5) { entry ->
+                    val largeQueues = mutableListOf<Queue<*>>()
+                    val smallQueues = mutableListOf<Queue<*>>()
+                    entry
+                        .thenFork("Lane Fork", policy = forkPolicy.make(largeQueues, smallQueues), numLanes = 3) {
+                            i,
+                            lane ->
+                            lane
+                                .thenFork(
+                                    "Size Fork ${i + 1}",
+                                    policy = BySizeForkPolicy(),
+                                    lanes =
+                                        listOf(
+                                            { large ->
+                                                large
+                                                    .thenQueue("Large Queue ${i + 1}")
+                                                    .saveNode(largeQueues::add)
+                                                    .thenService(
+                                                        "Large Service ${i + 1}",
+                                                        Delays.exponentialWithMean(1.3.minutes),
+                                                    )
+                                            },
+                                            { small ->
+                                                small
+                                                    .thenQueue("Small Queue ${i + 1}")
+                                                    .saveNode(smallQueues::add)
+                                                    .thenService(
+                                                        "Small Service ${i + 1}",
+                                                        Delays.exponentialWithMean(15.seconds),
+                                                    )
+                                            },
+                                        ),
+                                )
+                                .thenJoin("Service Join")
+                        }
+                        .thenJoin("Lane Join")
                 }
-                .thenJoin("Lane Join")
+                .thenSink("Departures")
         }
-        .thenSink("Departures")
-}
+        .withMetrics {
+            trackGlobal(Latency)
+            trackGlobal(Occupancy)
+        }
 
 private class SmartForkPolicy(val good: Boolean, val largeQueues: List<Queue<*>>, val smallQueues: List<Queue<*>>) :
     ForkPolicy<Vehicle> {

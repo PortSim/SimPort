@@ -10,7 +10,7 @@ import com.group7.utils.suffix
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
-sealed class ResidenceTime(private val unit: DurationUnit = DurationUnit.SECONDS) : InstantaneousMetric() {
+sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric() {
     private val entryTimes = mutableMapOf<Any?, Instant>()
 
     abstract fun alreadyEntered(obj: Any?): String
