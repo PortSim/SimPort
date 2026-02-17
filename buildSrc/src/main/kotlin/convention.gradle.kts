@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.power-assert")
     id("io.kotest")
     id("com.ncorti.ktfmt.gradle")
+    `maven-publish`
 }
 
 group = "com.group7"
@@ -51,3 +52,5 @@ ktfmt {
     kotlinLangStyle()
     maxWidth = 120
 }
+
+publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
