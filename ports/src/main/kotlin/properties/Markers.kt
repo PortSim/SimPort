@@ -38,6 +38,8 @@ interface Sink<out T> : Container<T> {
             context(Simulator)
             (T) -> Unit
     ) {}
+
+    override fun supportsResidenceTime() = false
 }
 
 interface Split<out InputT, out MainOutputT, out SideOutputT> {

@@ -30,7 +30,11 @@ class PushJoinNodeTest :
                     DSLAddons.arrivalLanes(
                             generators =
                                 List(numSources) {
-                                    Presets.defaultFixedGenerator(numVehiclesPerSource, obj = TestVehicle, 10.seconds)
+                                    Presets.defaultFixedGenerator(
+                                        numVehiclesPerSource,
+                                        factory = { TestVehicle },
+                                        10.seconds,
+                                    )
                                 }
                         ) { _, lane ->
                             lane
@@ -55,7 +59,7 @@ class PushJoinNodeTest :
                 val (scenario, inputChannels) =
                     Presets.generateSourcesWithGenerators(
                         List(numSources) {
-                            Presets.defaultFixedGenerator(numVehiclesPerSource, obj = TestVehicle, 10.seconds)
+                            Presets.defaultFixedGenerator(numVehiclesPerSource, factory = { TestVehicle }, 10.seconds)
                         }
                     )
                 val (joinOut, deadIn) = newPushChannel<TestVehicle>()

@@ -16,7 +16,7 @@ class LeastFullForkPolicyTest :
             val (qlog, startTime) =
                 runSimulation(
                     buildScenario {
-                        Presets.defaultArrivals(TestVehicle)
+                        Presets.defaultArrivals({ TestVehicle })
                             .thenQueue("Queue")
                             .thenPump()
                             .thenFork("Fork", 3, policy = LeastFullForkPolicy<TestVehicle>()) { i, lane ->
@@ -51,7 +51,7 @@ class LeastFullForkPolicyTest :
         test("Complex subnetworking pattern") {
             runSimulation(
                 buildScenario {
-                    Presets.defaultArrivals(TestVehicle)
+                    Presets.defaultArrivals({ TestVehicle })
                         .thenQueue("Queue")
                         .thenPump()
                         .thenFork("Fork", 3, policy = LeastFullForkPolicy<TestVehicle>()) { i, lane ->

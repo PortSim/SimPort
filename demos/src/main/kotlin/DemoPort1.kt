@@ -42,7 +42,7 @@ fun generatePort(
         buildScenario {
                 arrivals(
                         "Truck Arrivals",
-                        Generators.constant(Truck, Delays.exponential(truckArrivalsPerHour, DurationUnit.HOURS)).let {
+                        Generators.constant(::Truck, Delays.exponential(truckArrivalsPerHour, DurationUnit.HOURS)).let {
                             if (numTrucks != null) it.take(numTrucks) else it
                         },
                     )

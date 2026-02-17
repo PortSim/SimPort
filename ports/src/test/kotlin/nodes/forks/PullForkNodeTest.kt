@@ -23,7 +23,10 @@ class PullForkNodeTest :
 
             runSimulation(
                 buildScenario {
-                    arrivals("Source", Generators.constant(TestVehicle, Delays.fixed(10.seconds)).take(NUM_VEHICLES))
+                    arrivals(
+                            "Source",
+                            Generators.constant({ TestVehicle }, Delays.fixed(10.seconds)).take(NUM_VEHICLES),
+                        )
                         .thenQueue("Queue")
                         .thenPushFork("Fork", numForks) { i, lane -> lane.thenSink("Sink") }
                         .let { sinks = it }

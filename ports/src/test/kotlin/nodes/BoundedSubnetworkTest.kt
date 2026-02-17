@@ -19,7 +19,7 @@ class BoundedSubnetworkTest :
             val scenario = buildScenario {
                 arrivals(
                         "Arrival",
-                        generator = Generators.constant(TestVehicle, Delays.fixed(5.seconds)).take(numVehicles),
+                        generator = Generators.constant({ TestVehicle }, Delays.fixed(5.seconds)).take(numVehicles),
                     )
                     .thenQueue("Inbound Queue")
                     .thenSubnetwork("Bounded Subnetwork 1", subnetworkCapacity) {
@@ -44,7 +44,7 @@ class BoundedSubnetworkTest :
 
         test("Bounded subnetwork should accept inbound traffic upon any outbound direction") {
             val scenario = buildScenario {
-                arrivals("Arrivals", generator = Generators.constant(TestVehicle, Delays.fixed(5.seconds)).take(20))
+                arrivals("Arrivals", generator = Generators.constant({ TestVehicle }, Delays.fixed(5.seconds)).take(20))
                     .thenQueue("Inbound Queue")
                     .thenSubnetwork("Bounded Subnetwork", capacity = 1) { it }
                     .thenQueue("Outbound Queue")

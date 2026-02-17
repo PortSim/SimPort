@@ -14,7 +14,9 @@ class QueueNodeTest :
     FunSpec({
         test("All vehicles entering leaves eventually") {
             val (scenario, queueIn) =
-                Presets.generateSourcesWithGenerator(Presets.defaultFixedGenerator(NUM_VEHICLES, obj = TestVehicle))
+                Presets.generateSourcesWithGenerator(
+                    Presets.defaultFixedGenerator(NUM_VEHICLES, factory = { TestVehicle })
+                )
             val (queueOut, pumpIn) = newPullChannel<TestVehicle>()
             val (pumpOut, sinkIn) = newPushChannel<TestVehicle>()
 
@@ -34,7 +36,7 @@ class QueueNodeTest :
             val (queueOut, deadIn) = newPullChannel<TestVehicle>()
 
             val source =
-                ArrivalNode("Source", sourceOut, Presets.defaultFixedGenerator(NUM_VEHICLES, obj = TestVehicle))
+                ArrivalNode("Source", sourceOut, Presets.defaultFixedGenerator(NUM_VEHICLES, factory = { TestVehicle }))
             val queue = QueueNode("Queue", queueIn, queueOut)
             DeadEndNode("Dead end", deadIn)
 

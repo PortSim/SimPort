@@ -16,6 +16,8 @@ interface Container<out T> {
             context(Simulator)
             (T) -> Unit
     )
+
+    fun supportsResidenceTime(): Boolean = true
 }
 
 interface BoundedContainer<out T> : Container<T> {

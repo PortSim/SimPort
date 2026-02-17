@@ -8,4 +8,6 @@ interface QueuePolicy<T> {
     fun dequeue(): T
 
     fun reportOccupancy(): Int
+
+    fun supportsResidenceTime(): Boolean = true
 }

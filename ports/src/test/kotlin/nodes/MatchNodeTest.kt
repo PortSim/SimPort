@@ -14,10 +14,10 @@ class MatchNodeTest :
         test("Should throw when no side input") {
             shouldThrow<ClosedChannelException> {
                 val scenario = buildScenario {
-                    arrivals("Source A", Presets.defaultFixedGenerator(2, obj = TestVehicle))
+                    arrivals("Source A", Presets.defaultFixedGenerator(2, factory = { TestVehicle }))
                         .thenMatch(
                             "Match",
-                            arrivals("Source B", Presets.defaultFixedGenerator(0, obj = TestContainer))
+                            arrivals("Source B", Presets.defaultFixedGenerator(0, factory = { TestContainer }))
                                 .thenQueue("Queue"),
                         ) { _, _ ->
                             TestLoadedVehicle
@@ -32,10 +32,10 @@ class MatchNodeTest :
         test("Should not pull when no main input") {
             val queue: QueueNode<TestContainer>
             val scenario = buildScenario {
-                arrivals("Source A", Presets.defaultFixedGenerator(0, obj = TestVehicle))
+                arrivals("Source A", Presets.defaultFixedGenerator(0, factory = { TestVehicle }))
                     .thenMatch(
                         "Match",
-                        arrivals("Source B", Presets.defaultFixedGenerator(2, obj = TestContainer))
+                        arrivals("Source B", Presets.defaultFixedGenerator(2, factory = { TestContainer }))
                             .thenQueue("Queue")
                             .saveNode { queue = it },
                     ) { _, _ ->
@@ -53,11 +53,11 @@ class MatchNodeTest :
             val sink: SinkNode<TestLoadedVehicle>
 
             val scenario = buildScenario {
-                arrivals("Source A", Presets.defaultFixedGenerator(1, obj = TestVehicle))
+                arrivals("Source A", Presets.defaultFixedGenerator(1, factory = { TestVehicle }))
                     .thenDelay("Delay for input A", Delays.fixed(10.seconds))
                     .thenMatch(
                         "Match",
-                        arrivals("Source B", Presets.defaultFixedGenerator(1, obj = TestContainer))
+                        arrivals("Source B", Presets.defaultFixedGenerator(1, factory = { TestContainer }))
                             .thenQueue("Source B Queue"),
                     ) { _, _ ->
                         TestLoadedVehicle

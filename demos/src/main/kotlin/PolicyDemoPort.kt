@@ -29,65 +29,55 @@ enum class DemoQueuePolicy(private val description: String) {
     PRIORITISE_LARGE("Prioritise Large") {
         override fun make() =
             object : QueuePolicy<Vehicle> {
-                private var large = 0
-                private var small = 0
+                private var large = ArrayDeque<Vehicle>()
+                private var small = ArrayDeque<Vehicle>()
 
                 override val contents
-                    get() =
-                        generateSequence { Vehicle(isLarge = true) }.take(large) +
-                            generateSequence { Vehicle(isLarge = false) }.take(small)
+                    get() = large.asSequence() + small.asSequence()
 
                 override fun enqueue(obj: Vehicle) {
                     if (obj.isLarge) {
-                        large++
+                        large.addLast(obj)
                     } else {
-                        small++
+                        small.addLast(obj)
                     }
                 }
 
                 override fun dequeue(): Vehicle {
-                    if (large > 0) {
-                        large--
-                        return Vehicle(isLarge = true)
+                    if (large.isNotEmpty()) {
+                        return large.removeFirst()
                     }
-                    check(small > 0)
-                    small--
-                    return Vehicle(isLarge = false)
+                    return small.removeFirst()
                 }
 
-                override fun reportOccupancy() = large + small
+                override fun reportOccupancy() = large.size + small.size
             }
     },
     PRIORITISE_SMALL("Prioritise Small") {
         override fun make() =
             object : QueuePolicy<Vehicle> {
-                private var large = 0
-                private var small = 0
+                private var large = ArrayDeque<Vehicle>()
+                private var small = ArrayDeque<Vehicle>()
 
                 override val contents
-                    get() =
-                        generateSequence { Vehicle(isLarge = false) }.take(small) +
-                            generateSequence { Vehicle(isLarge = true) }.take(large)
+                    get() = small.asSequence() + large.asSequence()
 
                 override fun enqueue(obj: Vehicle) {
                     if (obj.isLarge) {
-                        large++
+                        large.addLast(obj)
                     } else {
-                        small++
+                        small.addLast(obj)
                     }
                 }
 
                 override fun dequeue(): Vehicle {
-                    if (small > 0) {
-                        small--
-                        return Vehicle(isLarge = false)
+                    if (small.isNotEmpty()) {
+                        return small.removeFirst()
                     }
-                    check(large > 0)
-                    large--
-                    return Vehicle(isLarge = true)
+                    return large.removeFirst()
                 }
 
-                override fun reportOccupancy() = large + small
+                override fun reportOccupancy() = small.size + large.size
             }
     };
 
@@ -119,17 +109,17 @@ enum class DemoForkPolicy(private val description: String) {
     abstract fun make(largeQueues: List<Queue<*>>, smallQueues: List<Queue<*>>): ForkPolicy<Vehicle>
 }
 
-data class Vehicle(val isLarge: Boolean)
+class Vehicle(val isLarge: Boolean)
 
 fun policyDemoPort(queuePolicy: DemoQueuePolicy, forkPolicy: DemoForkPolicy) = buildScenario {
     listOf(
             arrivals(
                 "Large Arrivals",
-                Generators.constant(Vehicle(isLarge = true), Delays.exponentialWithMean(1.minutes)),
+                Generators.constant({ Vehicle(isLarge = true) }, Delays.exponentialWithMean(1.minutes)),
             ),
             arrivals(
                 "Small Arrivals",
-                Generators.constant(Vehicle(isLarge = false), Delays.exponentialWithMean(10.seconds)),
+                Generators.constant({ Vehicle(isLarge = false) }, Delays.exponentialWithMean(10.seconds)),
             ),
         )
         .thenJoin("Arrivals Join")

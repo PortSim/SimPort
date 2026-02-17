@@ -16,7 +16,7 @@ class MostFullJoinPolicyTest :
             val (qlog, _) =
                 runSimulation(
                     buildScenario {
-                        Presets.defaultArrivals(TestVehicle)
+                        Presets.defaultArrivals({ TestVehicle })
                             .thenQueue("Queue")
                             .thenFork("Fork", 3) { i, lane ->
                                 // One lane that has greater capacity with a bigger buffer, and two lanes that services

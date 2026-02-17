@@ -12,7 +12,7 @@ class GeneratorTest :
     FunSpec({
         test("Constant generator creates the same object") {
             val delay = 10.seconds
-            val gen = Generators.constant(TestVehicle, delayProvider = Delays.fixed(delay))
+            val gen = Generators.constant({ TestVehicle }, delayProvider = Delays.fixed(delay))
 
             val result = List(10) { gen.next() }
 
@@ -22,7 +22,12 @@ class GeneratorTest :
         test("Alternating generator correctly cycles vehicle types") {
             val delay = 10.seconds
             val gen =
-                Generators.alternating(TestVehicle1, TestVehicle2, TestVehicle3, delayProvider = Delays.fixed(delay))
+                Generators.alternating(
+                    { TestVehicle1 },
+                    { TestVehicle2 },
+                    { TestVehicle3 },
+                    delayProvider = Delays.fixed(delay),
+                )
 
             val result = List(10) { gen.next() }
 
