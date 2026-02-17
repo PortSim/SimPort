@@ -20,7 +20,7 @@ internal object Presets {
     fun <T> generateSourcesWithGenerators(generators: List<Generator<T>>): Pair<Scenario, List<PushInputChannel<T>>> {
         val (sourceOuts, inputChannels) = newPushChannels<T>(generators.size)
         val sources = sourceOuts.zip(generators) { sourceOut, generator -> ArrivalNode("Source", sourceOut, generator) }
-        return Scenario(sources, mutableListOf()) to inputChannels
+        return Scenario(sources, mutableSetOf()) to inputChannels
     }
 
     /**

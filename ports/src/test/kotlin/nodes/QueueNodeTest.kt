@@ -40,7 +40,7 @@ class QueueNodeTest :
             val queue = QueueNode("Queue", queueIn, queueOut)
             DeadEndNode("Dead end", deadIn)
 
-            runSimulation(Scenario(listOf(source), mutableListOf()))
+            runSimulation(Scenario(listOf(source), mutableSetOf()))
 
             queue.occupants shouldBe NUM_VEHICLES
         }
