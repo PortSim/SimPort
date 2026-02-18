@@ -297,7 +297,9 @@ fun drawGroupDisplayProperty(
         }
         hasMetricGroup?.let { metricGroup ->
             TextButton(
-                onClick = { groupMetricsToDisplayInChart.value += metricGroup },
+                // in the future after we add support for plotting multiple parameters we can append to this list
+                // instead
+                onClick = { groupMetricsToDisplayInChart.value = listOf(metricGroup) },
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 0.dp, bottom = 8.dp),
             ) {
                 Text("Plot")
