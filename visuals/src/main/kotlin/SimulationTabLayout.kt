@@ -16,7 +16,7 @@ import components.MetricsPanelState
 import components.ResultsTablePage
 import components.SimpleGraphViewer
 import components.debugPanel
-import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 
 enum class SimulationTab(val label: String) {
     GraphViewer("Graph Viewer"),
@@ -26,8 +26,8 @@ enum class SimulationTab(val label: String) {
 
 @Composable
 fun SimulationTabLayout(
-    scenarioLayout: ScenarioLayout,
-    simulations: ImmutableMap<String, MetricsPanelState>,
+    simulationName: String,
+    metricsPanelState: MetricsPanelState,
     showResultsToolbar: Boolean = false,
     bottomBar: @Composable ColumnScope.() -> Unit = {},
 ) {
@@ -56,9 +56,10 @@ fun SimulationTabLayout(
             }
         }
 
+        val simulations = persistentMapOf(simulationName to metricsPanelState)
         Box(Modifier.weight(1f).clipToBounds()) {
             when (selectedTab) {
-                SimulationTab.GraphViewer -> SimpleGraphViewer(scenarioLayout)
+                SimulationTab.GraphViewer -> SimpleGraphViewer(metricsPanelState)
                 SimulationTab.Metrics -> SummaryVisualisation(simulations)
                 SimulationTab.ResultsTable -> ResultsTablePage(simulations, showToolbar = showResultsToolbar)
             }

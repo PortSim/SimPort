@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,10 +48,13 @@ import androidx.compose.ui.unit.toSize
 import com.group7.DisplayProperty
 import com.group7.DoubleDisplayProperty
 import com.group7.GroupDisplayProperty
+import com.group7.MetricGroupDisplayProperty
 import com.group7.OccupantsDisplayProperty
 import com.group7.TextDisplayProperty
 import com.group7.channels.ChannelType
+import com.group7.metrics.MetricGroup
 import kotlin.math.atan2
+import kotlinx.collections.immutable.toImmutableMap
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 
@@ -143,6 +147,7 @@ fun drawElkNodes(
                     enabled = true,
                 ) {
                     focusedNode.value = node
+                    println("${focusedNode.value}")
                 },
         contentAlignment = Alignment.TopStart,
     ) {
@@ -229,7 +234,15 @@ fun DrawScope.drawElkEdges(
     }
 }
 
+data class SimpleGraphViewerViewModel(
+    // Metrics to display in the chart
+    val chartsGroupMetrics: MutableState<List<MetricGroup>> = mutableStateOf(emptyList()),
+    // Whether a side panel is open
+    val focusedNode: MutableState<ElkNode?> = mutableStateOf(null),
+)
+
 @Composable
+context(viewModel: SimpleGraphViewerViewModel)
 fun drawNumericDisplayProperty(property: DoubleDisplayProperty) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
@@ -258,6 +271,7 @@ fun drawNumericDisplayProperty(property: DoubleDisplayProperty) {
 }
 
 @Composable
+context(viewModel: SimpleGraphViewerViewModel)
 fun drawGroupDisplayProperty(group: GroupDisplayProperty) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(
@@ -278,6 +292,7 @@ fun drawGroupDisplayProperty(group: GroupDisplayProperty) {
 }
 
 @Composable
+context(viewModel: SimpleGraphViewerViewModel)
 fun drawOccupantsDisplayProperty(property: OccupantsDisplayProperty) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
@@ -311,6 +326,7 @@ fun drawOccupantsDisplayProperty(property: OccupantsDisplayProperty) {
 }
 
 @Composable
+context(viewModel: SimpleGraphViewerViewModel)
 fun drawTextDisplayProperty(property: TextDisplayProperty) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
@@ -327,24 +343,40 @@ fun drawTextDisplayProperty(property: TextDisplayProperty) {
 }
 
 @Composable
+context(viewModel: SimpleGraphViewerViewModel)
+fun drawMetricGroupDisplayProperty(group: MetricGroupDisplayProperty) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        TextButton(
+            onClick = {
+                val originalList = viewModel.chartsGroupMetrics.value
+                viewModel.chartsGroupMetrics.value = originalList + group.metricGroup
+            },
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) {
+            Text("Plot")
+        }
+    }
+}
+
+@Composable
+context(viewModel: SimpleGraphViewerViewModel)
 fun drawDisplayProperty(property: DisplayProperty) {
     when (property) {
         is GroupDisplayProperty -> drawGroupDisplayProperty(property)
         is DoubleDisplayProperty -> drawNumericDisplayProperty(property)
         is OccupantsDisplayProperty -> drawOccupantsDisplayProperty(property)
         is TextDisplayProperty -> drawTextDisplayProperty(property)
+        is MetricGroupDisplayProperty -> drawMetricGroupDisplayProperty(property)
     }
 }
 
 @Composable
-fun drawDisplayPropertyPanel(
-    displayProperty: MutableState<GroupDisplayProperty>,
-    focusedProperty: MutableState<ElkNode?>,
-) {
+context(viewModel: SimpleGraphViewerViewModel)
+fun drawDisplayPropertyPanel(displayProperty: MutableState<GroupDisplayProperty>) {
     Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 1.dp) {
         Box(modifier = Modifier.fillMaxSize()) {
             IconButton(
-                onClick = { focusedProperty.value = null },
+                onClick = { viewModel.focusedNode.value = null },
                 modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
             ) {
                 Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
@@ -436,23 +468,49 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
 }
 
 @Composable
-fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
-    key(elkGraph) {
-        val focusedNode: MutableState<ElkNode?> = remember { mutableStateOf(null) }
+context(viewModel: SimpleGraphViewerViewModel)
+fun drawFocusedMetricGroups(metricsPanelState: MetricsPanelState) {
+    Box(modifier = Modifier.fillMaxSize().border(1.dp, Color.Black)) {
+        SummaryChart(
+            metricByScenario = viewModel.chartsGroupMetrics.value.associateBy { "" }.toImmutableMap(),
+            simulations = mapOf("" to metricsPanelState),
+            showRaw = false,
+            showCi = true,
+        )
+        IconButton(
+            onClick = { viewModel.chartsGroupMetrics.value = emptyList() },
+            modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
+        ) {
+            Icon(Icons.Default.Close, contentDescription = "Close Chart")
+        }
+    }
+}
+
+@Composable
+fun SimpleGraphViewer(metricsPanelState: MetricsPanelState) {
+    key(metricsPanelState) {
+        val elkGraph = remember { ScenarioLayout(metricsPanelState.scenario) }
+        val viewModel = remember { SimpleGraphViewerViewModel() }
 
         Row(modifier = Modifier.fillMaxSize()) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, focusedNode) }
-
-                if (focusedNode.value != null) {
-                    val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
-                    key(mutableDisplayProperty) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, viewModel.focusedNode) }
+                    println(viewModel.focusedNode.value)
+                    if (viewModel.focusedNode.value != null) {
+                        val mutableDisplayProperty =
+                            elkGraph.nodeDisplayProperties.getValue(viewModel.focusedNode.value!!)
                         Box(
                             modifier =
                                 Modifier.width(280.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background)
                         ) {
-                            drawDisplayPropertyPanel(mutableDisplayProperty, focusedNode)
+                            with(viewModel) { drawDisplayPropertyPanel(mutableDisplayProperty) }
                         }
+                    }
+                }
+                if (viewModel.chartsGroupMetrics.value.isNotEmpty()) {
+                    Box(modifier = Modifier.height(480.dp).background(MaterialTheme.colorScheme.primary)) {
+                        with(viewModel) { drawFocusedMetricGroups(metricsPanelState) }
                     }
                 }
             }

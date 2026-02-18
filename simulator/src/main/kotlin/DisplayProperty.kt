@@ -1,5 +1,7 @@
 package com.group7
 
+import com.group7.metrics.MetricGroup
+
 sealed interface DisplayProperty
 
 class GroupDisplayProperty(val name: String, val list: List<DisplayProperty>) : DisplayProperty {
@@ -16,6 +18,8 @@ class GroupDisplayProperty(val name: String, val list: List<DisplayProperty>) : 
         return GroupDisplayProperty(name, list + other)
     }
 }
+
+class MetricGroupDisplayProperty(val metricGroup: MetricGroup) : DisplayProperty
 
 class OccupantsDisplayProperty(val label: String, val occupants: Int, val capacity: Int?) : DisplayProperty
 

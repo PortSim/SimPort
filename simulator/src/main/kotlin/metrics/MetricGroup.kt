@@ -3,6 +3,7 @@ package com.group7.metrics
 import com.group7.DisplayProperty
 import com.group7.DoubleDisplayProperty
 import com.group7.GroupDisplayProperty
+import com.group7.MetricGroupDisplayProperty
 import com.group7.NodeGroup
 import com.group7.TextDisplayProperty
 import java.util.*
@@ -30,12 +31,14 @@ open class MetricGroup(val name: String, val associatedNode: NodeGroup?, val raw
         GroupDisplayProperty(
             name,
             buildList {
+                add(MetricGroupDisplayProperty(this@MetricGroup))
                 if (raw.lastData != null) {
                     add(DoubleDisplayProperty("Raw", raw.lastData!!.second, ""))
                 } else {
                     add(TextDisplayProperty("Raw: no data yet"))
                 }
                 if (moments != null) {
+                    // TODO more informative messages on why values are not available
                     moments.mean.lastData?.let { add(DoubleDisplayProperty("Mean", it.second, "")) }
                     moments.lowerCi?.lastData?.let { add(DoubleDisplayProperty("Lower CI", it.second, "")) }
                     moments.upperCi?.lastData?.let { add(DoubleDisplayProperty("Upper CI", it.second, "")) }
