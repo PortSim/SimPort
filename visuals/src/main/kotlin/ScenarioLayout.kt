@@ -112,10 +112,10 @@ class ScenarioLayout(scenario: Scenario) {
 
     private fun getDisplayPropertyForGlobalNode(): GroupDisplayProperty {
         val globalMetricsDisplays = globalMetricGroups.map { metric -> metric.displayProperty() }
-        if (globalMetricsDisplays.isNotEmpty()) {
-            return GroupDisplayProperty("Global Metrics", globalMetricsDisplays)
+        return if (globalMetricsDisplays.isNotEmpty()) {
+            GroupDisplayProperty("Global Metrics", globalMetricsDisplays)
         } else {
-            return GroupDisplayProperty("Global Metrics", TextDisplayProperty("No global metrics defined"))
+            GroupDisplayProperty("Global Metrics", TextDisplayProperty("No global metrics defined"))
         }
     }
 
