@@ -9,11 +9,6 @@ class GroupDisplayProperty(val name: String, val list: List<DisplayProperty>) : 
 
     constructor(name: String, vararg properties: DisplayProperty) : this(name, properties.toList())
 
-    fun takeChildrenOf(other: GroupDisplayProperty): GroupDisplayProperty {
-        check(other.name == name)
-        return GroupDisplayProperty(name, list + other.list)
-    }
-
     fun addChild(other: DisplayProperty): GroupDisplayProperty {
         return GroupDisplayProperty(name, list + other)
     }
@@ -21,10 +16,10 @@ class GroupDisplayProperty(val name: String, val list: List<DisplayProperty>) : 
 
 class MetricGroupDisplayProperty(val metricGroup: MetricGroup) : DisplayProperty
 
-class OccupantsDisplayProperty(val label: String, val occupants: Int, val capacity: Int?) : DisplayProperty
+/* Displays a line of text in the sidepanel */
+class TextDisplayProperty(val string: String) : DisplayProperty
 
 class DoubleDisplayProperty(val label: String, val value: Double, val unitSuffix: String) : DisplayProperty
 
-class TextDisplayProperty(val label: String) : DisplayProperty
-
-// some way for the user to just print whatever onto the display if they want ?? class Arbitrary()
+/* Displays a "field: value" where field is left aligned and value is right aligned */
+class FieldDisplayProperty(val fieldName: String, val value: String) : DisplayProperty

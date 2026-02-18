@@ -1,8 +1,8 @@
 package com.group7.nodes
 
 import com.group7.DisplayProperty
+import com.group7.FieldDisplayProperty
 import com.group7.Node
-import com.group7.OccupantsDisplayProperty
 import com.group7.Simulator
 import com.group7.channels.InputChannel
 import com.group7.channels.OutputChannel
@@ -49,5 +49,5 @@ abstract class ContainerNode<T>(
         leaveCallback?.let { it(obj) }
     }
 
-    override fun properties(): List<DisplayProperty> = listOf(OccupantsDisplayProperty("Occupants", occupants, null))
+    override fun properties(): List<DisplayProperty> = listOf(FieldDisplayProperty("Occupants", "$occupants"))
 }

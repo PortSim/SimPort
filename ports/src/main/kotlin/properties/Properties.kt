@@ -1,7 +1,7 @@
 package com.group7.properties
 
 import com.group7.DisplayProperty
-import com.group7.OccupantsDisplayProperty
+import com.group7.FieldDisplayProperty
 import com.group7.Simulator
 
 interface Container<out T> : HasDisplayProperties {
@@ -21,7 +21,7 @@ interface Container<out T> : HasDisplayProperties {
 
     fun supportsResidenceTime(): Boolean = true
 
-    override fun properties(): List<DisplayProperty> = listOf(OccupantsDisplayProperty("Occupants", occupants, null))
+    override fun properties(): List<DisplayProperty> = listOf(FieldDisplayProperty("Occupants", "$occupants"))
 }
 
 interface BoundedContainer<out T> : Container<T>, HasDisplayProperties {
@@ -31,5 +31,5 @@ interface BoundedContainer<out T> : Container<T>, HasDisplayProperties {
         get() = occupants >= capacity
 
     override fun properties(): List<DisplayProperty> =
-        listOf(OccupantsDisplayProperty("Occupants", occupants, capacity))
+        listOf(FieldDisplayProperty("Occupants", "$occupants / $capacity"))
 }

@@ -45,11 +45,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toIntRect
 import androidx.compose.ui.unit.toRect
 import androidx.compose.ui.unit.toSize
-import com.group7.DisplayProperty
 import com.group7.DoubleDisplayProperty
+import com.group7.FieldDisplayProperty
 import com.group7.GroupDisplayProperty
 import com.group7.MetricGroupDisplayProperty
-import com.group7.OccupantsDisplayProperty
 import com.group7.TextDisplayProperty
 import com.group7.channels.ChannelType
 import com.group7.metrics.MetricGroup
@@ -240,30 +239,30 @@ fun DrawScope.drawElkEdges(
 }
 
 @Composable
-fun drawNumericDisplayProperty(property: DoubleDisplayProperty) {
+fun drawLine(fieldName: String, fieldValue: String?) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
         horizontalArrangement = Arrangement.SpaceBetween, // Pushes Label left, Value right
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "${property.label}:",
+            text = "${fieldName}${if (fieldValue == null) "" else ":"}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f), // Let label take available space if needed
         )
 
-        val formattedValue = "%.2f%s".format(property.value, property.unitSuffix)
-
-        Text(
-            text = formattedValue,
-            style =
-                MaterialTheme.typography.bodyMedium.copy(
-                    fontFeatureSettings = "tnum",
-                    fontWeight = FontWeight.SemiBold,
-                ),
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        if (fieldValue != null) {
+            Text(
+                text = fieldValue,
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontFeatureSettings = "tnum",
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 
@@ -272,98 +271,38 @@ fun drawGroupDisplayProperty(
     group: GroupDisplayProperty,
     groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Text(
-            text = group.name,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 4.dp),
-        )
+    Box(Modifier.fillMaxWidth()) {
+        var hasMetricGroup: MetricGroup? = null
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Text(
+                text = group.name,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
 
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(start = 12.dp)
-            // .border(width = 1.dp, color = Color.LightGray, shape = RectangleShape)
-        ) {
-            group.list.forEach { childProperty -> drawDisplayProperty(childProperty, groupMetricsToDisplayInChart) }
-        }
-    }
-}
-
-@Composable
-fun drawOccupantsDisplayProperty(property: OccupantsDisplayProperty) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
-        horizontalArrangement = Arrangement.SpaceBetween, // Pushes Label left, Value right
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "${property.label}:",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f), // Let label take available space if needed
-        )
-
-        val formattedValue =
-            if (property.capacity != null) {
-                "${property.occupants} / ${property.capacity}"
-            } else {
-                "${property.occupants}"
+            Column(modifier = Modifier.fillMaxWidth().padding(start = 12.dp)) {
+                group.list.forEach { property ->
+                    when (property) {
+                        is GroupDisplayProperty -> drawGroupDisplayProperty(property, groupMetricsToDisplayInChart)
+                        is MetricGroupDisplayProperty -> hasMetricGroup = property.metricGroup
+                        is FieldDisplayProperty -> drawLine(property.fieldName, property.value)
+                        is DoubleDisplayProperty ->
+                            drawLine(property.label, "${"%.2f".format(property.value)}${property.unitSuffix}")
+                        is TextDisplayProperty -> drawLine(property.string, null)
+                    }
+                }
             }
-
-        Text(
-            text = formattedValue,
-            style =
-                MaterialTheme.typography.bodyMedium.copy(
-                    fontFeatureSettings = "tnum",
-                    fontWeight = FontWeight.SemiBold,
-                ),
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
-
-@Composable
-fun drawTextDisplayProperty(property: TextDisplayProperty) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
-        horizontalArrangement = Arrangement.SpaceBetween, // Pushes Label left, Value right
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "${property.label}:",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f), // Let label take available space if needed
-        )
-    }
-}
-
-@Composable
-fun drawMetricGroupDisplayProperty(
-    group: MetricGroupDisplayProperty,
-    groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
-) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        TextButton(
-            onClick = { groupMetricsToDisplayInChart.value += group.metricGroup },
-            modifier = Modifier.align(Alignment.TopEnd),
-        ) {
-            Text("Plot")
         }
-    }
-}
-
-@Composable
-fun drawDisplayProperty(property: DisplayProperty, groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>) {
-    when (property) {
-        is GroupDisplayProperty -> drawGroupDisplayProperty(property, groupMetricsToDisplayInChart)
-        is MetricGroupDisplayProperty -> drawMetricGroupDisplayProperty(property, groupMetricsToDisplayInChart)
-        // TODO make GroupDisplayProperty look better, probably error here error("MetricGroupDisplayProperty needs to be
-        // wrapped with a group display property ")
-        is DoubleDisplayProperty -> drawNumericDisplayProperty(property)
-        is OccupantsDisplayProperty -> drawOccupantsDisplayProperty(property)
-        is TextDisplayProperty -> drawTextDisplayProperty(property)
+        hasMetricGroup?.let { metricGroup ->
+            TextButton(
+                onClick = { groupMetricsToDisplayInChart.value += metricGroup },
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 0.dp, bottom = 8.dp),
+            ) {
+                Text("Plot")
+            }
+        }
     }
 }
 
@@ -382,7 +321,7 @@ fun drawDisplayPropertyPanel(
                 Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
             }
             Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                drawDisplayProperty(displayProperty.value, groupMetricsToDisplayInChart)
+                drawGroupDisplayProperty(displayProperty.value, groupMetricsToDisplayInChart)
             }
         }
     }

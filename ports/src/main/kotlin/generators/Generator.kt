@@ -1,7 +1,7 @@
 package com.group7.generators
 
 import com.group7.DisplayProperty
-import com.group7.DoubleDisplayProperty
+import com.group7.FieldDisplayProperty
 import com.group7.GroupDisplayProperty
 import com.group7.utils.suffix
 import kotlin.time.Duration
@@ -46,10 +46,7 @@ object Generators {
 object Delays {
     fun fixed(delay: Duration): DelayProvider {
         val displayProperty =
-            GroupDisplayProperty(
-                "Fixed Delay Provider Parameters",
-                DoubleDisplayProperty("delay", delay.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS.suffix),
-            )
+            GroupDisplayProperty("Fixed Delay Provider Parameters", FieldDisplayProperty("Delay", delay.toString()))
         return DelayProvider(displayProperty) { delay }
     }
 
@@ -57,16 +54,16 @@ object Delays {
         val stream = MRG32k3a() // random number stream
         val expGen = ExponentialGen(stream, lambda) // exponential distribution
         val displayProperty =
-            GroupDisplayProperty("Exponential Delay Provider", DoubleDisplayProperty("lambda", lambda, unit.suffix))
+            GroupDisplayProperty(
+                "Exponential Delay Provider",
+                FieldDisplayProperty("lambda", "${"%.2f".format(lambda)}${unit.suffix}"),
+            )
         return DelayProvider(displayProperty) { expGen.nextDouble().toDuration(unit) }
     }
 
     fun exponentialWithMean(mean: Duration): DelayProvider {
         val displayProperty =
-            GroupDisplayProperty(
-                "Exponential Delay Provider",
-                DoubleDisplayProperty("mean", mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS.suffix),
-            )
+            GroupDisplayProperty("Exponential Delay Provider", FieldDisplayProperty("Mean", mean.toString()))
         val exp = exponential(1 / mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS)
         return DelayProvider(displayProperty, { exp.nextDelay() })
     }
