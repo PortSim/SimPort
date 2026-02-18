@@ -14,6 +14,10 @@ import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -333,9 +337,20 @@ fun drawDisplayProperty(property: DisplayProperty) {
 }
 
 @Composable
-fun drawDisplayPropertyPanel(displayProperty: MutableState<GroupDisplayProperty>) {
-    Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 4.dp) {
-        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) { drawDisplayProperty(displayProperty.value) }
+fun drawDisplayPropertyPanel(
+    displayProperty: MutableState<GroupDisplayProperty>,
+    focusedProperty: MutableState<ElkNode?>,
+) {
+    Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 1.dp) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            IconButton(
+                onClick = { focusedProperty.value = null },
+                modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
+            }
+            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) { drawDisplayProperty(displayProperty.value) }
+        }
     }
 }
 
@@ -436,7 +451,7 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
                             modifier =
                                 Modifier.width(280.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background)
                         ) {
-                            drawDisplayPropertyPanel(mutableDisplayProperty)
+                            drawDisplayPropertyPanel(mutableDisplayProperty, focusedNode)
                         }
                     }
                 }
