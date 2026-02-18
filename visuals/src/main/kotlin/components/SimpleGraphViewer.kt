@@ -422,20 +422,22 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
 
 @Composable
 fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
-    val focusedNode: MutableState<ElkNode?> = remember { mutableStateOf(null) }
+    key(elkGraph) {
+        val focusedNode: MutableState<ElkNode?> = remember { mutableStateOf(null) }
 
-    Row(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, focusedNode) }
+            Row(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, focusedNode) }
 
-            if (focusedNode.value != null) {
-                val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
-                key(mutableDisplayProperty) {
-                    Box(
-                        modifier =
-                            Modifier.width(280.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background)
-                    ) {
-                        drawDisplayPropertyPanel(mutableDisplayProperty)
+                if (focusedNode.value != null) {
+                    val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
+                    key(mutableDisplayProperty) {
+                        Box(
+                            modifier =
+                                Modifier.width(280.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background)
+                        ) {
+                            drawDisplayPropertyPanel(mutableDisplayProperty)
+                        }
                     }
                 }
             }
