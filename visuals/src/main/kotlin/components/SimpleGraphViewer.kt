@@ -8,7 +8,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -52,6 +54,7 @@ import com.group7.channels.ChannelType
 import com.group7.metrics.MetricGroup
 import kotlin.math.atan2
 import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.coroutines.launch
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 
@@ -352,6 +355,17 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
         val yRange = calcClampValues(outerHeightWithPadding, outerElementSize.height)
         viewOffset = Offset(viewOffset.x.coerceIn(xRange), viewOffset.y.coerceIn(yRange))
     }
+    val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollableState { delta ->
+        val zoomFactor = (1 - delta)
+        val scaleMaximum = 20f
+        if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
+            scale *= zoomFactor
+            viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
+            clampOffsetToKeepCanvasOnScreen()
+        }
+        delta // this is how much delta we consumed
+    }
 
     // We use a Box with no size constraints to act as a coordinate plane
     Box(
@@ -374,34 +388,11 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
                         while (true) {
                             val event = awaitPointerEvent()
                             if (event.type == PointerEventType.Scroll) {
-                                // Get the raw delta (x or y)
-                                val delta = event.changes.first().scrollDelta.y
-                                val zoomFactor = (1 - delta * 0.5f)
-                                val scaleMaximum = 20f
-                                if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
-                                    scale *= zoomFactor
-                                    viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
-                                    clampOffsetToKeepCanvasOnScreen()
-                                }
+                                scope.launch { scrollState.animateScrollBy(event.changes.first().scrollDelta.y) }
                             }
                         }
                     }
                 }
-                //                .scrollable(
-                //                    orientation = Orientation.Vertical,
-                //                    state =
-                //                        rememberScrollableState { delta ->
-                //                            val zoomFactor = (1 + delta * 0.005f)
-                //                            val scaleMaximum = 20f
-                //                            if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <=
-                // scaleMaximum) {
-                //                                scale *= zoomFactor
-                //                                viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
-                //                                clampOffsetToKeepCanvasOnScreen()
-                //                            }
-                //                            delta // Return the delta to indicate scroll amount consumed
-                //                        },
-                //                )
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, _, _ ->
                         viewOffset = Offset(viewOffset.x + pan.x, viewOffset.y + pan.y)
