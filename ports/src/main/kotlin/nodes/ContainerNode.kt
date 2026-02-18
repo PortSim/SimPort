@@ -1,6 +1,6 @@
 package com.group7.nodes
 
-import com.group7.GroupDisplayProperty
+import com.group7.DisplayProperty
 import com.group7.Node
 import com.group7.OccupantsDisplayProperty
 import com.group7.Simulator
@@ -49,7 +49,5 @@ abstract class ContainerNode<T>(
         leaveCallback?.let { it(obj) }
     }
 
-    override fun properties(): GroupDisplayProperty {
-        return GroupDisplayProperty(label, listOf(OccupantsDisplayProperty("Occupants", occupants, null)))
-    }
+    override fun properties(): List<DisplayProperty> = listOf(OccupantsDisplayProperty("Occupants", occupants, null))
 }

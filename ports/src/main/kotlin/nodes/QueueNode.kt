@@ -1,6 +1,5 @@
 package com.group7.nodes
 
-import com.group7.GroupDisplayProperty
 import com.group7.Simulator
 import com.group7.channels.*
 import com.group7.policies.queue.FIFOQueuePolicy
@@ -50,6 +49,4 @@ class QueueNode<T>(
         }
         return result
     }
-
-    override fun properties() = GroupDisplayProperty(label).takeChildrenOf(super.properties())
 }

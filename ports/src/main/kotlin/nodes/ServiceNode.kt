@@ -1,6 +1,5 @@
 package com.group7.nodes
 
-import com.group7.GroupDisplayProperty
 import com.group7.Simulator
 import com.group7.channels.*
 import com.group7.generators.DelayProvider
@@ -37,6 +36,5 @@ class ServiceNode<T>(
         destination.send(obj)
     }
 
-    override fun properties(): GroupDisplayProperty =
-        GroupDisplayProperty(label, this.asCapacityDisplayProperty(), delayProvider.displayProperty)
+    override fun properties() = listOf(this.asCapacityDisplayProperty(), delayProvider.displayProperty)
 }

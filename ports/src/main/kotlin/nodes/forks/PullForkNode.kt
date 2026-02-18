@@ -1,6 +1,5 @@
 package com.group7.nodes.forks
 
-import com.group7.GroupDisplayProperty
 import com.group7.Node
 import com.group7.TextDisplayProperty
 import com.group7.channels.*
@@ -17,5 +16,5 @@ class PullForkNode<T>(
         destinations.forEach { it.onPull { source.receive() } }
     }
 
-    override fun properties() = GroupDisplayProperty(label, TextDisplayProperty("Pull fork node"))
+    override fun properties() = listOf(TextDisplayProperty("Pull fork node"))
 }

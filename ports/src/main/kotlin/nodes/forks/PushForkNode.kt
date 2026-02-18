@@ -1,6 +1,5 @@
 package com.group7.nodes.forks
 
-import com.group7.GroupDisplayProperty
 import com.group7.Node
 import com.group7.Simulator
 import com.group7.TextDisplayProperty
@@ -35,5 +34,5 @@ class PushForkNode<T>(
     }
 
     // TODO descriptions on policies
-    override fun properties() = GroupDisplayProperty(label, TextDisplayProperty("Push fork node"))
+    override fun properties() = listOf(TextDisplayProperty("Push fork node"))
 }

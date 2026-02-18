@@ -92,7 +92,7 @@ class ScenarioLayout(scenario: Scenario) {
             .mapValues { (_, list) -> list }
 
     private fun getDisplayPropertyForNodeGroup(nodeGroup: NodeGroup): GroupDisplayProperty {
-        val rootDisplayProperty = nodeGroup.properties()
+        val rootDisplayProperty = GroupDisplayProperty(nodeGroup.label, nodeGroup.properties())
         val nodeGroupMetricGroups = nodeGroupsToMetricGroups[nodeGroup] ?: emptyList()
         return if (nodeGroupMetricGroups.isNotEmpty()) {
             val metricsOnNodeProperty = nodeGroupMetricGroups.map { metric -> metric.displayProperty() }

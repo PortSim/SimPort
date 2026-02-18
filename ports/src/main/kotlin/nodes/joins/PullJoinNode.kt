@@ -1,6 +1,5 @@
 package com.group7.nodes.joins
 
-import com.group7.GroupDisplayProperty
 import com.group7.Node
 import com.group7.Simulator
 import com.group7.TextDisplayProperty
@@ -32,5 +31,5 @@ class PullJoinNode<T>(
         return policy.selectChannel().receive()
     }
 
-    override fun properties() = GroupDisplayProperty(label, TextDisplayProperty("Pull join node"))
+    override fun properties() = listOf(TextDisplayProperty("Pull join node"))
 }

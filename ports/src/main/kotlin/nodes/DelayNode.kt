@@ -1,6 +1,6 @@
 package com.group7.nodes
 
-import com.group7.GroupDisplayProperty
+import com.group7.DisplayProperty
 import com.group7.TextDisplayProperty
 import com.group7.channels.PushInputChannel
 import com.group7.channels.PushOutputChannel
@@ -35,6 +35,6 @@ class DelayNode<T>(
         }
     }
 
-    override fun properties() =
-        GroupDisplayProperty(label, listOf(TextDisplayProperty("Delay node"), delayProvider.displayProperty))
+    override fun properties(): List<DisplayProperty> =
+        listOf(TextDisplayProperty("Delay node"), delayProvider.displayProperty)
 }
