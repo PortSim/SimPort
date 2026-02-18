@@ -28,6 +28,7 @@ enum class SimulationTab(val label: String) {
 fun SimulationTabLayout(
     simulationName: String,
     metricsPanelState: MetricsPanelState,
+    scenarioLayout: ScenarioLayout,
     showResultsToolbar: Boolean = false,
     bottomBar: @Composable ColumnScope.() -> Unit = {},
 ) {
@@ -59,7 +60,7 @@ fun SimulationTabLayout(
         val simulations = persistentMapOf(simulationName to metricsPanelState)
         Box(Modifier.weight(1f).clipToBounds()) {
             when (selectedTab) {
-                SimulationTab.GraphViewer -> SimpleGraphViewer(metricsPanelState)
+                SimulationTab.GraphViewer -> SimpleGraphViewer(metricsPanelState, scenarioLayout)
                 SimulationTab.Metrics -> SummaryVisualisation(simulations)
                 SimulationTab.ResultsTable -> ResultsTablePage(simulations, showToolbar = showResultsToolbar)
             }

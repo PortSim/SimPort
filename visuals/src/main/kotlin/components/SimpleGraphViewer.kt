@@ -442,10 +442,13 @@ fun drawFocusedMetricGroups(
 }
 
 @Composable
-fun SimpleGraphViewer(metricsPanelState: MetricsPanelState) {
+fun SimpleGraphViewer(
+    // the data for graphing
+    metricsPanelState: MetricsPanelState,
+    // the locations of nodes and their values to display
+    elkGraph: ScenarioLayout = remember { ScenarioLayout(metricsPanelState.scenario) },
+) {
     key(metricsPanelState) {
-        // the locations of nodes and their values to display
-        val elkGraph = remember { ScenarioLayout(metricsPanelState.scenario) }
         // Whether a side panel is open
         val focusedNode: MutableState<ElkNode?> = remember { mutableStateOf(null) }
         // Metrics to display in the chart
