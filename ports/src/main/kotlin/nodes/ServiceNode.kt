@@ -4,7 +4,6 @@ import com.group7.Simulator
 import com.group7.channels.*
 import com.group7.generators.DelayProvider
 import com.group7.properties.Service
-import com.group7.properties.asCapacityDisplayProperty
 
 class ServiceNode<T>(
     label: String,
@@ -36,5 +35,5 @@ class ServiceNode<T>(
         destination.send(obj)
     }
 
-    override fun properties() = listOf(this.asCapacityDisplayProperty(), delayProvider.displayProperty)
+    override fun properties() = super<Service>.properties() + delayProvider.displayProperty
 }

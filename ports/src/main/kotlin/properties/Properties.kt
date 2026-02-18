@@ -1,8 +1,10 @@
 package com.group7.properties
 
+import com.group7.DisplayProperty
+import com.group7.OccupantsDisplayProperty
 import com.group7.Simulator
 
-interface Container<out T> {
+interface Container<out T> : HasDisplayProperties {
     val occupants: Int
 
     fun onEnter(
@@ -18,11 +20,16 @@ interface Container<out T> {
     )
 
     fun supportsResidenceTime(): Boolean = true
+
+    override fun properties(): List<DisplayProperty> = listOf(OccupantsDisplayProperty("Occupants", occupants, null))
 }
 
-interface BoundedContainer<out T> : Container<T> {
+interface BoundedContainer<out T> : Container<T>, HasDisplayProperties {
     val capacity: Int
 
     val isFull
         get() = occupants >= capacity
+
+    override fun properties(): List<DisplayProperty> =
+        listOf(OccupantsDisplayProperty("Occupants", occupants, capacity))
 }

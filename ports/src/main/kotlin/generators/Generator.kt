@@ -15,19 +15,20 @@ interface Generator<out T> : Iterator<Pair<T, Duration>> {
     val displayProperty: DisplayProperty
 }
 
-fun interface DelayProvider {
+interface DelayProvider {
     fun nextDelay(): Duration
 
     val displayProperty: DisplayProperty
-        get() = GroupDisplayProperty("No delay provider display properties provided")
-}
 
-fun DelayProvider.withDisplay(property: DisplayProperty): DelayProvider {
-    val delegate = this
-    return object : DelayProvider {
-        override fun nextDelay() = delegate.nextDelay()
+    companion object {
+        // This is the ONLY way to create an instance
+        operator fun invoke(displayProperty: DisplayProperty, block: () -> Duration): DelayProvider =
+            object : DelayProvider {
+                override val displayProperty: DisplayProperty
+                    get() = displayProperty
 
-        override val displayProperty = property
+                override fun nextDelay(): Duration = block()
+            }
     }
 }
 
@@ -43,31 +44,32 @@ object Generators {
 }
 
 object Delays {
-    fun fixed(delay: Duration) =
-        DelayProvider { delay }
-            .withDisplay(
-                GroupDisplayProperty(
-                    "Fixed Delay Provider Parameters",
-                    DoubleDisplayProperty("delay", delay.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS.suffix),
-                )
+    fun fixed(delay: Duration): DelayProvider {
+        val displayProperty =
+            GroupDisplayProperty(
+                "Fixed Delay Provider Parameters",
+                DoubleDisplayProperty("delay", delay.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS.suffix),
             )
+        return DelayProvider(displayProperty) { delay }
+    }
 
     fun exponential(lambda: Double, unit: DurationUnit): DelayProvider {
         val stream = MRG32k3a() // random number stream
         val expGen = ExponentialGen(stream, lambda) // exponential distribution
         val displayProperty =
             GroupDisplayProperty("Exponential Delay Provider", DoubleDisplayProperty("lambda", lambda, unit.suffix))
-        return DelayProvider { expGen.nextDouble().toDuration(unit) }.withDisplay(displayProperty)
+        return DelayProvider(displayProperty) { expGen.nextDouble().toDuration(unit) }
     }
 
-    fun exponentialWithMean(mean: Duration) =
-        exponential(1 / mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS)
-            .withDisplay(
-                GroupDisplayProperty(
-                    "Exponential Delay Provider",
-                    DoubleDisplayProperty("mean", mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS.suffix),
-                )
+    fun exponentialWithMean(mean: Duration): DelayProvider {
+        val displayProperty =
+            GroupDisplayProperty(
+                "Exponential Delay Provider",
+                DoubleDisplayProperty("mean", mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS.suffix),
             )
+        val exp = exponential(1 / mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS)
+        return DelayProvider(displayProperty, { exp.nextDelay() })
+    }
 }
 
 fun <T> Generator<T>.take(n: Int) = asSequence().take(n).asGenerator()
