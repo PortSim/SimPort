@@ -14,22 +14,14 @@ import org.eclipse.elk.core.util.BasicProgressMonitor
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.util.ElkGraphUtil
 
-/*
-   The scenario graph figures out the nodes and channels in a scenario.
-   It might be simpler to have a function in scenario instead, i am undecided.
-*/
-internal class ScenarioGraph(scenario: Scenario) {
-    val nodesOrderedByBFS = scenario.bfs()
-    val edgesWithChannels =
+class ScenarioLayout(scenario: Scenario) {
+    private val nodesOrderedByBFS = scenario.bfs()
+    private val edgesWithChannels =
         nodesOrderedByBFS.flatMap { upstream ->
             upstream.outgoing.asSequence().map { channel ->
                 Triple(upstream, channel.downstream.downstreamNode, channel)
             }
         }
-}
-
-class ScenarioLayout(scenario: Scenario) {
-    private val graphOfScenario = ScenarioGraph(scenario)
 
     val elkGraphRoot: ElkNode = ElkGraphUtil.createGraph() // necessary so nodesContainer can have a input port
 
@@ -65,7 +57,7 @@ class ScenarioLayout(scenario: Scenario) {
     }
 
     private val simulationNodeGroupToElkNode = buildMap {
-        graphOfScenario.nodesOrderedByBFS.forEach { node ->
+        nodesOrderedByBFS.forEach { node ->
             val elkNode = ElkGraphUtil.createNode(getElkNodeFromNodeGroup(node.parent))
             elkNode.width = 80.0
             elkNode.height = 80.0
@@ -76,7 +68,7 @@ class ScenarioLayout(scenario: Scenario) {
     }
 
     private val simulationEdgeToElkEdge = buildMap {
-        for ((source, destination, channel) in graphOfScenario.edgesWithChannels) {
+        for ((source, destination, channel) in edgesWithChannels) {
             val edge =
                 ElkGraphUtil.createSimpleEdge(
                     simulationNodeGroupToElkNode[source],
