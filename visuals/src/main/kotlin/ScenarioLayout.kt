@@ -3,6 +3,7 @@ import androidx.compose.runtime.mutableStateOf
 import com.group7.GroupDisplayProperty
 import com.group7.NodeGroup
 import com.group7.Scenario
+import com.group7.TextDisplayProperty
 import com.group7.channels.*
 import org.eclipse.elk.alg.layered.options.*
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
@@ -99,14 +100,23 @@ class ScenarioLayout(scenario: Scenario) {
             .mapValues { (_, list) -> list }
 
     private fun getDisplayPropertyForNodeGroup(nodeGroup: NodeGroup): GroupDisplayProperty {
-        val metricsOnNodeProperty =
-            (nodeGroupsToMetricGroups[nodeGroup] ?: emptyList()).map { metric -> metric.displayProperty() }
-        return nodeGroup.properties().addChild(GroupDisplayProperty("Metrics", metricsOnNodeProperty))
+        val rootDisplayProperty = nodeGroup.properties()
+        val nodeGroupMetricGroups = nodeGroupsToMetricGroups[nodeGroup] ?: emptyList()
+        return if (nodeGroupMetricGroups.isNotEmpty()) {
+            val metricsOnNodeProperty = nodeGroupMetricGroups.map { metric -> metric.displayProperty() }
+            rootDisplayProperty.addChild(GroupDisplayProperty("Metrics", metricsOnNodeProperty))
+        } else {
+            rootDisplayProperty
+        }
     }
 
     private fun getDisplayPropertyForGlobalNode(): GroupDisplayProperty {
         val globalMetricsDisplays = globalMetricGroups.map { metric -> metric.displayProperty() }
-        return GroupDisplayProperty("Global Metrics", globalMetricsDisplays)
+        if (globalMetricsDisplays.isNotEmpty()) {
+            return GroupDisplayProperty("Global Metrics", globalMetricsDisplays)
+        } else {
+            return GroupDisplayProperty("Global Metrics", TextDisplayProperty("No global metrics defined"))
+        }
     }
 
     val nodeMetrics =
