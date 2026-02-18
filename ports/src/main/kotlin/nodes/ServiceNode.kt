@@ -37,5 +37,6 @@ class ServiceNode<T>(
         destination.send(obj)
     }
 
-    override fun properties(): GroupDisplayProperty = GroupDisplayProperty(label, this.asCapacityDisplayProperty())
+    override fun properties(): GroupDisplayProperty =
+        GroupDisplayProperty(label, this.asCapacityDisplayProperty(), delayProvider.displayProperty)
 }
