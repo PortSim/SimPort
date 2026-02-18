@@ -110,10 +110,32 @@ fun DrawScope.drawArrowHead(
     }
 }
 
+/**
+ * Detects if the current node is hovered and, if it's smaller than the currently hovered node, sets the hovered node to
+ * be this node.
+ */
+fun Modifier.exclusiveHover(node: ElkNode, hoveredNode: MutableState<ElkNode?>): Modifier =
+    this.pointerInput(node) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Main)
+                val isPointerInside = size.toIntRect().toRect().contains(event.changes.first().position)
+                // Semi-hack to figure out if we're the smallest node being hovered, this does not
+                // consume events so doesn't interfere with panning around
+                if (isPointerInside && (hoveredNode.value?.width ?: Double.MAX_VALUE) >= node.width) {
+                    hoveredNode.value = node
+                }
+                if (!isPointerInside && hoveredNode.value == node) {
+                    hoveredNode.value = null
+                }
+            }
+        }
+    }
+
 @Composable
 fun drawElkNodes(
     node: ElkNode,
-    nodeMetrics: Map<ElkNode, MutableState<Metrics>>,
+    nodeMetrics: Map<ElkNode, State<Metrics>>,
     hoveredNode: MutableState<ElkNode?>,
     focusedNode: MutableState<ElkNode?>,
 ) {
@@ -125,30 +147,13 @@ fun drawElkNodes(
                 .requiredSize(node.width.dp, node.height.dp)
                 .background(if (isHovered) Color.LightGray.copy(alpha = 0.5f) else Color.Transparent)
                 .border(1.dp, Color.Black)
-                .pointerInput(node) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Main)
-                            val isPointerInside = size.toIntRect().toRect().contains(event.changes.first().position)
-                            // Semi-hack to figure out if we're the smallest node being hovered, this does not
-                            // consume events so doesn't interfere with panning around
-                            if (isPointerInside && (hoveredNode.value?.width ?: Double.MAX_VALUE) >= node.width) {
-                                hoveredNode.value = node
-                            }
-                            if (!isPointerInside && hoveredNode.value == node) {
-                                hoveredNode.value = null
-                            }
-                        }
-                    }
-                }
+                .exclusiveHover(node, hoveredNode)
                 .clickable(
                     interactionSource = remember(node) { MutableInteractionSource() },
                     indication = null,
                     enabled = true,
-                ) {
-                    focusedNode.value = node
-                    println("${focusedNode.value}")
-                },
+                    onClick = { focusedNode.value = node },
+                ),
         contentAlignment = Alignment.TopStart,
     ) {
         if (node.parent != null) {
@@ -234,15 +239,7 @@ fun DrawScope.drawElkEdges(
     }
 }
 
-data class SimpleGraphViewerViewModel(
-    // Metrics to display in the chart
-    val chartsGroupMetrics: MutableState<List<MetricGroup>> = mutableStateOf(emptyList()),
-    // Whether a side panel is open
-    val focusedNode: MutableState<ElkNode?> = mutableStateOf(null),
-)
-
 @Composable
-context(viewModel: SimpleGraphViewerViewModel)
 fun drawNumericDisplayProperty(property: DoubleDisplayProperty) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
@@ -271,8 +268,10 @@ fun drawNumericDisplayProperty(property: DoubleDisplayProperty) {
 }
 
 @Composable
-context(viewModel: SimpleGraphViewerViewModel)
-fun drawGroupDisplayProperty(group: GroupDisplayProperty) {
+fun drawGroupDisplayProperty(
+    group: GroupDisplayProperty,
+    groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(
             text = group.name,
@@ -286,13 +285,12 @@ fun drawGroupDisplayProperty(group: GroupDisplayProperty) {
             modifier = Modifier.fillMaxWidth().padding(start = 12.dp)
             // .border(width = 1.dp, color = Color.LightGray, shape = RectangleShape)
         ) {
-            group.list.forEach { childProperty -> drawDisplayProperty(childProperty) }
+            group.list.forEach { childProperty -> drawDisplayProperty(childProperty, groupMetricsToDisplayInChart) }
         }
     }
 }
 
 @Composable
-context(viewModel: SimpleGraphViewerViewModel)
 fun drawOccupantsDisplayProperty(property: OccupantsDisplayProperty) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
@@ -326,7 +324,6 @@ fun drawOccupantsDisplayProperty(property: OccupantsDisplayProperty) {
 }
 
 @Composable
-context(viewModel: SimpleGraphViewerViewModel)
 fun drawTextDisplayProperty(property: TextDisplayProperty) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
@@ -343,14 +340,13 @@ fun drawTextDisplayProperty(property: TextDisplayProperty) {
 }
 
 @Composable
-context(viewModel: SimpleGraphViewerViewModel)
-fun drawMetricGroupDisplayProperty(group: MetricGroupDisplayProperty) {
+fun drawMetricGroupDisplayProperty(
+    group: MetricGroupDisplayProperty,
+    groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
+) {
     Box(modifier = Modifier.fillMaxWidth()) {
         TextButton(
-            onClick = {
-                val originalList = viewModel.chartsGroupMetrics.value
-                viewModel.chartsGroupMetrics.value = originalList + group.metricGroup
-            },
+            onClick = { groupMetricsToDisplayInChart.value += group.metricGroup },
             modifier = Modifier.align(Alignment.TopEnd),
         ) {
             Text("Plot")
@@ -359,29 +355,35 @@ fun drawMetricGroupDisplayProperty(group: MetricGroupDisplayProperty) {
 }
 
 @Composable
-context(viewModel: SimpleGraphViewerViewModel)
-fun drawDisplayProperty(property: DisplayProperty) {
+fun drawDisplayProperty(property: DisplayProperty, groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>) {
     when (property) {
-        is GroupDisplayProperty -> drawGroupDisplayProperty(property)
+        is GroupDisplayProperty -> drawGroupDisplayProperty(property, groupMetricsToDisplayInChart)
+        is MetricGroupDisplayProperty -> drawMetricGroupDisplayProperty(property, groupMetricsToDisplayInChart)
+        // TODO make GroupDisplayProperty look better, probably error here error("MetricGroupDisplayProperty needs to be
+        // wrapped with a group display property ")
         is DoubleDisplayProperty -> drawNumericDisplayProperty(property)
         is OccupantsDisplayProperty -> drawOccupantsDisplayProperty(property)
         is TextDisplayProperty -> drawTextDisplayProperty(property)
-        is MetricGroupDisplayProperty -> drawMetricGroupDisplayProperty(property)
     }
 }
 
 @Composable
-context(viewModel: SimpleGraphViewerViewModel)
-fun drawDisplayPropertyPanel(displayProperty: MutableState<GroupDisplayProperty>) {
+fun drawDisplayPropertyPanel(
+    focusedNode: MutableState<ElkNode?>,
+    groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
+    displayProperty: State<GroupDisplayProperty>,
+) {
     Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 1.dp) {
         Box(modifier = Modifier.fillMaxSize()) {
             IconButton(
-                onClick = { viewModel.focusedNode.value = null },
+                onClick = { focusedNode.value = null },
                 modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
             ) {
                 Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
             }
-            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) { drawDisplayProperty(displayProperty.value) }
+            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                drawDisplayProperty(displayProperty.value, groupMetricsToDisplayInChart)
+            }
         }
     }
 }
@@ -468,17 +470,22 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
 }
 
 @Composable
-context(viewModel: SimpleGraphViewerViewModel)
-fun drawFocusedMetricGroups(metricsPanelState: MetricsPanelState) {
+fun drawFocusedMetricGroups(
+    metricsPanelState: MetricsPanelState,
+    groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
+) {
     Box(modifier = Modifier.fillMaxSize().border(1.dp, Color.Black)) {
         SummaryChart(
-            metricByScenario = viewModel.chartsGroupMetrics.value.associateBy { "" }.toImmutableMap(),
+            metricByScenario =
+                groupMetricsToDisplayInChart.value
+                    .associateBy { "" }
+                    .toImmutableMap(), // This only allows displaying one metric per simulation, ideally we want more
             simulations = mapOf("" to metricsPanelState),
             showRaw = false,
             showCi = true,
         )
         IconButton(
-            onClick = { viewModel.chartsGroupMetrics.value = emptyList() },
+            onClick = { groupMetricsToDisplayInChart.value = emptyList() },
             modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
         ) {
             Icon(Icons.Default.Close, contentDescription = "Close Chart")
@@ -489,28 +496,27 @@ fun drawFocusedMetricGroups(metricsPanelState: MetricsPanelState) {
 @Composable
 fun SimpleGraphViewer(metricsPanelState: MetricsPanelState) {
     key(metricsPanelState) {
+        // the locations of nodes and their values to display
         val elkGraph = remember { ScenarioLayout(metricsPanelState.scenario) }
-        val viewModel = remember { SimpleGraphViewerViewModel() }
+        // Whether a side panel is open
+        val focusedNode: MutableState<ElkNode?> = remember { mutableStateOf(null) }
+        // Metrics to display in the chart
+        val groupMetricsToDisplayInChart: MutableState<List<MetricGroup>> = remember { mutableStateOf(emptyList()) }
 
         Row(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, viewModel.focusedNode) }
-                    println(viewModel.focusedNode.value)
-                    if (viewModel.focusedNode.value != null) {
-                        val mutableDisplayProperty =
-                            elkGraph.nodeDisplayProperties.getValue(viewModel.focusedNode.value!!)
-                        Box(
-                            modifier =
-                                Modifier.width(280.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background)
-                        ) {
-                            with(viewModel) { drawDisplayPropertyPanel(mutableDisplayProperty) }
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, focusedNode) }
+                    if (focusedNode.value != null) {
+                        val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
+                        Box(modifier = Modifier.width(280.dp).fillMaxHeight()) {
+                            drawDisplayPropertyPanel(focusedNode, groupMetricsToDisplayInChart, mutableDisplayProperty)
                         }
                     }
                 }
-                if (viewModel.chartsGroupMetrics.value.isNotEmpty()) {
+                if (groupMetricsToDisplayInChart.value.isNotEmpty()) {
                     Box(modifier = Modifier.height(480.dp).background(MaterialTheme.colorScheme.primary)) {
-                        with(viewModel) { drawFocusedMetricGroups(metricsPanelState) }
+                        drawFocusedMetricGroups(metricsPanelState, groupMetricsToDisplayInChart)
                     }
                 }
             }
