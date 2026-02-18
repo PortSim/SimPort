@@ -135,8 +135,8 @@ fun Modifier.exclusiveHover(node: ElkNode, hoveredNode: MutableState<ElkNode?>):
 fun drawElkNodes(
     node: ElkNode,
     nodeMetrics: Map<ElkNode, State<Metrics>>,
-    hoveredNode: MutableState<ElkNode?>,
     focusedNode: MutableState<ElkNode?>,
+    hoveredNode: MutableState<ElkNode?> = remember { mutableStateOf(null) },
 ) {
     val isHovered = hoveredNode.value == node
     Box(
@@ -180,7 +180,7 @@ fun drawElkNodes(
             }
         }
 
-        node.children.forEach { drawElkNodes(it, nodeMetrics, hoveredNode, focusedNode) }
+        node.children.forEach { drawElkNodes(it, nodeMetrics, focusedNode, hoveredNode) }
     }
 }
 
@@ -402,8 +402,7 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
             Canvas(Modifier.matchParentSize()) {
                 drawElkEdges(scenarioData.elkGraphRoot, backgroundColor, scenarioData.edgeStatuses)
             }
-            val hoveredNode = remember { mutableStateOf<ElkNode?>(null) }
-            drawElkNodes(scenarioData.elkGraphRoot, scenarioData.nodeMetrics, hoveredNode, focusedNode)
+            drawElkNodes(scenarioData.elkGraphRoot, scenarioData.nodeMetrics, focusedNode)
         }
     }
 }
