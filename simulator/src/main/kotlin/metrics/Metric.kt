@@ -32,12 +32,7 @@ abstract class ContinuousMetric : Metric {
     }
 
     override val lastData: Pair<Instant, Double>?
-        get() =
-            if (lastTime != null) {
-                lastTime!! to lastValue
-            } else {
-                null
-            }
+        get() = lastTime?.let { it to lastValue }
 }
 
 abstract class InstantaneousMetric : Metric {
@@ -58,10 +53,5 @@ abstract class InstantaneousMetric : Metric {
     }
 
     override val lastData: Pair<Instant, Double>?
-        get() =
-            if (lastTime != null) {
-                lastTime!! to lastValue
-            } else {
-                null
-            }
+        get() = lastTime?.let { it to lastValue }
 }
