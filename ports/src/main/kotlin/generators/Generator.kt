@@ -56,10 +56,7 @@ object Delays {
         val stream = MRG32k3a() // random number stream
         val expGen = ExponentialGen(stream, lambda) // exponential distribution
         val displayProperty =
-            GroupDisplayProperty(
-                "Exponential Delay Provider Parameters",
-                DoubleDisplayProperty("lambda", lambda, unit.suffix),
-            )
+            GroupDisplayProperty("Exponential Delay Provider", DoubleDisplayProperty("lambda", lambda, unit.suffix))
         return DelayProvider { expGen.nextDouble().toDuration(unit) }.withDisplay(displayProperty)
     }
 
@@ -67,7 +64,7 @@ object Delays {
         exponential(1 / mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS)
             .withDisplay(
                 GroupDisplayProperty(
-                    "Exponential Delay Provider Parameters",
+                    "Exponential Delay Provider",
                     DoubleDisplayProperty("mean", mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS.suffix),
                 )
             )
