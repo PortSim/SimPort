@@ -36,5 +36,5 @@ class DelayNode<T>(
     }
 
     override fun properties() =
-        GroupDisplayProperty(label, listOf(TextDisplayProperty("Push fork node"), delayProvider.displayProperty))
+        GroupDisplayProperty(label, listOf(TextDisplayProperty("Delay node"), delayProvider.displayProperty))
 }
