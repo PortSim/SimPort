@@ -1,7 +1,9 @@
 package com.group7.nodes.joins
 
+import com.group7.GroupDisplayProperty
 import com.group7.Node
 import com.group7.Simulator
+import com.group7.TextDisplayProperty
 import com.group7.channels.PullInputChannel
 import com.group7.channels.PullOutputChannel
 import com.group7.channels.onPull
@@ -29,4 +31,6 @@ class PullJoinNode<T>(
     private fun takeFromSource(): T {
         return policy.selectChannel().receive()
     }
+
+    override fun properties() = GroupDisplayProperty(label, TextDisplayProperty("Pull join node"))
 }

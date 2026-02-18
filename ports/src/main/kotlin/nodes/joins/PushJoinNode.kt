@@ -1,6 +1,8 @@
 package com.group7.nodes.joins
 
+import com.group7.GroupDisplayProperty
 import com.group7.Node
+import com.group7.TextDisplayProperty
 import com.group7.channels.*
 
 /** Joins multiple streams together. */
@@ -15,4 +17,6 @@ class PushJoinNode<T>(label: String, sources: List<PushInputChannel<T>>, destina
         destination.whenOpened { sources.forEach { it.open() } }
         destination.whenClosed { sources.forEach { it.close() } }
     }
+
+    override fun properties() = GroupDisplayProperty(label, TextDisplayProperty("Push join node"))
 }

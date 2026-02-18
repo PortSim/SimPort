@@ -1,5 +1,7 @@
 package com.group7.compound
 
+import com.group7.GroupDisplayProperty
+import com.group7.OccupantsDisplayProperty
 import com.group7.Simulator
 import com.group7.channels.ChannelType
 import com.group7.dsl.*
@@ -74,4 +76,7 @@ class BoundedSubnetwork<
     ) {
         leaveCallback = leaveCallback.andThen(callback)
     }
+
+    override fun properties(): GroupDisplayProperty =
+        GroupDisplayProperty(label, listOf(OccupantsDisplayProperty("Occupancy", occupants, capacity)))
 }

@@ -1,4 +1,6 @@
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import com.group7.GroupDisplayProperty
 import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.channels.*
@@ -61,7 +63,7 @@ class ScenarioLayout(scenario: Scenario) {
         return nodeGroups[nodeGroup]!!
     }
 
-    private val simulationNodeToElkNode = buildMap {
+    private val simulationNodeGroupToElkNode = buildMap {
         graphOfScenario.nodesOrderedByBFS.forEach { node ->
             val elkNode = ElkGraphUtil.createNode(getElkNodeFromNodeGroup(node.parent))
             elkNode.width = 80.0
@@ -73,8 +75,12 @@ class ScenarioLayout(scenario: Scenario) {
     }
 
     private val simulationEdgeToElkEdge = buildMap {
-        for ((source, dest, channel) in graphOfScenario.edgesWithChannels) {
-            val edge = ElkGraphUtil.createSimpleEdge(simulationNodeToElkNode[source], simulationNodeToElkNode[dest])
+        for ((source, destination, channel) in graphOfScenario.edgesWithChannels) {
+            val edge =
+                ElkGraphUtil.createSimpleEdge(
+                    simulationNodeGroupToElkNode[source],
+                    simulationNodeGroupToElkNode[destination],
+                )
             ElkGraphUtil.updateContainment(edge)
             put(channel, edge)
         }
@@ -85,18 +91,48 @@ class ScenarioLayout(scenario: Scenario) {
         RecursiveGraphLayoutEngine().layout(elkGraphRoot, BasicProgressMonitor())
     }
 
+    private val globalMetricGroups = scenario.metrics.filter { it.associatedNode == null }
+    private val nodeGroupsToMetricGroups =
+        scenario.metrics
+            .filter { it.associatedNode != null }
+            .groupBy(keySelector = { it.associatedNode!! })
+            .mapValues { (_, list) -> list }
+
+    private fun getDisplayPropertyForNodeGroup(nodeGroup: NodeGroup): GroupDisplayProperty {
+        val metricsOnNodeProperty =
+            (nodeGroupsToMetricGroups[nodeGroup] ?: emptyList()).map { metric -> metric.displayProperty() }
+        return nodeGroup.properties().addChild(GroupDisplayProperty("Metrics", metricsOnNodeProperty))
+    }
+
+    private fun getDisplayPropertyForGlobalNode(): GroupDisplayProperty {
+        val globalMetricsDisplays = globalMetricGroups.map { metric -> metric.displayProperty() }
+        return GroupDisplayProperty("Global Metrics", globalMetricsDisplays)
+    }
+
     val nodeMetrics =
-        simulationNodeToElkNode.entries.associate { (node, elkNode) -> elkNode to mutableStateOf(node.reportMetrics()) }
+        simulationNodeGroupToElkNode.entries.associate { (node, elkNode) ->
+            elkNode to mutableStateOf(node.reportMetrics())
+        }
     val edgeStatuses =
         simulationEdgeToElkEdge.entries.associate { (channel, edge) -> edge to mutableStateOf(channel.openStatus()) }
+    val nodeDisplayProperties: Map<ElkNode, MutableState<GroupDisplayProperty>> = buildMap {
+        simulationNodeGroupToElkNode.forEach { (nodeGroup, elkNode) ->
+            put(elkNode, mutableStateOf(getDisplayPropertyForNodeGroup(nodeGroup)))
+        }
+        put(elkGraphRoot, mutableStateOf(getDisplayPropertyForGlobalNode()))
+    }
 
     fun refresh() {
-        simulationNodeToElkNode.forEach { (node, elkNode) ->
+        simulationNodeGroupToElkNode.forEach { (node, elkNode) ->
             nodeMetrics.getValue(elkNode).value = node.reportMetrics()
         }
         simulationEdgeToElkEdge.forEach { (channel, elkEdge) ->
             edgeStatuses.getValue(elkEdge).value = channel.openStatus()
         }
+        simulationNodeGroupToElkNode.forEach { (nodeGroup, elkNode) ->
+            nodeDisplayProperties.getValue(elkNode).value = getDisplayPropertyForNodeGroup(nodeGroup)
+        }
+        nodeDisplayProperties.getValue(elkGraphRoot).value = getDisplayPropertyForGlobalNode()
     }
 
     private companion object {

@@ -1,5 +1,7 @@
 package com.group7.nodes
 
+import com.group7.GroupDisplayProperty
+import com.group7.TextDisplayProperty
 import com.group7.channels.PushInputChannel
 import com.group7.channels.PushOutputChannel
 import com.group7.channels.onReceive
@@ -15,7 +17,7 @@ class DelayNode<T>(
     label: String,
     source: PushInputChannel<T>,
     destination: PushOutputChannel<T>,
-    delayProvider: DelayProvider,
+    private val delayProvider: DelayProvider,
 ) : ContainerNode<T>(label, listOf(source), listOf(destination)), Delay<T> {
 
     override var occupants = 0
@@ -32,4 +34,7 @@ class DelayNode<T>(
             }
         }
     }
+
+    override fun properties() =
+        GroupDisplayProperty(label, listOf(TextDisplayProperty("Push fork node"), delayProvider.displayProperty))
 }

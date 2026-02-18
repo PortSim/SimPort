@@ -1,9 +1,11 @@
 package com.group7.nodes
 
+import com.group7.GroupDisplayProperty
 import com.group7.Simulator
 import com.group7.channels.*
 import com.group7.generators.DelayProvider
 import com.group7.properties.Service
+import com.group7.properties.asCapacityDisplayProperty
 
 class ServiceNode<T>(
     label: String,
@@ -34,4 +36,6 @@ class ServiceNode<T>(
         source.open()
         destination.send(obj)
     }
+
+    override fun properties(): GroupDisplayProperty = GroupDisplayProperty(label, this.asCapacityDisplayProperty())
 }

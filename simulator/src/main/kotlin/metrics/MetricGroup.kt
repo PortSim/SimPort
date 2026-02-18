@@ -1,6 +1,10 @@
 package com.group7.metrics
 
+import com.group7.DisplayProperty
+import com.group7.DoubleDisplayProperty
+import com.group7.GroupDisplayProperty
 import com.group7.NodeGroup
+import com.group7.TextDisplayProperty
 import java.util.*
 
 /* Includes the raw metric and its moments. Can have no associatedNode for global metrics */
@@ -21,6 +25,24 @@ open class MetricGroup(val name: String, val associatedNode: NodeGroup?, val raw
         other is MetricGroup && other.name == name && other.associatedNode == associatedNode
 
     override fun hashCode() = Objects.hash(name, associatedNode)
+
+    fun displayProperty(): DisplayProperty =
+        GroupDisplayProperty(
+            name,
+            buildList {
+                if (raw.lastData != null) {
+                    add(DoubleDisplayProperty("Raw", raw.lastData!!.second, ""))
+                } else {
+                    add(TextDisplayProperty("Raw: no data yet"))
+                }
+                if (moments != null) {
+                    moments.mean.lastData?.let { add(DoubleDisplayProperty("Mean", it.second, "")) }
+                    moments.lowerCi?.lastData?.let { add(DoubleDisplayProperty("Lower CI", it.second, "")) }
+                    moments.upperCi?.lastData?.let { add(DoubleDisplayProperty("Upper CI", it.second, "")) }
+                    moments.variance?.lastData?.let { add(DoubleDisplayProperty("Variance", it.second, "")) }
+                }
+            },
+        )
 }
 
 class Moments(val mean: Metric, val lowerCi: Metric?, val upperCi: Metric?, val variance: Metric?)

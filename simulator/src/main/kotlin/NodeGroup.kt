@@ -10,5 +10,7 @@ abstract class NodeGroup(val label: String) {
 
     abstract val outgoing: List<OutputChannel<*, *>>
 
+    open fun properties(): GroupDisplayProperty = GroupDisplayProperty(label)
+
     override fun toString() = label
 }

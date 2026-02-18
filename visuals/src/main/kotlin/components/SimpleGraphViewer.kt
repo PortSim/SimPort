@@ -7,11 +7,15 @@ import ScenarioLayout
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,12 +30,21 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.toIntRect
+import androidx.compose.ui.unit.toRect
 import androidx.compose.ui.unit.toSize
+import com.group7.DisplayProperty
+import com.group7.DoubleDisplayProperty
+import com.group7.GroupDisplayProperty
+import com.group7.OccupantsDisplayProperty
+import com.group7.TextDisplayProperty
 import com.group7.channels.ChannelType
 import kotlin.math.atan2
 import org.eclipse.elk.graph.ElkEdge
@@ -90,14 +103,43 @@ fun DrawScope.drawArrowHead(
 }
 
 @Composable
-fun drawElkNodes(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metrics>>) {
+fun drawElkNodes(
+    node: ElkNode,
+    nodeMetrics: Map<ElkNode, MutableState<Metrics>>,
+    hoveredNode: MutableState<ElkNode?>,
+    focusedNode: MutableState<ElkNode?>,
+) {
+    val isHovered = hoveredNode.value == node
     Box(
         modifier =
             Modifier.wrapContentSize(unbounded = true)
                 .absoluteOffset(node.x.dp, node.y.dp)
                 .requiredSize(node.width.dp, node.height.dp)
-                .background(Color.Transparent)
-                .border(1.dp, Color.Black),
+                .background(if (isHovered) Color.LightGray.copy(alpha = 0.5f) else Color.Transparent)
+                .border(1.dp, Color.Black)
+                .pointerInput(node) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            val isPointerInside = size.toIntRect().toRect().contains(event.changes.first().position)
+                            // Semi-hack to figure out if we're the smallest node being hovered, this does not
+                            // consume events so doesn't interfere with panning around
+                            if (isPointerInside && (hoveredNode.value?.width ?: Double.MAX_VALUE) >= node.width) {
+                                hoveredNode.value = node
+                            }
+                            if (!isPointerInside && hoveredNode.value == node) {
+                                hoveredNode.value = null
+                            }
+                        }
+                    }
+                }
+                .clickable(
+                    interactionSource = remember(node) { MutableInteractionSource() },
+                    indication = null,
+                    enabled = true,
+                ) {
+                    focusedNode.value = node
+                },
         contentAlignment = Alignment.TopStart,
     ) {
         if (node.parent != null) {
@@ -125,7 +167,7 @@ fun drawElkNodes(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metrics>>
             }
         }
 
-        node.children.forEach { drawElkNodes(it, nodeMetrics) }
+        node.children.forEach { drawElkNodes(it, nodeMetrics, hoveredNode, focusedNode) }
     }
 }
 
@@ -184,11 +226,124 @@ fun DrawScope.drawElkEdges(
 }
 
 @Composable
-fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
+fun drawNumericDisplayProperty(property: DoubleDisplayProperty) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
+        horizontalArrangement = Arrangement.SpaceBetween, // Pushes Label left, Value right
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "${property.label}:",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f), // Let label take available space if needed
+        )
+
+        val formattedValue = "%.2f%s".format(property.value, property.unitSuffix)
+
+        Text(
+            text = formattedValue,
+            style =
+                MaterialTheme.typography.bodyMedium.copy(
+                    fontFeatureSettings = "tnum",
+                    fontWeight = FontWeight.SemiBold,
+                ),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+fun drawGroupDisplayProperty(group: GroupDisplayProperty) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Text(
+            text = group.name,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp)
+            // .border(width = 1.dp, color = Color.LightGray, shape = RectangleShape)
+        ) {
+            group.list.forEach { childProperty -> drawDisplayProperty(childProperty) }
+        }
+    }
+}
+
+@Composable
+fun drawOccupantsDisplayProperty(property: OccupantsDisplayProperty) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
+        horizontalArrangement = Arrangement.SpaceBetween, // Pushes Label left, Value right
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "${property.label}:",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f), // Let label take available space if needed
+        )
+
+        val formattedValue =
+            if (property.capacity != null) {
+                "${property.occupants} / ${property.capacity}"
+            } else {
+                "${property.occupants}"
+            }
+
+        Text(
+            text = formattedValue,
+            style =
+                MaterialTheme.typography.bodyMedium.copy(
+                    fontFeatureSettings = "tnum",
+                    fontWeight = FontWeight.SemiBold,
+                ),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+fun drawTextDisplayProperty(property: TextDisplayProperty) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
+        horizontalArrangement = Arrangement.SpaceBetween, // Pushes Label left, Value right
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "${property.label}:",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f), // Let label take available space if needed
+        )
+    }
+}
+
+@Composable
+fun drawDisplayProperty(property: DisplayProperty) {
+    when (property) {
+        is GroupDisplayProperty -> drawGroupDisplayProperty(property)
+        is DoubleDisplayProperty -> drawNumericDisplayProperty(property)
+        is OccupantsDisplayProperty -> drawOccupantsDisplayProperty(property)
+        is TextDisplayProperty -> drawTextDisplayProperty(property)
+    }
+}
+
+@Composable
+fun drawDisplayPropertyPanel(displayProperty: MutableState<GroupDisplayProperty>) {
+    Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 4.dp) {
+        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) { drawDisplayProperty(displayProperty.value) }
+    }
+}
+
+@Composable
+fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?>) {
     var viewOffset by remember { mutableStateOf(Offset.Zero) }
     var scale by remember { mutableStateOf(1f) }
     var mouseOffset by remember { mutableStateOf(Offset.Zero) }
-
     var innerElementSize by remember { mutableStateOf(Size.Zero) }
     var outerElementSize by remember { mutableStateOf(Size.Zero) }
 
@@ -246,7 +401,7 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
                         clampOffsetToKeepCanvasOnScreen()
                     }
                 }
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.background)
                 .graphicsLayer(translationX = viewOffset.x, translationY = viewOffset.y, scaleX = scale, scaleY = scale)
                 .onSizeChanged { size -> outerElementSize = size.toSize() },
         contentAlignment = Alignment.Center,
@@ -255,10 +410,35 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
             modifier =
                 Modifier.wrapContentSize(unbounded = true).onSizeChanged { size -> innerElementSize = size.toSize() }
         ) {
+            val backgroundColor = MaterialTheme.colorScheme.background
             Canvas(Modifier.matchParentSize()) {
-                drawElkEdges(elkGraph.elkGraphRoot, Color.White, elkGraph.edgeStatuses)
+                drawElkEdges(scenarioData.elkGraphRoot, backgroundColor, scenarioData.edgeStatuses)
             }
-            drawElkNodes(elkGraph.elkGraphRoot, elkGraph.nodeMetrics)
+            val hoveredNode = remember { mutableStateOf<ElkNode?>(null) }
+            drawElkNodes(scenarioData.elkGraphRoot, scenarioData.nodeMetrics, hoveredNode, focusedNode)
+        }
+    }
+}
+
+@Composable
+fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
+    val focusedNode: MutableState<ElkNode?> = remember { mutableStateOf(null) }
+
+    Row(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, focusedNode) }
+
+            if (focusedNode.value != null) {
+                val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
+                key(mutableDisplayProperty) {
+                    Box(
+                        modifier =
+                            Modifier.width(280.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background)
+                    ) {
+                        drawDisplayPropertyPanel(mutableDisplayProperty)
+                    }
+                }
+            }
         }
     }
 }

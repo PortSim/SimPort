@@ -1,5 +1,6 @@
 package com.group7.properties
 
+import com.group7.OccupantsDisplayProperty
 import com.group7.Simulator
 
 interface Source<out T> {
@@ -31,6 +32,8 @@ interface Service<out T> : BoundedContainer<T> {
     override val capacity
         get() = 1
 }
+
+fun <T> Service<T>.asCapacityDisplayProperty() = OccupantsDisplayProperty("Occupancy", occupants, capacity)
 
 interface Sink<out T> : Container<T> {
     override fun onLeave(

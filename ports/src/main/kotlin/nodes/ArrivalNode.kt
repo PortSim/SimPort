@@ -1,5 +1,6 @@
 package com.group7.nodes
 
+import com.group7.GroupDisplayProperty
 import com.group7.Simulator
 import com.group7.SourceNode
 import com.group7.channels.PushOutputChannel
@@ -47,4 +48,6 @@ class ArrivalNode<OutputT>(
     ) {
         emitCallback = emitCallback.andThen(callback)
     }
+
+    override fun properties() = GroupDisplayProperty(label, generator.displayProperty)
 }

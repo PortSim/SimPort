@@ -1,5 +1,6 @@
 package com.group7.nodes
 
+import com.group7.GroupDisplayProperty
 import com.group7.Simulator
 import com.group7.channels.PushInputChannel
 import com.group7.channels.onReceive
@@ -25,4 +26,6 @@ class SinkNode<InputT>(label: String, source: PushInputChannel<InputT>) :
             context(Simulator)
             (InputT) -> Unit
     ) {}
+
+    override fun properties(): GroupDisplayProperty = GroupDisplayProperty(label).takeChildrenOf(super.properties())
 }

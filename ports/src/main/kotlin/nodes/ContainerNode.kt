@@ -1,6 +1,8 @@
 package com.group7.nodes
 
+import com.group7.GroupDisplayProperty
 import com.group7.Node
+import com.group7.OccupantsDisplayProperty
 import com.group7.Simulator
 import com.group7.channels.InputChannel
 import com.group7.channels.OutputChannel
@@ -45,5 +47,9 @@ abstract class ContainerNode<T>(
     context(_: Simulator)
     protected fun notifyLeave(obj: T) {
         leaveCallback?.let { it(obj) }
+    }
+
+    override fun properties(): GroupDisplayProperty {
+        return GroupDisplayProperty(label, listOf(OccupantsDisplayProperty("Occupants", occupants, null)))
     }
 }

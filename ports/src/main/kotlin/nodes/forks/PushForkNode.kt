@@ -1,7 +1,9 @@
 package com.group7.nodes.forks
 
+import com.group7.GroupDisplayProperty
 import com.group7.Node
 import com.group7.Simulator
+import com.group7.TextDisplayProperty
 import com.group7.channels.PushInputChannel
 import com.group7.channels.PushOutputChannel
 import com.group7.channels.onReceive
@@ -31,4 +33,7 @@ class PushForkNode<T>(
     private fun emit(obj: T) {
         policy.selectChannel(obj).send(obj)
     }
+
+    // TODO descriptions on policies
+    override fun properties() = GroupDisplayProperty(label, TextDisplayProperty("Push fork node"))
 }
