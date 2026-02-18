@@ -8,10 +8,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -36,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
@@ -371,20 +369,39 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
                         }
                     }
                 }
-                .scrollable(
-                    orientation = Orientation.Vertical,
-                    state =
-                        rememberScrollableState { delta ->
-                            val zoomFactor = (1 + delta * 0.005f)
-                            val scaleMaximum = 20f
-                            if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
-                                scale *= zoomFactor
-                                viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
-                                clampOffsetToKeepCanvasOnScreen()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.type == PointerEventType.Scroll) {
+                                // Get the raw delta (x or y)
+                                val delta = event.changes.first().scrollDelta.y
+                                val zoomFactor = (1 - delta * 0.5f)
+                                val scaleMaximum = 20f
+                                if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
+                                    scale *= zoomFactor
+                                    viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
+                                    clampOffsetToKeepCanvasOnScreen()
+                                }
                             }
-                            delta // Return the delta to indicate scroll amount consumed
-                        },
-                )
+                        }
+                    }
+                }
+                //                .scrollable(
+                //                    orientation = Orientation.Vertical,
+                //                    state =
+                //                        rememberScrollableState { delta ->
+                //                            val zoomFactor = (1 + delta * 0.005f)
+                //                            val scaleMaximum = 20f
+                //                            if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <=
+                // scaleMaximum) {
+                //                                scale *= zoomFactor
+                //                                viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
+                //                                clampOffsetToKeepCanvasOnScreen()
+                //                            }
+                //                            delta // Return the delta to indicate scroll amount consumed
+                //                        },
+                //                )
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, _, _ ->
                         viewOffset = Offset(viewOffset.x + pan.x, viewOffset.y + pan.y)
