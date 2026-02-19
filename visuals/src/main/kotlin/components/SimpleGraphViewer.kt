@@ -8,47 +8,31 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.toIntRect
-import androidx.compose.ui.unit.toRect
-import androidx.compose.ui.unit.toSize
-import com.group7.DoubleDisplayProperty
-import com.group7.FieldDisplayProperty
-import com.group7.GroupDisplayProperty
-import com.group7.MetricGroupDisplayProperty
-import com.group7.TextDisplayProperty
+import androidx.compose.ui.unit.*
+import com.group7.*
 import com.group7.channels.ChannelType
 import com.group7.metrics.MetricGroup
 import kotlin.math.atan2
@@ -357,6 +341,7 @@ fun drawDisplayPropertyPanel(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?>) {
     var viewOffset by remember { mutableStateOf(Offset.Zero) }
@@ -387,35 +372,37 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
     Box(
         modifier =
             Modifier.fillMaxSize()
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull()
-                            if (change != null) {
-                                val center = Offset(size.width / 2f, size.height / 2f)
-                                mouseOffset = change.position - center
-                            }
-                        }
-                    }
+                // 1. Handle Mouse Wheel Zooming
+                // This only fires on actual wheel movement, never on clicks/drags.
+                .onPointerEvent(PointerEventType.Scroll) { event ->
+                    val change = event.changes.first()
+                    val delta = change.scrollDelta.y
+
+                    // Calculate the multiplier (negative delta usually means zoom in on some systems,
+                    // strictly depends on preference, here we assume standard scrolling)
+                    val zoomMultiplier = (1 - delta * 0.1f)
+
+                    val newScale = (scale * zoomMultiplier).coerceIn(0.1f, 20f)
+
+                    // Recalculate zoomFactor based on the clamped newScale to prevent offset jumps
+                    val effectiveZoomFactor = newScale / scale
+
+                    // Calculate where the mouse is relative to the center (matching your original logic)
+                    // change.position gives coordinates relative to the top-left of the modifier
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val mouseOffset = change.position - center
+
+                    // Apply math: Keep the point under the mouse stationary
+                    viewOffset += (mouseOffset - viewOffset) * (1 - effectiveZoomFactor)
+                    scale = newScale
+
+                    clampOffsetToKeepCanvasOnScreen()
                 }
-                .scrollable(
-                    orientation = Orientation.Vertical,
-                    state =
-                        rememberScrollableState { delta ->
-                            val zoomFactor = (1 + delta * 0.005f)
-                            val scaleMaximum = 20f
-                            if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
-                                scale *= zoomFactor
-                                viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
-                                clampOffsetToKeepCanvasOnScreen()
-                            }
-                            delta // Return the delta to indicate scroll amount consumed
-                        },
-                )
+                // 2. Handle Panning (Drag)
+                // detectTransformGestures handles dragging nicely and won't conflict with clicks
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, _, _ ->
-                        viewOffset = Offset(viewOffset.x + pan.x, viewOffset.y + pan.y)
+                        viewOffset += pan
                         clampOffsetToKeepCanvasOnScreen()
                     }
                 }
