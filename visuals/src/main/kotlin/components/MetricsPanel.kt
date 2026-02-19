@@ -1,6 +1,9 @@
 package components
 
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.group7.MetricReporter
@@ -25,7 +28,7 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
     private val buffer: Map<Metric, MutableList<Pair<Instant, Double>>> = allMetrics.associateWith { mutableListOf() }
     private var isBatching = false
     private var samplesSinceRedraw = 0
-    var latestTimeSeen = Instant.DISTANT_PAST
+    var latestTimeSeen by mutableStateOf(Instant.DISTANT_PAST)
         private set
 
     private var samplesSeen = 0
