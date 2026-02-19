@@ -401,16 +401,20 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
                         }
                     }
                 }
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            if (event.type == PointerEventType.Scroll) {
-                                scope.launch { scrollState.animateScrollBy(event.changes.first().scrollDelta.y) }
+                .scrollable(
+                    orientation = Orientation.Vertical,
+                    state =
+                        rememberScrollableState { delta ->
+                            val zoomFactor = (1 + delta * 0.005f)
+                            val scaleMaximum = 20f
+                            if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
+                                scale *= zoomFactor
+                                viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
+                                clampOffsetToKeepCanvasOnScreen()
                             }
-                        }
-                    }
-                }
+                            delta // Return the delta to indicate scroll amount consumed
+                        },
+                )
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, _, _ ->
                         viewOffset = Offset(viewOffset.x + pan.x, viewOffset.y + pan.y)
