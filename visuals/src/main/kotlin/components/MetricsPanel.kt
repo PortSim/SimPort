@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.dynatrace.dynahist.Histogram
+import com.dynatrace.dynahist.layout.LogQuadraticLayout
 import com.group7.MetricReporter
 import com.group7.Scenario
 import com.group7.metrics.ContinuousMetric
@@ -33,17 +35,26 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
 
     private var samplesSeen = 0
 
+    /** Per-metric histograms for instantaneous metrics, recorded incrementally via onFire. */
+    private val histograms: Map<Metric, Histogram> =
+        allMetrics.filterIsInstance<InstantaneousMetric>().associateWith {
+            Histogram.createDynamic(LogQuadraticLayout.create(1e-5, 1e-2, -1e15, 1e15))
+        }
+
     init {
         for (metric in allMetrics) {
             if (metric is InstantaneousMetric) {
                 metric.onFire { currentTime, value ->
                     if (!value.isNaN()) {
                         buffer.getValue(metric).add(currentTime to value)
+                        histograms.getValue(metric).addValue(value)
                     }
                 }
             }
         }
     }
+
+    fun getHistogram(metric: Metric): Histogram? = histograms[metric]
 
     /** Get time series data for a specific node */
     fun getMetricData(metric: Metric): List<Pair<Instant, Double>> = downsample(metricData.getValue(metric))

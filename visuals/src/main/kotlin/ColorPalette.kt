@@ -1,5 +1,13 @@
 import androidx.compose.ui.graphics.Color
 
+fun generateDistinctColors(count: Int): List<Color> {
+    if (count == 0) return emptyList()
+    if (count <= DefaultColorPalette.chartColors.size) {
+        return DefaultColorPalette.chartColors.take(count)
+    }
+    return List(count) { i -> Color.hsl(hue = i * 360f / count, saturation = 0.5f, lightness = 0.55f) }
+}
+
 class ColorScale(
     val _1: Color,
     val _2: Color,
