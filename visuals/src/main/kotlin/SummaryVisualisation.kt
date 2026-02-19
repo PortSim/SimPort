@@ -8,11 +8,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
+import com.group7.metrics.InstantaneousMetric
 import com.group7.metrics.MetricGroup
-import components.Dropdown
-import components.LabeledSwitch
-import components.MetricsPanelState
-import components.SummaryChart
+import components.*
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.toImmutableMap
@@ -21,6 +19,12 @@ import utils.GLOBAL_NODE_LABEL
 import utils.assignNodeNames
 
 private val EmptyStateHeight = 300.dp
+
+private enum class ChartViewMode(val label: String) {
+    Raw("Raw"),
+    Average("Average"),
+    Histogram("Histogram"),
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +86,7 @@ private fun <T> MultiSelectDropdown(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
     if (simulations.isEmpty()) {
@@ -109,19 +114,56 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
             result as Map<String, Map<String?, Map<String, MetricGroup>>>
         }
 
-    val allSimulationNames = remember(simulations) { simulations.keys.sorted() }
-
     var selectedMetric by remember(metricIndex) { mutableStateOf(metricIndex.keys.first()) }
     var selectedNodeLabel by
         remember(metricIndex, selectedMetric) { mutableStateOf(metricIndex.getValue(selectedMetric).keys.first()) }
-    var selectedScenarios by
-        remember(metricIndex, selectedMetric, selectedNodeLabel) {
-            mutableStateOf(metricIndex.getValue(selectedMetric).getValue(selectedNodeLabel).keys.toPersistentSet())
-        }
     val groups = metricIndex.getValue(selectedMetric).getValue(selectedNodeLabel)
-    var showRaw by remember(metricIndex, selectedMetric) { mutableStateOf(false) }
-    var showCi by remember(metricIndex, selectedMetric) { mutableStateOf(true) }
+    val validScenarios = groups.keys.toPersistentSet()
+    // Persist user's selection across metric/node changes; effectiveScenarios intersects with what's valid.
+    var selectedScenarios by remember { mutableStateOf(validScenarios) }
+    val effectiveScenarios =
+        remember(selectedScenarios, validScenarios) {
+            val intersection = (selectedScenarios intersect validScenarios).toPersistentSet()
+            // Reset to all valid if the intersection is empty (e.g. switching to a metric where
+            // previously selected scenarios don't exist, or after manually deselecting everything).
+            if (intersection.isEmpty()) validScenarios else intersection
+        }
     val hasMoments = groups.values.any { it.moments != null }
+    val isInstantaneous = groups.values.any { it.raw is InstantaneousMetric }
+
+    val averageHasData =
+        hasMoments &&
+            groups.entries.any { (simName, group) ->
+                group.moments?.mean?.let { mean -> simulations[simName]?.getLatestValue(mean) != null } == true
+            }
+    val histogramHasData =
+        isInstantaneous &&
+            groups.entries.any { (simName, group) ->
+                simulations[simName]?.let { (it.getHistogram(group.raw)?.totalCount ?: 0) > 0 } == true
+            }
+
+    val availableModes = buildList {
+        add(ChartViewMode.Raw)
+        if (hasMoments) add(ChartViewMode.Average)
+        if (isInstantaneous) add(ChartViewMode.Histogram)
+    }
+    val modeEnabled =
+        mapOf(
+            ChartViewMode.Raw to true,
+            ChartViewMode.Average to averageHasData,
+            ChartViewMode.Histogram to histogramHasData,
+        )
+
+    // Lifted state: persists across simulation switches for the same metric
+    var viewMode by remember { mutableStateOf(ChartViewMode.Average) }
+    var showCi by remember { mutableStateOf(true) }
+
+    // Coerce to a valid enabled mode when available modes change
+    LaunchedEffect(availableModes, modeEnabled) {
+        if (viewMode !in availableModes || modeEnabled[viewMode] == false) {
+            viewMode = availableModes.firstOrNull { modeEnabled[it] != false } ?: ChartViewMode.Raw
+        }
+    }
 
     Column(
         Modifier.fillMaxSize().background(Color(0xFFF5F5F5)).padding(Dimensions.spacingLg),
@@ -148,35 +190,91 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
                 displayText = { it ?: GLOBAL_NODE_LABEL },
             )
 
-            if (allSimulationNames.size >= 2) {
+            if (validScenarios.size >= 2) {
                 MultiSelectDropdown(
                     label = "Scenarios",
-                    options = allSimulationNames,
-                    selectedOptions = selectedScenarios,
+                    options = validScenarios.sorted(),
+                    selectedOptions = effectiveScenarios,
                     onSelectionChange = { selectedScenarios = it },
                     optionLabel = { it },
                 )
             }
 
-            if (hasMoments) {
-                LabeledSwitch("Show Raw", checked = showRaw, onCheckedChange = { showRaw = it })
-                LabeledSwitch("Show CI", checked = showCi, onCheckedChange = { showCi = it }, enabled = !showRaw)
+            if (availableModes.size > 1) {
+                SingleChoiceSegmentedButtonRow {
+                    availableModes.forEachIndexed { index, mode ->
+                        val enabled = modeEnabled.getValue(mode)
+                        val tooltip =
+                            when {
+                                enabled -> null
+                                mode == ChartViewMode.Histogram -> "Sample never triggered"
+                                mode == ChartViewMode.Average -> "Convergence not yet reached"
+                                else -> null
+                            }
+                        val button =
+                            @Composable {
+                                SegmentedButton(
+                                    selected = viewMode == mode,
+                                    onClick = { viewMode = mode },
+                                    shape = SegmentedButtonDefaults.itemShape(index, availableModes.size),
+                                    enabled = enabled,
+                                    icon = {},
+                                ) {
+                                    Text(mode.label)
+                                }
+                            }
+                        if (tooltip != null) {
+                            TooltipBox(
+                                positionProvider =
+                                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                                tooltip = { PlainTooltip { Text(tooltip) } },
+                                state = rememberTooltipState(),
+                            ) {
+                                button()
+                            }
+                        } else {
+                            button()
+                        }
+                    }
+                }
+                if (viewMode == ChartViewMode.Average) {
+                    LabeledSwitch("Show CI", checked = showCi, onCheckedChange = { showCi = it })
+                }
             }
         }
 
         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(Dimensions.spacingLg)) {
-            if (selectedScenarios.isNotEmpty()) {
-                SummaryChart(
-                    metricByScenario =
-                        metricIndex
-                            .getValue(selectedMetric)
-                            .getValue(selectedNodeLabel)
-                            .filterKeys { it in selectedScenarios }
-                            .toImmutableMap(),
-                    simulations = simulations,
-                    showRaw = showRaw || !hasMoments,
-                    showCi = showCi && !showRaw && hasMoments,
-                )
+            if (effectiveScenarios.isNotEmpty()) {
+                val filteredMetrics =
+                    metricIndex
+                        .getValue(selectedMetric)
+                        .getValue(selectedNodeLabel)
+                        .filterKeys { it in effectiveScenarios }
+                        .toImmutableMap()
+
+                // key(viewMode) tears down and recreates all composition state on view mode switch,
+                // so Vico's internal rememberSaveable state (zoom, animation) is discarded and
+                // cannot be erroneously restored into the wrong type (e.g. SpringSpec → SaveableHolder).
+                key(viewMode) {
+                    when (viewMode) {
+                        ChartViewMode.Raw ->
+                            SummaryChart(
+                                metricByScenario = filteredMetrics,
+                                simulations = simulations,
+                                showRaw = true,
+                                showCi = false,
+                            )
+                        ChartViewMode.Average ->
+                            SummaryChart(
+                                metricByScenario = filteredMetrics,
+                                simulations = simulations,
+                                showRaw = false,
+                                showCi = showCi,
+                            )
+                        ChartViewMode.Histogram ->
+                            HistogramChart(metricByScenario = filteredMetrics, simulations = simulations)
+                    }
+                }
             } else {
                 Box(modifier = Modifier.fillMaxWidth().height(EmptyStateHeight), contentAlignment = Alignment.Center) {
                     Text("Select at least one scenario to display chart")

@@ -21,6 +21,8 @@ dependencies {
     /* Metric visualisations */
     implementation("com.patrykandpatrick.vico:compose:3.0.0-beta.3")
     implementation("com.patrykandpatrick.vico:compose-m3:3.0.0-beta.3")
+    /* Histogram binning */
+    implementation("com.dynatrace.dynahist:dynahist:1.4")
 }
 
 compose.desktop { application { mainClass = "MainKt" } }

@@ -1,8 +1,6 @@
 package components
 
-import DefaultColorPalette
 import Dimensions
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,17 +8,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.group7.Simulator
 import com.group7.metrics.ContinuousMetric
@@ -32,14 +25,11 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.*
-import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
-import com.patrykandpatrick.vico.compose.cartesian.marker.Interaction
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.ShapeComponent
+import generateDistinctColors
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.collections.immutable.ImmutableMap
 
@@ -51,13 +41,9 @@ fun SummaryChart(
     showCi: Boolean = true,
 ) {
     val scenarioColors =
-        remember(simulations) {
-            simulations.keys
-                .asSequence()
-                .mapIndexed { index, simName ->
-                    simName to DefaultColorPalette.chartColors[index % DefaultColorPalette.chartColors.size]
-                }
-                .toMap()
+        remember(metricByScenario) {
+            val colors = generateDistinctColors(metricByScenario.size)
+            metricByScenario.keys.zip(colors).toMap()
         }
 
     val modelProducer = remember { CartesianChartModelProducer() }
@@ -142,51 +128,63 @@ fun SummaryChart(
             ) {
                 ChartLegend(items = legendItems)
             }
+            // Vico's internal state uses rememberSaveable for animation/zoom tracking.
+            // When live data updates change the chart model, Vico's internal remembered type
+            // can change (e.g. SpringSpec → SaveableHolder), causing ClassCastExceptions.
+            // Setting the registry to null prevents any rememberSaveable from persisting state,
+            // so Vico always starts fresh each recomposition rather than restoring stale state.
+            CompositionLocalProvider(LocalSaveableStateRegistry provides null) {
+                BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(bottom = 16.dp)) {
+                    val markerRecorder = remember { MarkerRecorder() }
+                    val layerBoundsCapture = remember { LayerBoundsCapture() }
 
-            BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(bottom = 16.dp)) {
-                val markerRecorder = remember { MarkerRecorder() }
-                val layerBoundsCapture = remember { LayerBoundsCapture() }
-
-                CartesianChartHost(
-                    chart =
-                        rememberCartesianChart(
-                            rememberLineCartesianLayer(
-                                lineProvider,
-                                rangeProvider = remember { CartesianLayerRangeProvider.fixed(minX = 0.0) },
+                    CartesianChartHost(
+                        chart =
+                            rememberCartesianChart(
+                                rememberLineCartesianLayer(
+                                    lineProvider,
+                                    rangeProvider = remember { CartesianLayerRangeProvider.fixed(minX = 0.0) },
+                                ),
+                                startAxis =
+                                    VerticalAxis.rememberStart(
+                                        label =
+                                            rememberAxisLabelComponent(
+                                                style = TextStyle(color = MaterialTheme.colorScheme.onSurface)
+                                            )
+                                    ),
+                                bottomAxis =
+                                    HorizontalAxis.rememberBottom(
+                                        label =
+                                            rememberAxisLabelComponent(
+                                                style = TextStyle(color = MaterialTheme.colorScheme.onSurface)
+                                            ),
+                                        valueFormatter = InstantFormatter,
+                                    ),
+                                markerController = markerRecorder,
+                                marker = NoOpMarker,
+                                decorations = listOf(layerBoundsCapture),
                             ),
-                            startAxis =
-                                VerticalAxis.rememberStart(
-                                    label =
-                                        rememberAxisLabelComponent(
-                                            style = TextStyle(color = MaterialTheme.colorScheme.onSurface)
-                                        )
-                                ),
-                            bottomAxis =
-                                HorizontalAxis.rememberBottom(
-                                    label =
-                                        rememberAxisLabelComponent(
-                                            style = TextStyle(color = MaterialTheme.colorScheme.onSurface)
-                                        ),
-                                    valueFormatter = InstantFormatter,
-                                ),
-                            markerController = markerRecorder,
-                            marker = NoOpMarker,
-                            decorations = listOf(layerBoundsCapture),
-                        ),
-                    modelProducer = modelProducer,
-                    modifier = Modifier.matchParentSize().graphicsLayer(),
-                    zoomState = rememberVicoZoomState(initialZoom = Zoom.Content),
-                    scrollState = rememberVicoScrollState(scrollEnabled = false),
-                )
+                        modelProducer = modelProducer,
+                        modifier = Modifier.matchParentSize().graphicsLayer(),
+                        zoomState =
+                            rememberVicoZoomState(
+                                initialZoom = Zoom.Content,
+                                minZoom = Zoom.Content,
+                                maxZoom = Zoom.Content,
+                                zoomEnabled = false,
+                            ),
+                        scrollState = rememberVicoScrollState(scrollEnabled = false),
+                    )
 
-                markerRecorder.marker
-                    ?.takeIf { it.canvasY.toInt() in 0..constraints.maxHeight }
-                    ?.let { (x, canvasX, canvasY) ->
-                        GuideLine(canvasX, layerBoundsCapture.layerBounds, Modifier.matchParentSize())
-                        DisplayNear(anchorX = canvasX.toInt(), anchorY = canvasY.toInt()) {
-                            ChartMarker(x, metricByScenario, simulations, showRaw, scenarioColors)
+                    markerRecorder.marker
+                        ?.takeIf { it.canvasY.toInt() in 0..constraints.maxHeight }
+                        ?.let { (x, canvasX, canvasY) ->
+                            GuideLine(canvasX, layerBoundsCapture.layerBounds, Modifier.matchParentSize())
+                            DisplayNear(anchorX = canvasX.toInt(), anchorY = canvasY.toInt()) {
+                                ChartMarker(x, metricByScenario, simulations, showRaw, scenarioColors)
+                            }
                         }
-                    }
+                }
             }
         } else {
             Text("No data to display")
@@ -256,58 +254,6 @@ private fun ChartMarker(
     }
 }
 
-@Composable
-private fun DisplayNear(
-    anchorX: Int,
-    anchorY: Int,
-    modifier: Modifier = Modifier,
-    offset: Dp = 8.dp,
-    content: @Composable () -> Unit,
-) {
-    val cursorOffsetPx = with(LocalDensity.current) { offset.toPx().toInt() }
-    Layout(modifier = modifier, content = content) { measurables, constraints ->
-        val placeable = measurables.firstOrNull()?.measure(constraints) ?: return@Layout layout(0, 0) {}
-
-        val parentWidth = constraints.maxWidth
-        val parentHeight = constraints.maxHeight
-        val childWidth = placeable.width
-        val childHeight = placeable.height
-        val horizontalPadding = Dimensions.spacingMd.value.toInt()
-
-        val placeBelow = anchorY + childHeight <= parentHeight
-        val placeRight = anchorX + cursorOffsetPx + horizontalPadding + childWidth <= parentWidth
-
-        val x =
-            if (placeRight) {
-                anchorX + cursorOffsetPx + horizontalPadding
-            } else {
-                anchorX - childWidth - horizontalPadding
-            }
-
-        val y =
-            if (placeBelow) {
-                anchorY
-            } else {
-                anchorY - childHeight
-            }
-
-        layout(parentWidth, constraints.maxHeight) { placeable.placeRelative(x, y) }
-    }
-}
-
-@Composable
-private fun GuideLine(x: Float, layerBounds: Rect, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        drawLine(
-            color = Color.Gray,
-            start = Offset(x, layerBounds.bottom),
-            end = Offset(x, layerBounds.top),
-            strokeWidth = 2.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), phase = 0f),
-        )
-    }
-}
-
 private object InstantFormatter : CartesianValueFormatter {
     override fun format(
         context: CartesianMeasuringContext,
@@ -328,55 +274,3 @@ private fun metricLine(metric: Metric, color: Color, stroke: LineCartesianLayer.
                 ),
         )
     }
-
-private class MarkerRecorder : CartesianMarkerController {
-    private var isMouseDown = false
-    var marker by mutableStateOf<MarkerPosition?>(null)
-        private set
-
-    override fun shouldAcceptInteraction(interaction: Interaction, targets: List<CartesianMarker.Target>): Boolean {
-        processInteraction(interaction, targets)
-        return false
-    }
-
-    override fun shouldShowMarker(interaction: Interaction, targets: List<CartesianMarker.Target>): Boolean {
-        return false
-    }
-
-    private fun processInteraction(interaction: Interaction, targets: List<CartesianMarker.Target>) {
-        val target =
-            targets.singleOrNull()
-                ?: run {
-                    marker = null
-                    return
-                }
-        val newMarker = MarkerPosition(target.x, interaction.point.x, interaction.point.y)
-        when (interaction) {
-            is Interaction.Press -> {
-                marker = newMarker
-                isMouseDown = true
-            }
-            is Interaction.Move if isMouseDown -> marker = newMarker
-            is Interaction.Release -> {
-                marker = null
-                isMouseDown = false
-            }
-            else -> {}
-        }
-    }
-}
-
-/** A [Decoration] that captures the chart's layer bounds for GuideLine. */
-private class LayerBoundsCapture : Decoration {
-    var layerBounds by mutableStateOf(Rect.Zero)
-        private set
-
-    override fun drawOverLayers(context: CartesianDrawingContext) {
-        layerBounds = context.layerBounds
-    }
-}
-
-/** A non-null [CartesianMarker] that draws nothing, required to enable chart interactions. */
-private object NoOpMarker : CartesianMarker
-
-private data class MarkerPosition(val x: Double, val canvasX: Float, val canvasY: Float)
