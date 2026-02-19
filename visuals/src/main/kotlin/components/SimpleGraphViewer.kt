@@ -310,7 +310,8 @@ fun drawGroupDisplayProperty(
 
                                 is MetricGroupDisplayProperty -> {
                                     key(metricsPanel) {
-                                        drawMiniGraph(property.metricGroup, metricsPanel, simulationName)
+                                        //                                        drawMiniGraph(property.metricGroup,
+                                        // metricsPanel, simulationName)
                                     }
                                 }
 
