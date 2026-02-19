@@ -4,6 +4,6 @@ import components.MetricsPanelState
 
 @Composable
 fun StaticVisualisation(metricsPanelState: MetricsPanelState, simulationName: String = "Simulation") {
-    val scenarioLayout = remember { ScenarioLayout(metricsPanelState.scenario) }
+    val scenarioLayout = remember(metricsPanelState) { ScenarioLayout(metricsPanelState.scenario) }
     SimulationTabLayout(simulationName, metricsPanelState, scenarioLayout)
 }

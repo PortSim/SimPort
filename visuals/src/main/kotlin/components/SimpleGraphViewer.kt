@@ -455,7 +455,7 @@ fun SimpleGraphViewer(
     // the data for graphing
     metricsPanelState: MetricsPanelState,
     // the locations of nodes and their values to display
-    elkGraph: ScenarioLayout = remember { ScenarioLayout(metricsPanelState.scenario) },
+    elkGraph: ScenarioLayout = remember(metricsPanelState) { ScenarioLayout(metricsPanelState.scenario) },
 ) {
     key(metricsPanelState) {
         // Whether a side panel is open
