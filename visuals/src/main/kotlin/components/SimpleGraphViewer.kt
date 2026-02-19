@@ -8,9 +8,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -20,7 +21,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
@@ -53,8 +52,8 @@ import com.group7.TextDisplayProperty
 import com.group7.channels.ChannelType
 import com.group7.metrics.MetricGroup
 import kotlin.math.atan2
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
-import kotlinx.coroutines.launch
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 
@@ -268,11 +267,11 @@ fun drawLine(fieldName: String, fieldValue: String?) {
 }
 
 @Composable
-fun drawMiniGraph(metric: MetricGroup, metricsPanel: MetricsPanelState) {
+fun drawMiniGraph(metric: MetricGroup, metricsPanel: MetricsPanelState, simulationName: String) {
     Box(modifier = Modifier.fillMaxWidth().border(1.dp, Color.Black).height(400.dp)) {
         SummaryChart(
-            metricByScenario = mapOf("" to metric).toImmutableMap(),
-            simulations = mapOf("" to metricsPanel),
+            metricByScenario = persistentMapOf(simulationName to metric),
+            simulations = mapOf(simulationName to metricsPanel),
             showRaw = false,
             showCi = true,
         )
@@ -284,43 +283,46 @@ fun drawGroupDisplayProperty(
     group: GroupDisplayProperty,
     groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
     metricsPanel: MetricsPanelState,
+    simulationName: String,
 ) {
-    Box(Modifier.fillMaxWidth()) {
-        var hasMetricGroup: MetricGroup? = null
-        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Text(
-                text = group.name,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 4.dp),
-            )
+    key(group) {
+        Box(Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Text(
+                    text = group.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
 
-            Column(modifier = Modifier.fillMaxWidth().padding(start = 12.dp)) {
-                group.list.forEach { property ->
-                    when (property) {
-                        is GroupDisplayProperty ->
-                            drawGroupDisplayProperty(property, groupMetricsToDisplayInChart, metricsPanel)
-                        is MetricGroupDisplayProperty -> {
-                            hasMetricGroup = property.metricGroup
-                            drawMiniGraph(property.metricGroup, metricsPanel)
+                Column(modifier = Modifier.fillMaxWidth().padding(start = 12.dp)) {
+                    for (property in group.list) {
+                        key(property) {
+                            when (property) {
+                                is GroupDisplayProperty ->
+                                    drawGroupDisplayProperty(
+                                        property,
+                                        groupMetricsToDisplayInChart,
+                                        metricsPanel,
+                                        simulationName,
+                                    )
+
+                                is MetricGroupDisplayProperty -> {
+                                    key(metricsPanel) {
+                                        drawMiniGraph(property.metricGroup, metricsPanel, simulationName)
+                                    }
+                                }
+
+                                is FieldDisplayProperty -> drawLine(property.fieldName, property.value)
+                                is DoubleDisplayProperty ->
+                                    drawLine(property.label, "${"%.2f".format(property.value)}${property.unitSuffix}")
+
+                                is TextDisplayProperty -> drawLine(property.string, null)
+                            }
                         }
-                        is FieldDisplayProperty -> drawLine(property.fieldName, property.value)
-                        is DoubleDisplayProperty ->
-                            drawLine(property.label, "${"%.2f".format(property.value)}${property.unitSuffix}")
-                        is TextDisplayProperty -> drawLine(property.string, null)
                     }
                 }
-            }
-        }
-        hasMetricGroup?.let { metricGroup ->
-            TextButton(
-                // in the future after we add support for plotting multiple parameters we can append to this list
-                // instead
-                onClick = { groupMetricsToDisplayInChart.value = listOf(metricGroup) },
-                modifier = Modifier.align(Alignment.TopEnd).padding(top = 0.dp, bottom = 8.dp),
-            ) {
-                Text("Plot")
             }
         }
     }
@@ -332,6 +334,7 @@ fun drawDisplayPropertyPanel(
     groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
     displayProperty: State<GroupDisplayProperty>,
     metricsPanel: MetricsPanelState,
+    simulationName: String,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 1.dp) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -342,7 +345,12 @@ fun drawDisplayPropertyPanel(
                 Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
             }
             Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                drawGroupDisplayProperty(displayProperty.value, groupMetricsToDisplayInChart, metricsPanel)
+                drawGroupDisplayProperty(
+                    displayProperty.value,
+                    groupMetricsToDisplayInChart,
+                    metricsPanel,
+                    simulationName,
+                )
             }
         }
     }
@@ -372,17 +380,6 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
         val outerHeightWithPadding = innerElementSize.height + 10.0f
         val yRange = calcClampValues(outerHeightWithPadding, outerElementSize.height)
         viewOffset = Offset(viewOffset.x.coerceIn(xRange), viewOffset.y.coerceIn(yRange))
-    }
-    val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollableState { delta ->
-        val zoomFactor = (1 - delta)
-        val scaleMaximum = 20f
-        if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
-            scale *= zoomFactor
-            viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
-            clampOffsetToKeepCanvasOnScreen()
-        }
-        delta // this is how much delta we consumed
     }
 
     // We use a Box with no size constraints to act as a coordinate plane
@@ -465,6 +462,8 @@ fun drawFocusedMetricGroups(
 
 @Composable
 fun SimpleGraphViewer(
+    // name of the simulation
+    simulationName: String,
     // the data for graphing
     metricsPanelState: MetricsPanelState,
     // the locations of nodes and their values to display
@@ -487,6 +486,7 @@ fun SimpleGraphViewer(
                             groupMetricsToDisplayInChart,
                             mutableDisplayProperty,
                             metricsPanelState,
+                            simulationName,
                         )
                     }
                 }

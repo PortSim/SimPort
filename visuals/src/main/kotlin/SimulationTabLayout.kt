@@ -60,7 +60,7 @@ fun SimulationTabLayout(
         val simulations = persistentMapOf(simulationName to metricsPanelState)
         Box(Modifier.weight(1f).clipToBounds()) {
             when (selectedTab) {
-                SimulationTab.GraphViewer -> SimpleGraphViewer(metricsPanelState, scenarioLayout)
+                SimulationTab.GraphViewer -> SimpleGraphViewer(simulationName, metricsPanelState, scenarioLayout)
                 SimulationTab.Metrics -> SummaryVisualisation(simulations)
                 SimulationTab.ResultsTable -> ResultsTablePage(simulations, showToolbar = showResultsToolbar)
             }
