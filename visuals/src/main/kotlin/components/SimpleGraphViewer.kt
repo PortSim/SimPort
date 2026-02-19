@@ -268,9 +268,22 @@ fun drawLine(fieldName: String, fieldValue: String?) {
 }
 
 @Composable
+fun drawMiniGraph(metric: MetricGroup, metricsPanel: MetricsPanelState) {
+    Box(modifier = Modifier.fillMaxWidth().border(1.dp, Color.Black).height(400.dp)) {
+        SummaryChart(
+            metricByScenario = mapOf("" to metric).toImmutableMap(),
+            simulations = mapOf("" to metricsPanel),
+            showRaw = false,
+            showCi = true,
+        )
+    }
+}
+
+@Composable
 fun drawGroupDisplayProperty(
     group: GroupDisplayProperty,
     groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
+    metricsPanel: MetricsPanelState,
 ) {
     Box(Modifier.fillMaxWidth()) {
         var hasMetricGroup: MetricGroup? = null
@@ -286,8 +299,12 @@ fun drawGroupDisplayProperty(
             Column(modifier = Modifier.fillMaxWidth().padding(start = 12.dp)) {
                 group.list.forEach { property ->
                     when (property) {
-                        is GroupDisplayProperty -> drawGroupDisplayProperty(property, groupMetricsToDisplayInChart)
-                        is MetricGroupDisplayProperty -> hasMetricGroup = property.metricGroup
+                        is GroupDisplayProperty ->
+                            drawGroupDisplayProperty(property, groupMetricsToDisplayInChart, metricsPanel)
+                        is MetricGroupDisplayProperty -> {
+                            hasMetricGroup = property.metricGroup
+                            drawMiniGraph(property.metricGroup, metricsPanel)
+                        }
                         is FieldDisplayProperty -> drawLine(property.fieldName, property.value)
                         is DoubleDisplayProperty ->
                             drawLine(property.label, "${"%.2f".format(property.value)}${property.unitSuffix}")
@@ -314,6 +331,7 @@ fun drawDisplayPropertyPanel(
     focusedNode: MutableState<ElkNode?>,
     groupMetricsToDisplayInChart: MutableState<List<MetricGroup>>,
     displayProperty: State<GroupDisplayProperty>,
+    metricsPanel: MetricsPanelState,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 1.dp) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -324,7 +342,7 @@ fun drawDisplayPropertyPanel(
                 Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
             }
             Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                drawGroupDisplayProperty(displayProperty.value, groupMetricsToDisplayInChart)
+                drawGroupDisplayProperty(displayProperty.value, groupMetricsToDisplayInChart, metricsPanel)
             }
         }
     }
@@ -454,21 +472,24 @@ fun SimpleGraphViewer(
         // Metrics to display in the chart
         val groupMetricsToDisplayInChart: MutableState<List<MetricGroup>> = remember { mutableStateOf(emptyList()) }
 
-        Row(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, focusedNode) }
-                    if (focusedNode.value != null) {
-                        val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
-                        Box(modifier = Modifier.width(280.dp).fillMaxHeight()) {
-                            drawDisplayPropertyPanel(focusedNode, groupMetricsToDisplayInChart, mutableDisplayProperty)
-                        }
+        Column(modifier = Modifier.fillMaxHeight()) {
+            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, focusedNode) }
+                if (focusedNode.value != null) {
+                    val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
+                    Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
+                        drawDisplayPropertyPanel(
+                            focusedNode,
+                            groupMetricsToDisplayInChart,
+                            mutableDisplayProperty,
+                            metricsPanelState,
+                        )
                     }
                 }
-                if (groupMetricsToDisplayInChart.value.isNotEmpty()) {
-                    Box(modifier = Modifier.height(480.dp).background(MaterialTheme.colorScheme.primary)) {
-                        drawFocusedMetricGroups(metricsPanelState, groupMetricsToDisplayInChart)
-                    }
+            }
+            if (groupMetricsToDisplayInChart.value.isNotEmpty()) {
+                Box(modifier = Modifier.height(480.dp).background(MaterialTheme.colorScheme.primary)) {
+                    drawFocusedMetricGroups(metricsPanelState, groupMetricsToDisplayInChart)
                 }
             }
         }
