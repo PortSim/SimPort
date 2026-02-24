@@ -10,7 +10,7 @@ import com.group7.utils.suffix
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
-sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric() {
+sealed class ResponseTime(private val unit: DurationUnit) : InstantaneousMetric() {
     private val entryTimes = mutableMapOf<Any?, Instant>()
 
     protected abstract fun alreadyEntered(obj: Any?): String
@@ -33,7 +33,7 @@ sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric
         notify(currentTime, (currentTime - entryTime).toDouble(unit))
     }
 
-    class Local(private val container: Container<*>, unit: DurationUnit = DurationUnit.SECONDS) : ResidenceTime(unit) {
+    class Local(private val container: Container<*>, unit: DurationUnit = DurationUnit.SECONDS) : ResponseTime(unit) {
         init {
             container.onEnter { notifyEnter(it) }
             container.onLeave { notifyLeave(it) }
@@ -45,7 +45,7 @@ sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric
         override fun neverEntered(obj: Any?) = "Object $obj never entered $container!"
     }
 
-    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : ResidenceTime(unit) {
+    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : ResponseTime(unit) {
         init {
             for (source in scenario.allNodes.asSequence().filterIsInstance<Source<*>>()) {
                 source.onEmit { notifyEnter(it) }

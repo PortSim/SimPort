@@ -9,7 +9,7 @@ import com.group7.utils.suffix
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
-sealed class Latency(private val unit: DurationUnit) : InstantaneousMetric() {
+sealed class InterDepartureTime(private val unit: DurationUnit) : InstantaneousMetric() {
     private var lastSeen: Instant? = null
 
     context(sim: Simulator)
@@ -22,13 +22,13 @@ sealed class Latency(private val unit: DurationUnit) : InstantaneousMetric() {
         this.lastSeen = currentTime
     }
 
-    class Local(container: Container<*>, unit: DurationUnit = DurationUnit.SECONDS) : Latency(unit) {
+    class Local(container: Container<*>, unit: DurationUnit = DurationUnit.SECONDS) : InterDepartureTime(unit) {
         init {
             container.onEnter { notifySeen() }
         }
     }
 
-    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : Latency(unit) {
+    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : InterDepartureTime(unit) {
         init {
             for (sink in scenario.allNodes.asSequence().filterIsInstance<Sink<*>>()) {
                 sink.onEnter { notifySeen() }
