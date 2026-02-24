@@ -5,7 +5,7 @@ import com.group7.channels.PushOutputChannel
 import com.group7.dsl.*
 import com.group7.generators.Delays
 import com.group7.generators.Generators
-import com.group7.metrics.Latency
+import com.group7.metrics.InterDepartureTime
 import com.group7.metrics.Occupancy
 import com.group7.policies.fork.ForkPolicy
 import com.group7.policies.generic_fj.RandomPolicy
@@ -168,7 +168,7 @@ fun policyDemoPort(queuePolicy: DemoQueuePolicy, forkPolicy: DemoForkPolicy) =
                 .thenSink("Departures")
         }
         .withMetrics {
-            trackGlobal(Latency)
+            trackGlobal(InterDepartureTime)
             trackGlobal(Occupancy)
         }
 
