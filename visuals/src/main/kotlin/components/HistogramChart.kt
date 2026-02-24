@@ -50,7 +50,10 @@ internal data class HistogramBin(val lowerBound: Double, val upperBound: Double)
 
 internal data class HistogramData(val bins: List<HistogramBin>, val frequenciesByScenario: Map<String, List<Int>>)
 
-internal fun computeHistogram(histogramsByScenario: Map<String, Histogram>): HistogramData {
+internal fun computeHistogram(
+    histogramsByScenario: Map<String, Histogram>,
+    requestedBinCount: Int? = null,
+): HistogramData {
     val nonEmpty = histogramsByScenario.filterValues { !it.isEmpty }
     if (nonEmpty.isEmpty()) return HistogramData(emptyList(), emptyMap())
 
@@ -68,9 +71,14 @@ internal fun computeHistogram(histogramsByScenario: Map<String, Histogram>): His
         )
     }
 
-    val totalCount = nonEmpty.values.sumOf { it.totalCount }
-    // Sturges' rule
-    val binCount = ceil(log2(totalCount.toDouble()) + 1).toInt().coerceIn(3, 50)
+    val binCount =
+        if (requestedBinCount != null) {
+            requestedBinCount.coerceIn(3, 100)
+        } else {
+            val totalCount = nonEmpty.values.sumOf { it.totalCount }
+            // Sturges' rule
+            ceil(log2(totalCount.toDouble()) + 1).toInt().coerceIn(3, 100)
+        }
     val binWidth = (globalMax - globalMin) / binCount
 
     val bins =
@@ -110,7 +118,11 @@ internal fun computeNiceMaxAndStep(maxValue: Int): Pair<Int, Int> {
 }
 
 @Composable
-fun HistogramChart(metricByScenario: ImmutableMap<String, MetricGroup>, simulations: Map<String, MetricsPanelState>) {
+fun HistogramChart(
+    metricByScenario: ImmutableMap<String, MetricGroup>,
+    simulations: Map<String, MetricsPanelState>,
+    numBins: Int? = null,
+) {
     val scenarioColors =
         remember(metricByScenario) {
             val colors = generateDistinctColors(metricByScenario.size)
@@ -125,7 +137,7 @@ fun HistogramChart(metricByScenario: ImmutableMap<String, MetricGroup>, simulati
 
     var histogramData by remember { mutableStateOf<HistogramData?>(null) }
 
-    LaunchedEffect(metricByScenario, simulations.values.map { it.latestTimeSeen }) {
+    LaunchedEffect(metricByScenario, numBins, simulations.values.map { it.latestTimeSeen }) {
         val histogramsByScenario =
             metricByScenario
                 .mapNotNull { (simName, metricGroup) ->
@@ -139,7 +151,7 @@ fun HistogramChart(metricByScenario: ImmutableMap<String, MetricGroup>, simulati
             histogramData = null
             return@LaunchedEffect
         }
-        val data = computeHistogram(histogramsByScenario)
+        val data = computeHistogram(histogramsByScenario, numBins)
         histogramData = if (data.bins.isEmpty()) null else data
     }
 
