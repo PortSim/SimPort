@@ -4,6 +4,7 @@ import Dimensions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,7 +42,10 @@ private fun CellContent(cell: TableCell, textAlign: TextAlign) {
         if (cell.tooltip != null) {
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(cell.tooltip) } },
+                // DisableSelection prevents tooltip Text from registering with the parent
+                // SelectionContainer's SelectionRegistrar, which would crash with
+                // "layouts are not part of the same hierarchy" (popup vs main content).
+                tooltip = { PlainTooltip { DisableSelection { Text(cell.tooltip) } } },
                 state = rememberTooltipState(),
             ) {
                 TextContent()

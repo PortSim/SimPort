@@ -4,6 +4,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -11,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.group7.metrics.InstantaneousMetric
 import com.group7.metrics.MetricGroup
 import components.*
+import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.toImmutableMap
@@ -157,6 +159,7 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
     // Lifted state: persists across simulation switches for the same metric
     var viewMode by remember { mutableStateOf(ChartViewMode.Average) }
     var showCi by remember { mutableStateOf(true) }
+    var numBins by remember { mutableStateOf<Int?>(null) } // null = auto (Sturges' rule)
 
     // Coerce to a valid enabled mode when available modes change
     LaunchedEffect(availableModes, modeEnabled) {
@@ -240,6 +243,25 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
                 if (viewMode == ChartViewMode.Average) {
                     LabeledSwitch("Show CI", checked = showCi, onCheckedChange = { showCi = it })
                 }
+                if (viewMode == ChartViewMode.Histogram) {
+                    LabeledSlider(
+                        value = (numBins ?: 25).toFloat(),
+                        onValueChange = { numBins = it.roundToInt() },
+                        valueRange = 3f..100f,
+                        steps = 96,
+                        minLabel = "3",
+                        maxLabel = "100",
+                        valueLabel = "Bins: ${numBins ?: "Auto"}",
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = { numBins = null },
+                        enabled = numBins != null,
+                        modifier = Modifier.alpha(if (numBins != null) 1f else 0f),
+                    ) {
+                        Text("Auto")
+                    }
+                }
             }
         }
 
@@ -272,7 +294,11 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
                                 showCi = showCi,
                             )
                         ChartViewMode.Histogram ->
-                            HistogramChart(metricByScenario = filteredMetrics, simulations = simulations)
+                            HistogramChart(
+                                metricByScenario = filteredMetrics,
+                                simulations = simulations,
+                                numBins = numBins,
+                            )
                     }
                 }
             } else {
