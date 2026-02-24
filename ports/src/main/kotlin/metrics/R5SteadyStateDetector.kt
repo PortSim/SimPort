@@ -29,6 +29,7 @@ abstract class R5SteadyStateDetector(private val mean: ContinuousMetric, private
             // Start new window
             samples = 0
             crossings = 0
+            previousSign = Double.NaN
         }
 
         val currentSign = (sample - mean.report(currentTime)).sign
