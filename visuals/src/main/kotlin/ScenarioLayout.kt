@@ -1,4 +1,7 @@
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import com.group7.FieldDisplayProperty
+import com.group7.GroupDisplayProperty
 import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.channels.*
@@ -11,22 +14,14 @@ import org.eclipse.elk.core.util.BasicProgressMonitor
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.util.ElkGraphUtil
 
-/*
-   The scenario graph figures out the nodes and channels in a scenario.
-   It might be simpler to have a function in scenario instead, i am undecided.
-*/
-internal class ScenarioGraph(scenario: Scenario) {
-    val nodesOrderedByBFS = scenario.bfs()
-    val edgesWithChannels =
+class ScenarioLayout(scenario: Scenario) {
+    private val nodesOrderedByBFS = scenario.bfs()
+    private val edgesWithChannels =
         nodesOrderedByBFS.flatMap { upstream ->
             upstream.outgoing.asSequence().map { channel ->
                 Triple(upstream, channel.downstream.downstreamNode, channel)
             }
         }
-}
-
-class ScenarioLayout(scenario: Scenario) {
-    private val graphOfScenario = ScenarioGraph(scenario)
 
     val elkGraphRoot: ElkNode = ElkGraphUtil.createGraph() // necessary so nodesContainer can have a input port
 
@@ -61,8 +56,8 @@ class ScenarioLayout(scenario: Scenario) {
         return nodeGroups[nodeGroup]!!
     }
 
-    private val simulationNodeToElkNode = buildMap {
-        graphOfScenario.nodesOrderedByBFS.forEach { node ->
+    private val simulationNodeGroupToElkNode = buildMap {
+        nodesOrderedByBFS.forEach { node ->
             val elkNode = ElkGraphUtil.createNode(getElkNodeFromNodeGroup(node.parent))
             elkNode.width = 80.0
             elkNode.height = 80.0
@@ -73,8 +68,12 @@ class ScenarioLayout(scenario: Scenario) {
     }
 
     private val simulationEdgeToElkEdge = buildMap {
-        for ((source, dest, channel) in graphOfScenario.edgesWithChannels) {
-            val edge = ElkGraphUtil.createSimpleEdge(simulationNodeToElkNode[source], simulationNodeToElkNode[dest])
+        for ((source, destination, channel) in edgesWithChannels) {
+            val edge =
+                ElkGraphUtil.createSimpleEdge(
+                    simulationNodeGroupToElkNode[source],
+                    simulationNodeGroupToElkNode[destination],
+                )
             ElkGraphUtil.updateContainment(edge)
             put(channel, edge)
         }
@@ -85,18 +84,41 @@ class ScenarioLayout(scenario: Scenario) {
         RecursiveGraphLayoutEngine().layout(elkGraphRoot, BasicProgressMonitor())
     }
 
+    private fun getDisplayPropertyForNodeGroup(nodeGroup: NodeGroup): GroupDisplayProperty {
+        val properties =
+            listOfNotNull(nodeGroup::class.simpleName?.let { FieldDisplayProperty("Class name", it) }) +
+                nodeGroup.properties()
+        return GroupDisplayProperty(nodeGroup.label, properties)
+    }
+
+    private fun getDisplayPropertyForGlobalNode(): GroupDisplayProperty {
+        return GroupDisplayProperty("Global Port")
+    }
+
     val nodeMetrics =
-        simulationNodeToElkNode.entries.associate { (node, elkNode) -> elkNode to mutableStateOf(node.reportMetrics()) }
+        simulationNodeGroupToElkNode.entries.associate { (node, elkNode) ->
+            elkNode to mutableStateOf(node.reportMetrics())
+        }
     val edgeStatuses =
         simulationEdgeToElkEdge.entries.associate { (channel, edge) -> edge to mutableStateOf(channel.openStatus()) }
+    val nodeDisplayProperties: Map<ElkNode, MutableState<GroupDisplayProperty>> = buildMap {
+        simulationNodeGroupToElkNode.forEach { (nodeGroup, elkNode) ->
+            put(elkNode, mutableStateOf(getDisplayPropertyForNodeGroup(nodeGroup)))
+        }
+        put(elkGraphRoot, mutableStateOf(getDisplayPropertyForGlobalNode()))
+    }
 
     fun refresh() {
-        simulationNodeToElkNode.forEach { (node, elkNode) ->
+        simulationNodeGroupToElkNode.forEach { (node, elkNode) ->
             nodeMetrics.getValue(elkNode).value = node.reportMetrics()
         }
         simulationEdgeToElkEdge.forEach { (channel, elkEdge) ->
             edgeStatuses.getValue(elkEdge).value = channel.openStatus()
         }
+        simulationNodeGroupToElkNode.forEach { (nodeGroup, elkNode) ->
+            nodeDisplayProperties.getValue(elkNode).value = getDisplayPropertyForNodeGroup(nodeGroup)
+        }
+        nodeDisplayProperties.getValue(elkGraphRoot).value = getDisplayPropertyForGlobalNode()
     }
 
     private companion object {

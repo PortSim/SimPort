@@ -3,7 +3,7 @@ package com.group7
 import com.group7.channels.InputChannel
 import com.group7.channels.OutputChannel
 
-abstract class NodeGroup(val label: String) {
+abstract class NodeGroup(val label: String) : HasDisplayProperties {
     var parent: NodeGroup? = GroupScope.current
 
     abstract val incoming: List<InputChannel<*, *>>

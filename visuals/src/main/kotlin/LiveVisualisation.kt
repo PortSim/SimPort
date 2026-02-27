@@ -24,7 +24,6 @@ import components.PlaybackSpeedSlider
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.time.toJavaInstant
-import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.launch
 
 private val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS yyyy-MM-dd").withZone(ZoneOffset.UTC)
@@ -38,10 +37,7 @@ fun LiveVisualisation(scenario: Scenario, logger: EventLog = EventLog.noop()) {
 
     LaunchedEffect(Unit) { simulation.run { scenarioLayout.refresh() } }
 
-    SimulationTabLayout(
-        scenarioLayout = scenarioLayout,
-        simulations = persistentMapOf("Simulation" to metricsPanelState),
-    ) {
+    SimulationTabLayout("Simulation", metricsPanelState) {
         // Playback controls at bottom - fixed height
         Row(
             modifier = Modifier.fillMaxWidth().background(Color.White).border(Dimensions.borderWidth, Color.Black),
