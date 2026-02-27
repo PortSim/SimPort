@@ -47,4 +47,6 @@ class ArrivalNode<OutputT>(
     ) {
         emitCallback = emitCallback.andThen(callback)
     }
+
+    override fun properties() = listOf(generator.displayProperty)
 }

@@ -7,31 +7,32 @@ import ScenarioLayout
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.unit.*
+import com.group7.*
 import com.group7.channels.ChannelType
 import kotlin.math.atan2
 import org.eclipse.elk.graph.ElkEdge
@@ -89,15 +90,50 @@ fun DrawScope.drawArrowHead(
     }
 }
 
+/**
+ * Detects if the current node is hovered and, if it's smaller than the currently hovered node, sets the hovered node to
+ * be this node.
+ */
+fun Modifier.exclusiveHover(node: ElkNode, hoveredNode: MutableState<ElkNode?>): Modifier =
+    this.pointerInput(node) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Main)
+                val isPointerInside = size.toIntRect().toRect().contains(event.changes.first().position)
+                // Semi-hack to figure out if we're the smallest node being hovered, this does not
+                // consume events so doesn't interfere with panning around
+                if (isPointerInside && (hoveredNode.value?.width ?: Double.MAX_VALUE) >= node.width) {
+                    hoveredNode.value = node
+                }
+                if (!isPointerInside && hoveredNode.value == node) {
+                    hoveredNode.value = null
+                }
+            }
+        }
+    }
+
 @Composable
-fun drawElkNodes(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metrics>>) {
+fun drawElkNodes(
+    node: ElkNode,
+    nodeMetrics: Map<ElkNode, State<Metrics>>,
+    focusedNode: MutableState<ElkNode?>,
+    hoveredNode: MutableState<ElkNode?> = remember { mutableStateOf(null) },
+) {
+    val isHovered = hoveredNode.value == node
     Box(
         modifier =
             Modifier.wrapContentSize(unbounded = true)
                 .absoluteOffset(node.x.dp, node.y.dp)
                 .requiredSize(node.width.dp, node.height.dp)
-                .background(Color.Transparent)
-                .border(1.dp, Color.Black),
+                .background(if (isHovered) Color.LightGray.copy(alpha = 0.5f) else Color.Transparent)
+                .border(1.dp, Color.Black)
+                .exclusiveHover(node, hoveredNode)
+                .clickable(
+                    interactionSource = remember(node) { MutableInteractionSource() },
+                    indication = null,
+                    enabled = true,
+                    onClick = { focusedNode.value = node },
+                ),
         contentAlignment = Alignment.TopStart,
     ) {
         if (node.parent != null) {
@@ -125,7 +161,7 @@ fun drawElkNodes(node: ElkNode, nodeMetrics: Map<ElkNode, MutableState<Metrics>>
             }
         }
 
-        node.children.forEach { drawElkNodes(it, nodeMetrics) }
+        node.children.forEach { drawElkNodes(it, nodeMetrics, focusedNode, hoveredNode) }
     }
 }
 
@@ -184,11 +220,95 @@ fun DrawScope.drawElkEdges(
 }
 
 @Composable
-fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
+fun drawLine(fieldName: String, fieldValue: String?) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
+        horizontalArrangement = Arrangement.SpaceBetween, // Pushes Label left, Value right
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "${fieldName}${if (fieldValue == null) "" else ":"}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f), // Let label take available space if needed
+        )
+
+        if (fieldValue != null) {
+            Text(
+                text = fieldValue,
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontFeatureSettings = "tnum",
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+@Composable
+fun drawGroupDisplayProperty(group: GroupDisplayProperty, metricsPanel: MetricsPanelState, simulationName: String) {
+    key(group) {
+        Box(Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Text(
+                    text = group.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+
+                Column(modifier = Modifier.fillMaxWidth().padding(start = 12.dp)) {
+                    for (property in group.list) {
+                        key(property) {
+                            when (property) {
+                                is GroupDisplayProperty ->
+                                    drawGroupDisplayProperty(property, metricsPanel, simulationName)
+
+                                is MetricGroupDisplayProperty -> {} // Possible future feature of small graphs
+                                is FieldDisplayProperty -> drawLine(property.fieldName, property.value)
+                                is DoubleDisplayProperty ->
+                                    drawLine(property.label, "${"%.2f".format(property.value)}${property.unitSuffix}")
+
+                                is TextDisplayProperty -> drawLine(property.string, null)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun drawDisplayPropertyPanel(
+    focusedNode: MutableState<ElkNode?>,
+    displayProperty: State<GroupDisplayProperty>,
+    metricsPanel: MetricsPanelState,
+    simulationName: String,
+) {
+    Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 1.dp) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            IconButton(
+                onClick = { focusedNode.value = null },
+                modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
+            }
+            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                drawGroupDisplayProperty(displayProperty.value, metricsPanel, simulationName)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?>) {
     var viewOffset by remember { mutableStateOf(Offset.Zero) }
     var scale by remember { mutableStateOf(1f) }
-    var mouseOffset by remember { mutableStateOf(Offset.Zero) }
-
     var innerElementSize by remember { mutableStateOf(Size.Zero) }
     var outerElementSize by remember { mutableStateOf(Size.Zero) }
 
@@ -214,39 +334,41 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
     Box(
         modifier =
             Modifier.fillMaxSize()
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull()
-                            if (change != null) {
-                                val center = Offset(size.width / 2f, size.height / 2f)
-                                mouseOffset = change.position - center
-                            }
-                        }
-                    }
+                // 1. Handle Mouse Wheel Zooming
+                // This only fires on actual wheel movement, never on clicks/drags.
+                .onPointerEvent(PointerEventType.Scroll) { event ->
+                    val change = event.changes.first()
+                    val delta = change.scrollDelta.y
+
+                    // Calculate the multiplier (negative delta usually means zoom in on some systems,
+                    // strictly depends on preference, here we assume standard scrolling)
+                    val zoomMultiplier = (1 - delta * 0.1f)
+
+                    val newScale = (scale * zoomMultiplier).coerceIn(0.1f, 20f)
+
+                    // Recalculate zoomFactor based on the clamped newScale to prevent offset jumps
+                    val effectiveZoomFactor = newScale / scale
+
+                    // Calculate where the mouse is relative to the center (matching your original logic)
+                    // change.position gives coordinates relative to the top-left of the modifier
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val mouseOffset = change.position - center
+
+                    // Apply math: Keep the point under the mouse stationary
+                    viewOffset += (mouseOffset - viewOffset) * (1 - effectiveZoomFactor)
+                    scale = newScale
+
+                    clampOffsetToKeepCanvasOnScreen()
                 }
-                .scrollable(
-                    orientation = Orientation.Vertical,
-                    state =
-                        rememberScrollableState { delta ->
-                            val zoomFactor = (1 + delta * 0.005f)
-                            val scaleMaximum = 20f
-                            if (1 / scaleMaximum <= scale * zoomFactor && scale * zoomFactor <= scaleMaximum) {
-                                scale *= zoomFactor
-                                viewOffset += (mouseOffset - viewOffset) * (1 - zoomFactor)
-                                clampOffsetToKeepCanvasOnScreen()
-                            }
-                            delta // Return the delta to indicate scroll amount consumed
-                        },
-                )
+                // 2. Handle Panning (Drag)
+                // detectTransformGestures handles dragging nicely and won't conflict with clicks
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, _, _ ->
-                        viewOffset = Offset(viewOffset.x + pan.x, viewOffset.y + pan.y)
+                        viewOffset += pan
                         clampOffsetToKeepCanvasOnScreen()
                     }
                 }
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.background)
                 .graphicsLayer(translationX = viewOffset.x, translationY = viewOffset.y, scaleX = scale, scaleY = scale)
                 .onSizeChanged { size -> outerElementSize = size.toSize() },
         contentAlignment = Alignment.Center,
@@ -255,10 +377,38 @@ fun SimpleGraphViewer(elkGraph: ScenarioLayout) {
             modifier =
                 Modifier.wrapContentSize(unbounded = true).onSizeChanged { size -> innerElementSize = size.toSize() }
         ) {
+            val backgroundColor = MaterialTheme.colorScheme.background
             Canvas(Modifier.matchParentSize()) {
-                drawElkEdges(elkGraph.elkGraphRoot, Color.White, elkGraph.edgeStatuses)
+                drawElkEdges(scenarioData.elkGraphRoot, backgroundColor, scenarioData.edgeStatuses)
             }
-            drawElkNodes(elkGraph.elkGraphRoot, elkGraph.nodeMetrics)
+            drawElkNodes(scenarioData.elkGraphRoot, scenarioData.nodeMetrics, focusedNode)
+        }
+    }
+}
+
+@Composable
+fun SimpleGraphViewer(
+    // name of the simulation
+    simulationName: String,
+    // the data for graphing
+    metricsPanelState: MetricsPanelState,
+) {
+    key(metricsPanelState) {
+        // Whether a side panel is open
+        val focusedNode: MutableState<ElkNode?> = remember { mutableStateOf(null) }
+        val elkGraph: ScenarioLayout = remember { ScenarioLayout(metricsPanelState.scenario) }
+        LaunchedEffect(metricsPanelState.latestTimeSeen) { elkGraph.refresh() }
+
+        Column(modifier = Modifier.fillMaxHeight()) {
+            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, focusedNode) }
+                if (focusedNode.value != null) {
+                    val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
+                    Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
+                        drawDisplayPropertyPanel(focusedNode, mutableDisplayProperty, metricsPanelState, simulationName)
+                    }
+                }
+            }
         }
     }
 }

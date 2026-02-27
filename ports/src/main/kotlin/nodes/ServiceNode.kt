@@ -34,4 +34,6 @@ class ServiceNode<T>(
         source.open()
         destination.send(obj)
     }
+
+    override fun properties() = super<Service>.properties() + delayProvider.displayProperty
 }

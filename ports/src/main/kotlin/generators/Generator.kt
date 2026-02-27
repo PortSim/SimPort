@@ -1,5 +1,10 @@
 package com.group7.generators
 
+import com.group7.DisplayProperty
+import com.group7.FieldDisplayProperty
+import com.group7.GroupDisplayProperty
+import com.group7.utils.suffix
+import com.group7.utils.toStringWithBiggestUnit
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -7,33 +12,75 @@ import umontreal.ssj.randvar.ExponentialGen
 import umontreal.ssj.rng.MRG32k3a
 
 // A generator interface used only by Source nodes
-interface Generator<out T> : Iterator<Pair<T, Duration>>
+interface Generator<out T> : Iterator<Pair<T, Duration>> {
+    val displayProperty: DisplayProperty
+}
 
-fun interface DelayProvider {
+interface DelayProvider {
     fun nextDelay(): Duration
+
+    val displayProperty: DisplayProperty
+
+    companion object {
+        operator fun invoke(displayProperty: DisplayProperty, block: () -> Duration): DelayProvider =
+            object : DelayProvider {
+                override val displayProperty: DisplayProperty
+                    get() = displayProperty
+
+                override fun nextDelay(): Duration = block()
+            }
+    }
 }
 
 object Generators {
     fun <T> constant(factory: () -> T, delayProvider: DelayProvider): Generator<T> =
-        generateSequence { factory() to delayProvider.nextDelay() }.asGenerator()
+        generateSequence { factory() to delayProvider.nextDelay() }.asGenerator(delayProvider.displayProperty)
 
     fun <T> alternating(vararg objs: () -> T, delayProvider: DelayProvider): Generator<T> =
-        generateSequence { objs.map { it() } }.flatten().map { it to delayProvider.nextDelay() }.asGenerator()
+        generateSequence { objs.map { it() } }
+            .flatten()
+            .map { it to delayProvider.nextDelay() }
+            .asGenerator(delayProvider.displayProperty)
 }
 
 object Delays {
-    fun fixed(delay: Duration) = DelayProvider { delay }
+    fun fixed(delay: Duration): DelayProvider {
+        val displayProperty =
+            GroupDisplayProperty(
+                "Fixed Delay Provider Parameters",
+                FieldDisplayProperty("Delay", delay.toStringWithBiggestUnit),
+            )
+        return DelayProvider(displayProperty) { delay }
+    }
 
     fun exponential(lambda: Double, unit: DurationUnit): DelayProvider {
         val stream = MRG32k3a() // random number stream
         val expGen = ExponentialGen(stream, lambda) // exponential distribution
-        return DelayProvider { expGen.nextDouble().toDuration(unit) }
+        val displayProperty =
+            GroupDisplayProperty(
+                "Exponential Delay Provider",
+                FieldDisplayProperty("lambda", "${"%.2f".format(lambda)}${unit.suffix}"),
+            )
+        return DelayProvider(displayProperty) { expGen.nextDouble().toDuration(unit) }
     }
 
-    fun exponentialWithMean(mean: Duration) = exponential(1 / mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS)
+    fun exponentialWithMean(mean: Duration): DelayProvider {
+        val displayProperty =
+            GroupDisplayProperty(
+                "Exponential Delay Provider",
+                FieldDisplayProperty("Mean", mean.toStringWithBiggestUnit),
+            )
+        val exp = exponential(1 / mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS)
+        return DelayProvider(displayProperty, { exp.nextDelay() })
+    }
 }
 
 fun <T> Generator<T>.take(n: Int) = asSequence().take(n).asGenerator()
 
-internal fun <T> Sequence<Pair<T, Duration>>.asGenerator(): Generator<T> =
-    object : Generator<T>, Iterator<Pair<T, Duration>> by iterator() {}
+internal fun <T> Sequence<Pair<T, Duration>>.asGenerator(
+    displayProperty: DisplayProperty = GroupDisplayProperty("No generator display properties provided")
+): Generator<T> =
+    object : Generator<T>, Iterator<Pair<T, Duration>> by iterator() {
+        override val displayProperty: DisplayProperty
+            get() = displayProperty
+    }

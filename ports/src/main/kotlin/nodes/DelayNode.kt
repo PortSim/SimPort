@@ -15,7 +15,7 @@ class DelayNode<T>(
     label: String,
     source: PushInputChannel<T>,
     destination: PushOutputChannel<T>,
-    delayProvider: DelayProvider,
+    private val delayProvider: DelayProvider,
 ) : ContainerNode<T>(label, listOf(source), listOf(destination)), Delay<T> {
 
     override var occupants = 0
