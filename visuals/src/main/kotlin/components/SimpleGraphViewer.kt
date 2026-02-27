@@ -116,8 +116,8 @@ fun Modifier.exclusiveHover(node: ElkNode, hoveredNode: MutableState<ElkNode?>):
 fun ElkNodes(
     node: ElkNode,
     nodeMetrics: Map<ElkNode, State<Metrics>>,
-    focusedNode: MutableState<ElkNode?>,
-    hoveredNode: MutableState<ElkNode?> = remember { mutableStateOf(null) },
+    onClickNode: (ElkNode) -> Unit,
+    hoveredNode: MutableState<ElkNode?>,
 ) {
     val isHovered = hoveredNode.value == node
     Box(
@@ -132,7 +132,7 @@ fun ElkNodes(
                     interactionSource = remember(node) { MutableInteractionSource() },
                     indication = null,
                     enabled = true,
-                    onClick = { focusedNode.value = node },
+                    onClick = { onClickNode(node) },
                 ),
         contentAlignment = Alignment.TopStart,
     ) {
@@ -161,7 +161,7 @@ fun ElkNodes(
             }
         }
 
-        node.children.forEach { ElkNodes(it, nodeMetrics, focusedNode, hoveredNode) }
+        node.children.forEach { ElkNodes(it, nodeMetrics, onClickNode, hoveredNode) }
     }
 }
 
@@ -286,21 +286,18 @@ fun GroupDisplayProperty(group: GroupDisplayProperty, metricsPanel: MetricsPanel
 
 @Composable
 fun DisplayPropertyPanel(
-    focusedNode: MutableState<ElkNode?>,
-    displayProperty: State<GroupDisplayProperty>,
+    onPanelClose: () -> Unit,
+    displayProperty: GroupDisplayProperty,
     metricsPanel: MetricsPanelState,
     simulationName: String,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 1.dp) {
         Box(modifier = Modifier.fillMaxSize()) {
-            IconButton(
-                onClick = { focusedNode.value = null },
-                modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
-            ) {
+            IconButton(onClick = onPanelClose, modifier = Modifier.align(Alignment.TopEnd).padding(2.dp)) {
                 Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
             }
-            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                GroupDisplayProperty(displayProperty.value, metricsPanel, simulationName)
+            Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                GroupDisplayProperty(displayProperty, metricsPanel, simulationName)
             }
         }
     }
@@ -308,11 +305,12 @@ fun DisplayPropertyPanel(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?>) {
+fun GraphViewer(scenarioData: ScenarioLayout, onClickNode: (ElkNode) -> Unit) {
     var viewOffset by remember { mutableStateOf(Offset.Zero) }
     var scale by remember { mutableStateOf(1f) }
     var innerElementSize by remember { mutableStateOf(Size.Zero) }
     var outerElementSize by remember { mutableStateOf(Size.Zero) }
+    val hoveredNode = remember { mutableStateOf<ElkNode?>(null) }
 
     fun clampOffsetToKeepCanvasOnScreen() {
         // Keep 20% of the canvas on screen or keep the screen 20% canvas whichever is possible
@@ -383,7 +381,7 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
             Canvas(Modifier.matchParentSize()) {
                 drawElkEdges(scenarioData.elkGraphRoot, backgroundColor, scenarioData.edgeStatuses)
             }
-            ElkNodes(scenarioData.elkGraphRoot, scenarioData.nodeMetrics, focusedNode)
+            ElkNodes(scenarioData.elkGraphRoot, scenarioData.nodeMetrics, onClickNode, hoveredNode)
         }
     }
 }
@@ -397,17 +395,22 @@ fun SimpleGraphViewer(
 ) {
     key(metricsPanelState) {
         // Whether a side panel is open
-        val focusedNode: MutableState<ElkNode?> = remember { mutableStateOf(null) }
-        val elkGraph: ScenarioLayout = remember { ScenarioLayout(metricsPanelState.scenario) }
+        var focusedNode by remember { mutableStateOf<ElkNode?>(null) }
+        val elkGraph = remember { ScenarioLayout(metricsPanelState.scenario) }
         LaunchedEffect(metricsPanelState.latestTimeSeen) { elkGraph.refresh() }
 
         Column(modifier = Modifier.fillMaxHeight()) {
             Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, focusedNode) }
-                if (focusedNode.value != null) {
-                    val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, { focusedNode = it }) }
+                if (focusedNode != null) {
+                    val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode!!)
                     Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
-                        DisplayPropertyPanel(focusedNode, mutableDisplayProperty, metricsPanelState, simulationName)
+                        DisplayPropertyPanel(
+                            { focusedNode = null },
+                            mutableDisplayProperty.value,
+                            metricsPanelState,
+                            simulationName,
+                        )
                     }
                 }
             }
