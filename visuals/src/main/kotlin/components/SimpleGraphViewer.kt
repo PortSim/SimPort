@@ -113,7 +113,7 @@ fun Modifier.exclusiveHover(node: ElkNode, hoveredNode: MutableState<ElkNode?>):
     }
 
 @Composable
-fun drawElkNodes(
+fun ElkNodes(
     node: ElkNode,
     nodeMetrics: Map<ElkNode, State<Metrics>>,
     focusedNode: MutableState<ElkNode?>,
@@ -161,7 +161,7 @@ fun drawElkNodes(
             }
         }
 
-        node.children.forEach { drawElkNodes(it, nodeMetrics, focusedNode, hoveredNode) }
+        node.children.forEach { ElkNodes(it, nodeMetrics, focusedNode, hoveredNode) }
     }
 }
 
@@ -220,7 +220,7 @@ fun DrawScope.drawElkEdges(
 }
 
 @Composable
-fun drawLine(fieldName: String, fieldValue: String?) {
+fun PropertyLine(fieldName: String, fieldValue: String?) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
         horizontalArrangement = Arrangement.SpaceBetween, // Pushes Label left, Value right
@@ -248,7 +248,7 @@ fun drawLine(fieldName: String, fieldValue: String?) {
 }
 
 @Composable
-fun drawGroupDisplayProperty(group: GroupDisplayProperty, metricsPanel: MetricsPanelState, simulationName: String) {
+fun GroupDisplayProperty(group: GroupDisplayProperty, metricsPanel: MetricsPanelState, simulationName: String) {
     key(group) {
         Box(Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
@@ -264,15 +264,17 @@ fun drawGroupDisplayProperty(group: GroupDisplayProperty, metricsPanel: MetricsP
                     for (property in group.list) {
                         key(property) {
                             when (property) {
-                                is GroupDisplayProperty ->
-                                    drawGroupDisplayProperty(property, metricsPanel, simulationName)
+                                is GroupDisplayProperty -> GroupDisplayProperty(property, metricsPanel, simulationName)
 
                                 is MetricGroupDisplayProperty -> {} // Possible future feature of small graphs
-                                is FieldDisplayProperty -> drawLine(property.fieldName, property.value)
+                                is FieldDisplayProperty -> PropertyLine(property.fieldName, property.value)
                                 is DoubleDisplayProperty ->
-                                    drawLine(property.label, "${"%.2f".format(property.value)}${property.unitSuffix}")
+                                    PropertyLine(
+                                        property.label,
+                                        "${"%.2f".format(property.value)}${property.unitSuffix}",
+                                    )
 
-                                is TextDisplayProperty -> drawLine(property.string, null)
+                                is TextDisplayProperty -> PropertyLine(property.string, null)
                             }
                         }
                     }
@@ -283,7 +285,7 @@ fun drawGroupDisplayProperty(group: GroupDisplayProperty, metricsPanel: MetricsP
 }
 
 @Composable
-fun drawDisplayPropertyPanel(
+fun DisplayPropertyPanel(
     focusedNode: MutableState<ElkNode?>,
     displayProperty: State<GroupDisplayProperty>,
     metricsPanel: MetricsPanelState,
@@ -298,7 +300,7 @@ fun drawDisplayPropertyPanel(
                 Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
             }
             Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                drawGroupDisplayProperty(displayProperty.value, metricsPanel, simulationName)
+                GroupDisplayProperty(displayProperty.value, metricsPanel, simulationName)
             }
         }
     }
@@ -381,7 +383,7 @@ fun GraphViewer(scenarioData: ScenarioLayout, focusedNode: MutableState<ElkNode?
             Canvas(Modifier.matchParentSize()) {
                 drawElkEdges(scenarioData.elkGraphRoot, backgroundColor, scenarioData.edgeStatuses)
             }
-            drawElkNodes(scenarioData.elkGraphRoot, scenarioData.nodeMetrics, focusedNode)
+            ElkNodes(scenarioData.elkGraphRoot, scenarioData.nodeMetrics, focusedNode)
         }
     }
 }
@@ -405,7 +407,7 @@ fun SimpleGraphViewer(
                 if (focusedNode.value != null) {
                     val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode.value!!)
                     Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
-                        drawDisplayPropertyPanel(focusedNode, mutableDisplayProperty, metricsPanelState, simulationName)
+                        DisplayPropertyPanel(focusedNode, mutableDisplayProperty, metricsPanelState, simulationName)
                     }
                 }
             }

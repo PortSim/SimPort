@@ -13,7 +13,7 @@ import kotlin.math.min
 import kotlinx.coroutines.isActive
 
 @Composable
-fun debugPanel() {
+fun DebugPanel() {
     // Debug state
 
     var minFpsThisSecond by remember { mutableIntStateOf(1000) }
