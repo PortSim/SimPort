@@ -249,9 +249,14 @@ fun PropertyLine(fieldName: String, fieldValue: String?) {
 }
 
 @Composable
-fun GroupDisplayProperty(group: GroupDisplayProperty, metricsPanel: MetricsPanelState, simulationName: String) {
+fun GroupDisplayProperty(
+    group: GroupDisplayProperty,
+    metricsPanel: MetricsPanelState,
+    simulationName: String,
+    modifier: Modifier = Modifier,
+) {
     key(group) {
-        Box(Modifier.fillMaxWidth()) {
+        Box(modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                 Text(
                     text = group.name,
@@ -287,6 +292,7 @@ fun GroupDisplayProperty(group: GroupDisplayProperty, metricsPanel: MetricsPanel
 
 @Composable
 fun DisplayPropertyPanel(
+    node: NodeGroup,
     onPanelClose: () -> Unit,
     displayProperty: GroupDisplayProperty,
     metricsPanel: MetricsPanelState,
@@ -297,8 +303,12 @@ fun DisplayPropertyPanel(
             IconButton(onClick = onPanelClose, modifier = Modifier.align(Alignment.TopEnd).padding(2.dp)) {
                 Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
             }
-            Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                GroupDisplayProperty(displayProperty, metricsPanel, simulationName)
+            Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                GroupDisplayProperty(displayProperty, metricsPanel, simulationName, Modifier.weight(2f))
+                Spacer(Modifier.weight(1f))
+
+                Text("Defined At:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Pannable(Modifier.fillMaxHeight(0.2f).fillMaxWidth()) { NodeStackTrace(node) }
             }
         }
     }
@@ -407,6 +417,7 @@ fun SimpleGraphViewer(
                     val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode!!)
                     Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
                         DisplayPropertyPanel(
+                            elkGraph.getNodeGroupFromElkNode(focusedNode!!)!!,
                             { focusedNode = null },
                             mutableDisplayProperty.value,
                             metricsPanelState,

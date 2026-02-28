@@ -1,5 +1,6 @@
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import com.google.common.collect.HashBiMap
 import com.group7.FieldDisplayProperty
 import com.group7.GroupDisplayProperty
 import com.group7.NodeGroup
@@ -56,16 +57,21 @@ class ScenarioLayout(scenario: Scenario) {
         return nodeGroups[nodeGroup]!!
     }
 
-    private val simulationNodeGroupToElkNode = buildMap {
-        nodesOrderedByBFS.forEach { node ->
-            val elkNode = ElkGraphUtil.createNode(getElkNodeFromNodeGroup(node.parent))
-            elkNode.width = 80.0
-            elkNode.height = 80.0
-            elkNode.identifier = node.label
-            put(node, elkNode)
-        }
-        putAll(nodeGroups)
-    }
+    private val simulationNodeGroupToElkNode =
+        HashBiMap.create(
+            buildMap {
+                nodesOrderedByBFS.forEach { node ->
+                    val elkNode = ElkGraphUtil.createNode(getElkNodeFromNodeGroup(node.parent))
+                    elkNode.width = 80.0
+                    elkNode.height = 80.0
+                    elkNode.identifier = node.label
+                    put(node, elkNode)
+                }
+                putAll(nodeGroups)
+            }
+        )
+
+    fun getNodeGroupFromElkNode(elkNode: ElkNode) = simulationNodeGroupToElkNode.inverse()[elkNode]
 
     private val simulationEdgeToElkEdge = buildMap {
         for ((source, destination, channel) in edgesWithChannels) {
