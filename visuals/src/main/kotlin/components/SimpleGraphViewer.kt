@@ -37,6 +37,7 @@ import com.group7.channels.ChannelType
 import kotlin.math.atan2
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
+import utils.isRoot
 
 fun DrawScope.drawArrowHead(
     end: Offset,
@@ -119,7 +120,7 @@ fun ElkNodes(
     onClickNode: (ElkNode) -> Unit,
     hoveredNode: MutableState<ElkNode?>,
 ) {
-    val isHovered = hoveredNode.value == node
+    val isHovered = hoveredNode.value == node && !node.isRoot
     Box(
         modifier =
             Modifier.wrapContentSize(unbounded = true)
@@ -131,7 +132,7 @@ fun ElkNodes(
                 .clickable(
                     interactionSource = remember(node) { MutableInteractionSource() },
                     indication = null,
-                    enabled = true,
+                    enabled = !node.isRoot,
                     onClick = { onClickNode(node) },
                 ),
         contentAlignment = Alignment.TopStart,
@@ -402,7 +403,7 @@ fun SimpleGraphViewer(
         Column(modifier = Modifier.fillMaxHeight()) {
             Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, { focusedNode = it }) }
-                if (focusedNode != null) {
+                if (focusedNode?.isRoot == false) {
                     val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode!!)
                     Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
                         DisplayPropertyPanel(
