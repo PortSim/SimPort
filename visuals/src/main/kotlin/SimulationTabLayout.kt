@@ -12,10 +12,10 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
+import components.DebugPanel
 import components.MetricsPanelState
 import components.ResultsTablePage
 import components.SimpleGraphViewer
-import components.debugPanel
 import kotlinx.collections.immutable.persistentMapOf
 
 enum class SimulationTab(val label: String) {
@@ -47,7 +47,7 @@ fun SimulationTabLayout(
         }
     ) {
         if (showDebug) {
-            debugPanel()
+            DebugPanel()
         }
 
         SecondaryTabRow(selectedTabIndex = selectedTab.ordinal) {
