@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -166,6 +168,41 @@ fun ElkNodes(
     }
 }
 
+private fun DrawScope.drawArrow(
+    points: List<Offset>,
+    channelReady: Boolean,
+    channelType: ChannelType<*>,
+    backgroundColor: Color,
+) {
+    if (points.size < 2) {
+        return
+    }
+    val edgeColor = if (channelReady) DefaultColorPalette.greens._4 else DefaultColorPalette.reds._4
+    val strokeWidth = 2.dp.toPx()
+
+    val path =
+        Path().apply {
+            moveTo(points.first().x, points.first().y)
+            for (i in 1 until points.size) {
+                lineTo(points[i].x, points[i].y)
+            }
+        }
+    drawPath(path, edgeColor, style = Stroke(width = strokeWidth))
+
+    val end = points.last()
+    val prev = points[points.size - 2]
+    val angle = Math.toDegrees(atan2(end.y - prev.y, end.x - prev.x).toDouble()).toFloat()
+    drawArrowHead(
+        end = end,
+        angleDegrees = angle,
+        height = 12f.dp.toPx(),
+        width = 6f.dp.toPx(),
+        channelType = channelType,
+        color = edgeColor,
+        backgroundColor = backgroundColor,
+    )
+}
+
 fun DrawScope.drawElkEdges(
     node: ElkNode,
     backgroundColor: Color,
@@ -183,40 +220,72 @@ fun DrawScope.drawElkEdges(
             )
         }
         /* Draw each edge */
+
         node.containedEdges.forEach { edge ->
-            val edgeColor =
-                when (edgeStatuses[edge]?.value?.openStatus) {
-                    null -> Color.Black
-                    true -> DefaultColorPalette.greens._4
-                    false -> DefaultColorPalette.reds._4
-                }
-
-            edge.sections.forEach { section ->
-                val path =
-                    Path().apply {
-                        moveTo(section.startX.toFloat().dp.toPx(), section.startY.toFloat().dp.toPx())
-                        section.bendPoints.forEach { pt -> lineTo(pt.x.toFloat().dp.toPx(), pt.y.toFloat().dp.toPx()) }
-                        lineTo(section.endX.toFloat().dp.toPx(), section.endY.toFloat().dp.toPx())
+            val points =
+                edge.sections.flatMap { section ->
+                    buildList {
+                        add(Offset(section.startX.toFloat().dp.toPx(), section.startY.toFloat().dp.toPx()))
+                        section.bendPoints.forEach { pt ->
+                            add(Offset(pt.x.toFloat().dp.toPx(), pt.y.toFloat().dp.toPx()))
+                        }
+                        add(Offset(section.endX.toFloat().dp.toPx(), section.endY.toFloat().dp.toPx()))
                     }
-                drawPath(path, edgeColor, style = Stroke(width = 2.dp.toPx()))
-
-                val end = Offset(section.endX.toFloat().dp.toPx(), section.endY.toFloat().dp.toPx())
-                val prevX =
-                    section.bendPoints.lastOrNull()?.x?.toFloat()?.dp?.toPx() ?: section.startX.toFloat().dp.toPx()
-                val prevY =
-                    section.bendPoints.lastOrNull()?.y?.toFloat()?.dp?.toPx() ?: section.startY.toFloat().dp.toPx()
-                drawArrowHead(
-                    end = end,
-                    angleDegrees = Math.toDegrees(atan2(end.y - prevY, end.x - prevX).toDouble()).toFloat(),
-                    height = 12f.dp.toPx(),
-                    width = 6f.dp.toPx(),
-                    channelType = edgeStatuses[edge]!!.value.channelType,
-                    color = edgeColor,
-                    backgroundColor = backgroundColor,
-                )
-            }
+                }
+            drawArrow(
+                points,
+                edgeStatuses[edge]?.value?.openStatus ?: false,
+                edgeStatuses[edge]!!.value.channelType,
+                backgroundColor,
+            )
         }
         node.children.forEach { child -> drawElkEdges(node = child, backgroundColor, edgeStatuses) }
+    }
+}
+
+@Composable
+fun drawLegend(modifier: Modifier = Modifier) {
+    Box(
+        modifier =
+            modifier
+                .padding(Dimensions.spacingLg)
+                .background(MaterialTheme.colorScheme.background)
+                .border(Dimensions.strokeWidthThin, MaterialTheme.colorScheme.onBackground)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    true,
+                ) {} // intercepts clicks so clicking on legend doesn't move graph
+    ) {
+        Column(
+            modifier = modifier.padding(Dimensions.spacingMd),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.spacingMd),
+        ) {
+            Text("Legend", fontWeight = FontWeight.Bold, fontSize = Dimensions.fontSizeSmall)
+
+            val backgroundColor = MaterialTheme.colorScheme.background
+            fun DrawScope.legendDrawEdge(channelType: ChannelType<*>, ready: Boolean) {
+                val legendPoints =
+                    listOf(
+                        Offset(0f, size.height / 2), // Start (Left-middle)
+                        Offset(size.width, size.height / 2), // End (Right-middle)
+                    )
+                drawArrow(legendPoints, ready, channelType, backgroundColor)
+            }
+            LegendItem("Open push channel") { legendDrawEdge(ChannelType.Push, true) }
+            LegendItem("Closed push channel") { legendDrawEdge(ChannelType.Push, false) }
+            LegendItem("Ready pull channel") { legendDrawEdge(ChannelType.Pull, true) }
+            LegendItem("Not ready pull channel") { legendDrawEdge(ChannelType.Pull, false) }
+        }
+    }
+}
+
+@Composable
+fun LegendItem(label: String, drawIcon: DrawScope.() -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Canvas(modifier = Modifier.size(width = Dimensions.spacingLg, height = Dimensions.spacingLg)) { drawIcon() }
+        Spacer(modifier = Modifier.width(Dimensions.spacingMd))
+        Text(text = label, fontSize = Dimensions.fontSizeSmall)
     }
 }
 
@@ -412,7 +481,10 @@ fun SimpleGraphViewer(
 
         Column(modifier = Modifier.fillMaxHeight()) {
             Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { GraphViewer(elkGraph, { focusedNode = it }) }
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    GraphViewer(elkGraph, { focusedNode = it })
+                    drawLegend(modifier = Modifier.align(Alignment.BottomEnd))
+                }
                 if (focusedNode?.isRoot == false) {
                     val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode!!)
                     Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
