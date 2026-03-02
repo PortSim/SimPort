@@ -79,9 +79,10 @@ fun SummaryChart(
 
             val metrics =
                 if (showRaw) {
-                    listOf(
-                        metricGroup.raw to
-                            metricLine(metricGroup.raw, baseColor, LineCartesianLayer.LineStroke.Continuous())
+                    listOfNotNull(
+                        metricGroup.raw?.let {
+                            it to metricLine(it, baseColor, LineCartesianLayer.LineStroke.Continuous())
+                        }
                     )
                 } else {
                     listOfNotNull(
@@ -216,14 +217,16 @@ private fun ChartMarker(
                     )
                     .mapNotNull { (metric, label) ->
                         val sample =
-                            simulations.getValue(simName).getMetricSample(metric, Simulator.START_TIME + xValue.seconds)
-                                ?: return@mapNotNull null
+                            metric?.let {
+                                simulations.getValue(simName).getMetricSample(it, Simulator.START_TIME + xValue.seconds)
+                            } ?: return@mapNotNull null
                         Value(label, scenarioColors.getValue(simName), sample.second)
                     }
             } else {
                 metricByScenario
                     .mapNotNull { (simName, metric) ->
-                        val selectedMetric = if (showRaw) metric.raw else metric.moments?.mean ?: return@mapNotNull null
+                        val selectedMetric =
+                            (if (showRaw) metric.raw else metric.moments?.mean) ?: return@mapNotNull null
                         val sample =
                             simulations
                                 .getValue(simName)

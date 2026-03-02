@@ -142,7 +142,8 @@ fun HistogramChart(
             metricByScenario
                 .mapNotNull { (simName, metricGroup) ->
                     val histogram =
-                        simulations.getValue(simName).getHistogram(metricGroup.raw) ?: return@mapNotNull null
+                        metricGroup.raw?.let { simulations.getValue(simName).getHistogram(it) }
+                            ?: return@mapNotNull null
                     simName to histogram
                 }
                 .toMap()

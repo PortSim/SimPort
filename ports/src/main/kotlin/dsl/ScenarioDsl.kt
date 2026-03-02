@@ -19,7 +19,11 @@ fun buildScenario(
     contract { callsInPlace(builder, InvocationKind.EXACTLY_ONCE) }
     val scenarioScope = ScenarioBuilderScopeImpl()
     GroupScope.withGroup(null) { context(scenarioScope) { builder() } }
-    return Scenario(scenarioScope.asImpl().sources, scenarioScope.asImpl().metrics)
+    val scenario = Scenario(scenarioScope.asImpl().sources)
+    for (metric in scenarioScope.asImpl().metrics) {
+        scenario.addMetric(metric(scenario))
+    }
+    return scenario
 }
 
 fun Scenario.withMetrics(builder: MetricsBuilderScope.() -> Unit): Scenario {
@@ -29,7 +33,7 @@ fun Scenario.withMetrics(builder: MetricsBuilderScope.() -> Unit): Scenario {
 
 internal class ScenarioBuilderScopeImpl : ScenarioBuilderScope {
     val sources = mutableListOf<SourceNode>()
-    val metrics = mutableSetOf<MetricGroup>()
+    val metrics = mutableListOf<(Scenario) -> MetricGroup>()
 }
 
 internal fun ScenarioBuilderScope.asImpl() =
@@ -38,7 +42,9 @@ internal fun ScenarioBuilderScope.asImpl() =
     }
 
 internal class MetricsBuilderScopeImpl(val scenario: Scenario) : MetricsBuilderScope {
-    val metrics = scenario.metrics
+    fun addMetric(metric: MetricGroup) {
+        scenario.addMetric(metric)
+    }
 }
 
 internal fun MetricsBuilderScope.asImpl() =

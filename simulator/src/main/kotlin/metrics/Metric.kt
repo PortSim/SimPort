@@ -1,5 +1,6 @@
 package com.group7.metrics
 
+import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
 sealed interface Metric
@@ -40,6 +41,20 @@ abstract class InstantaneousMetric : Metric {
     protected fun notify(currentTime: Instant, value: Double) {
         for (listener in listeners) {
             listener(currentTime, value)
+        }
+    }
+}
+
+abstract class RateMetric(val durationUnit: DurationUnit) : Metric {
+    private val listeners = mutableListOf<(Instant) -> Unit>()
+
+    fun onFire(callback: (Instant) -> Unit) {
+        listeners.add(callback)
+    }
+
+    protected fun notify(currentTime: Instant) {
+        for (listener in listeners) {
+            listener(currentTime)
         }
     }
 }

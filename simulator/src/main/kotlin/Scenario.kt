@@ -2,8 +2,16 @@ package com.group7
 
 import com.group7.metrics.MetricGroup
 
-class Scenario(val sources: List<SourceNode>, val metrics: MutableSet<MetricGroup>) {
+class Scenario(val sources: List<SourceNode>) {
+    private val _metrics = mutableMapOf<Pair<String, NodeGroup?>, MetricGroup>()
+    val metrics
+        get() = _metrics.values
+
     val allNodes by lazy(::walk)
+
+    fun addMetric(metric: MetricGroup) {
+        _metrics[metric.name to metric.associatedNode] = metric
+    }
 
     fun bfs(): List<Node> {
         val queue = ArrayDeque<Node>(sources)

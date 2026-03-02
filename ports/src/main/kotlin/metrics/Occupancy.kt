@@ -34,7 +34,7 @@ sealed class Occupancy : ContinuousMetric() {
     }
 
     companion object : MetricFactory<Container<*>>, GlobalMetricFactory {
-        override fun create(node: Container<*>): MetricGroup {
+        override fun create(node: Container<*>, scenario: Scenario): MetricGroup {
             val raw = Local(node)
             val cis = ContinuousConfidenceIntervals(raw)
             return MetricGroup("Occupancy", node as NodeGroup, raw, cis.moments())

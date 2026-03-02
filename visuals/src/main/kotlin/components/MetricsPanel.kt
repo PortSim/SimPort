@@ -13,7 +13,6 @@ import com.group7.Scenario
 import com.group7.metrics.ContinuousMetric
 import com.group7.metrics.InstantaneousMetric
 import com.group7.metrics.Metric
-import kotlin.math.abs
 import kotlin.time.Instant
 
 /** Samples metrics from nodes at regular intervals, storing data as Compose-observable mutable state. */
@@ -131,7 +130,7 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
                     data.add(currentTime to value)
                     continue
                 }
-                if (abs(data.last().second - value) < 1e-2) {
+                if (data.last().second == value) {
                     continue
                 }
                 if (data.last().first < latestTimeSeen) {
