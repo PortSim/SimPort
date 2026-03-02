@@ -36,8 +36,7 @@ sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric
 
     context(sim: Simulator)
     protected fun notifyLeaveSimulation(obj: Any?) {
-        // TODO do we want to report for things which never entered? ask Giuliano
-        val totalDuration = totalDurations.remove(obj) ?: return
+        val totalDuration = totalDurations.remove(obj) ?: Duration.ZERO
         notify(sim.currentTime, totalDuration.toDouble(unit))
     }
 
