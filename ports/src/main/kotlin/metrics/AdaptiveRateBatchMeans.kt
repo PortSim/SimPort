@@ -16,6 +16,7 @@ class AdaptiveRateBatchMeans(
     private val batchMeans = ArrayList<Double>(targetBatches * 2)
 
     private var currentBatchCount = 0L
+    private var totalCount = 0L
     private var currentBatchStart = Simulator.START_TIME
 
     private var lastUpdateTime = Simulator.START_TIME
@@ -44,6 +45,7 @@ class AdaptiveRateBatchMeans(
         }
 
         currentBatchCount++
+        totalCount++
     }
 
     private fun closeBatch() {
@@ -76,6 +78,8 @@ class AdaptiveRateBatchMeans(
     override fun mean(): Double = batchMeans.average()
 
     override fun batchCount(): Int = batchMeans.size
+
+    override fun sampleCount(): Long = totalCount
 
     override fun batchVariance(): Double {
         val b = batchMeans.size

@@ -14,12 +14,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.group7.metrics.LongColumn
+import com.group7.metrics.MetricColumn
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.launch
 import utils.GLOBAL_NODE_LABEL
 import utils.assignNodeNames
@@ -27,6 +30,13 @@ import utils.assignNodeNames
 enum class ResultsGrouping(val label: String) {
     SIMULATION("Simulation"),
     METRIC("Metric"),
+}
+
+private enum class FilterDropdown {
+    SIMULATIONS,
+    METRICS,
+    NODES,
+    NODE_SWITCH,
 }
 
 private const val NO_VALUE_PLACEHOLDER = "-"
@@ -54,15 +64,19 @@ private fun buildFlatRows(simulations: ImmutableMap<String, MetricsPanelState>):
                 metricName = group.name,
                 nodeName = group.associatedNode?.let { nodeNames[it] } ?: GLOBAL_NODE_LABEL,
                 valueCells =
-                    // Format a metric value, returning a [TableCell] with an appropriate tooltip when no val
-                    group.resultColumns().map { (_, metric) ->
-                        val toolTipText =
-                            if (metric === group.raw) "Sample never triggered" else "Convergence not yet reached"
-                        val metricVal = metric?.let { state.getLatestValue(it) }
-                        if (metricVal == null || metricVal.isNaN()) {
-                            return@map TableCell(NO_VALUE_PLACEHOLDER, toolTipText)
-                        } else {
-                            return@map TableCell("%.4f".format(metricVal))
+                    group.resultColumns().map { col ->
+                        when (col) {
+                            is MetricColumn -> {
+                                val metricVal = col.metric?.let { state.getLatestValue(it) }
+                                if (metricVal == null || metricVal.isNaN()) {
+                                    TableCell(NO_VALUE_PLACEHOLDER, "Convergence not yet reached")
+                                } else {
+                                    TableCell(col.format.format(metricVal))
+                                }
+                            }
+                            is LongColumn -> {
+                                TableCell(col.value()?.toString() ?: NO_VALUE_PLACEHOLDER)
+                            }
                         }
                     },
             )
@@ -73,13 +87,21 @@ private fun buildSections(
     simulations: ImmutableMap<String, MetricsPanelState>,
     grouping: ResultsGrouping,
     splitByNode: Boolean,
+    selectedMetrics: Set<String>? = null,
+    selectedNodes: Set<String>? = null,
+    selectedSimulations: Set<String>? = null,
 ): List<TableSection> {
     val valueCols =
         simulations.values.firstOrNull()?.metricGroups?.values?.flatten()?.firstOrNull()?.resultColumns()?.map {
-            it.first
+            it.label
         } ?: return emptyList()
 
-    val flatRows = buildFlatRows(simulations)
+    val flatRows =
+        buildFlatRows(simulations).filter { row ->
+            (selectedMetrics == null || row.metricName in selectedMetrics) &&
+                (selectedNodes == null || row.nodeName in selectedNodes) &&
+                (selectedSimulations == null || row.simName in selectedSimulations)
+        }
 
     val groupKey: (FlatRow) -> String
     val leadingHeaders: List<String>
@@ -181,9 +203,29 @@ fun ResultsTablePage(simulations: ImmutableMap<String, MetricsPanelState>, showT
     var grouping by remember { mutableStateOf(ResultsGrouping.SIMULATION) }
     var splitByNode by remember { mutableStateOf(true) }
 
+    // Derive available filter options from the simulation data
+    val allFlatRows = remember(simulations) { buildFlatRows(simulations) }
+    val allMetricNames = remember(allFlatRows) { allFlatRows.map { it.metricName }.distinct().sorted() }
+    val allNodeNames = remember(allFlatRows) { allFlatRows.map { it.nodeName }.distinct().sorted() }
+    val allSimNames = remember(allFlatRows) { allFlatRows.map { it.simName }.distinct().sorted() }
+
+    // Filter state — all selected by default, reset when available options change
+    var selectedMetrics by remember(allMetricNames) { mutableStateOf(allMetricNames.toPersistentSet()) }
+    var selectedNodes by remember(allNodeNames) { mutableStateOf(allNodeNames.toPersistentSet()) }
+    var selectedSimulations by remember(allSimNames) { mutableStateOf(allSimNames.toPersistentSet()) }
+
     val timeKeys = simulations.values.map { it.latestTimeSeen }
     val sections =
-        remember(simulations, grouping, splitByNode, timeKeys) { buildSections(simulations, grouping, splitByNode) }
+        remember(simulations, grouping, splitByNode, timeKeys, selectedMetrics, selectedNodes, selectedSimulations) {
+            buildSections(
+                simulations,
+                grouping,
+                splitByNode,
+                selectedMetrics = selectedMetrics,
+                selectedNodes = selectedNodes,
+                selectedSimulations = selectedSimulations,
+            )
+        }
 
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -212,12 +254,49 @@ fun ResultsTablePage(simulations: ImmutableMap<String, MetricsPanelState>, showT
                             displayText = { it.label },
                         )
 
-                        if (grouping == ResultsGrouping.METRIC) {
-                            LabeledSwitch(
-                                "Split by node",
-                                checked = splitByNode,
-                                onCheckedChange = { splitByNode = it },
-                            )
+                        val filterOrder =
+                            when (grouping) {
+                                ResultsGrouping.SIMULATION ->
+                                    listOf(FilterDropdown.SIMULATIONS, FilterDropdown.METRICS, FilterDropdown.NODES)
+                                ResultsGrouping.METRIC ->
+                                    listOf(
+                                        FilterDropdown.METRICS,
+                                        FilterDropdown.SIMULATIONS,
+                                        FilterDropdown.NODES,
+                                        FilterDropdown.NODE_SWITCH,
+                                    )
+                            }
+
+                        for (filter in filterOrder) {
+                            when (filter) {
+                                FilterDropdown.SIMULATIONS ->
+                                    MultiSelectDropdown(
+                                        label = "Simulations",
+                                        options = allSimNames,
+                                        selectedOptions = selectedSimulations,
+                                        onSelectionChange = { selectedSimulations = it },
+                                    )
+                                FilterDropdown.METRICS ->
+                                    MultiSelectDropdown(
+                                        label = "Metrics",
+                                        options = allMetricNames,
+                                        selectedOptions = selectedMetrics,
+                                        onSelectionChange = { selectedMetrics = it },
+                                    )
+                                FilterDropdown.NODES ->
+                                    MultiSelectDropdown(
+                                        label = "Nodes",
+                                        options = allNodeNames,
+                                        selectedOptions = selectedNodes,
+                                        onSelectionChange = { selectedNodes = it },
+                                    )
+                                FilterDropdown.NODE_SWITCH ->
+                                    LabeledSwitch(
+                                        "Split by node",
+                                        checked = splitByNode,
+                                        onCheckedChange = { splitByNode = it },
+                                    )
+                            }
                         }
                     }
 

@@ -19,11 +19,14 @@ class AdaptiveTimeWeightedBatchMeans(
     private var lastUpdateTime = Instant.DISTANT_PAST
     private var lastValue = 0.0
     private var isFirstUpdate = true
+    private var updateCount = 0L
 
     fun update(currentTime: Instant, value: Double) {
         if (currentTime < lastUpdateTime) {
             throw IllegalArgumentException("Time cannot go backwards")
         }
+
+        updateCount++
 
         if (isFirstUpdate) {
             lastUpdateTime = currentTime
@@ -85,6 +88,8 @@ class AdaptiveTimeWeightedBatchMeans(
     override fun mean(): Double = batchMeans.average()
 
     override fun batchCount(): Int = batchMeans.size
+
+    override fun sampleCount(): Long = updateCount
 
     override fun batchVariance(): Double {
         val b = batchMeans.size
