@@ -19,6 +19,16 @@ fun runSimulation(scenario: Scenario, duration: Duration, logger: EventLog = Eve
     runVisualisation { StaticVisualisation(sampler) }
 }
 
+fun runSimulation(scenario: Scenario, events: Int, logger: EventLog = EventLog.noop()) {
+    val sampler = MetricsPanelState(scenario)
+    val simulator = Simulator(logger, scenario, sampler)
+    sampler.beginBatch()
+    simulator.runFor(events)
+    sampler.endBatch()
+
+    runVisualisation { StaticVisualisation(sampler) }
+}
+
 fun runSimulations(
     scenarios: Map<String, Scenario>,
     duration: Duration,

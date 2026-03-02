@@ -3,13 +3,16 @@ package com.group7.nodes
 import com.group7.Simulator
 import com.group7.channels.PushInputChannel
 import com.group7.channels.onReceive
+import com.group7.properties.LossSink
+import com.group7.properties.OutputSink
 import com.group7.properties.Sink
 
-class SinkNode<InputT>(label: String, source: PushInputChannel<InputT>) :
+sealed class DefaultSinkNode<InputT>(label: String, source: PushInputChannel<InputT>) :
     ContainerNode<InputT>(label, listOf(source), emptyList()), Sink<InputT> {
+
     private val results = mutableMapOf<InputT, Int>()
 
-    override var occupants = 0
+    final override var occupants = 0
         private set
 
     init {
@@ -26,3 +29,9 @@ class SinkNode<InputT>(label: String, source: PushInputChannel<InputT>) :
             (InputT) -> Unit
     ) {}
 }
+
+class SinkNode<InputT>(label: String, source: PushInputChannel<InputT>) :
+    DefaultSinkNode<InputT>(label, source), OutputSink<InputT>
+
+class LossSinkNode<InputT>(label: String, source: PushInputChannel<InputT>) :
+    DefaultSinkNode<InputT>(label, source), LossSink<InputT>

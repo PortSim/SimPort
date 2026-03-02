@@ -4,16 +4,23 @@ import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.Simulator
 import com.group7.properties.Container
-import com.group7.properties.Sink
+import com.group7.properties.LossSink
+import com.group7.properties.OutputSink
 import com.group7.properties.Source
 import com.group7.utils.suffix
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
-sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric() {
+sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) : InstantaneousMetric() {
     private val entryTimes = mutableMapOf<Any?, Instant>()
     private val totalDurations = mutableMapOf<Any?, Duration>()
+
+    init {
+        for (sink in scenario.allNodes.asSequence().filterIsInstance<LossSink<*>>()) {
+            sink.onEnter { notifyLost(it) }
+        }
+    }
 
     protected abstract fun alreadyEntered(obj: Any?): String
 
@@ -41,13 +48,18 @@ sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric
         notify(sim.currentTime, totalDuration.toDouble(unit))
     }
 
+    private fun notifyLost(obj: Any?) {
+        entryTimes.remove(obj)
+        totalDurations.remove(obj)
+    }
+
     class Local(private val container: Container<*>, scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) :
-        ResidenceTime(unit) {
+        ResidenceTime(scenario, unit) {
         init {
             container.onEnter { notifyEnter(it) }
             container.onLeave { notifyLeave(it) }
 
-            for (sink in scenario.allNodes.asSequence().filterIsInstance<Sink<*>>()) {
+            for (sink in scenario.allNodes.asSequence().filterIsInstance<OutputSink<*>>()) {
                 sink.onEnter { notifyLeaveSimulation(it) }
             }
         }
@@ -58,13 +70,13 @@ sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric
         override fun neverEntered(obj: Any?) = "Object $obj never entered $container!"
     }
 
-    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : ResidenceTime(unit) {
+    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : ResidenceTime(scenario, unit) {
         init {
             for (source in scenario.allNodes.asSequence().filterIsInstance<Source<*>>()) {
                 source.onEmit { notifyEnter(it) }
             }
 
-            for (sink in scenario.allNodes.asSequence().filterIsInstance<Sink<*>>()) {
+            for (sink in scenario.allNodes.asSequence().filterIsInstance<OutputSink<*>>()) {
                 sink.onEnter {
                     notifyLeave(it)
                     notifyLeaveSimulation(it)

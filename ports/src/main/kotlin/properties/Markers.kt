@@ -24,13 +24,11 @@ interface Queue<out T> : Container<T>
 
 interface Service<out T> : BoundedContainer<T> {
     val isServing: Boolean
-
-    override val occupants
-        get() = if (isServing) 1 else 0
-
-    override val capacity
-        get() = 1
 }
+
+interface LossSink<out T> : Sink<T>
+
+interface OutputSink<out T> : Sink<T>
 
 interface Sink<out T> : Container<T> {
     override fun onLeave(

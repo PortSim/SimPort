@@ -17,6 +17,8 @@ sealed interface Simulator {
 
     fun runFor(duration: Duration)
 
+    fun runFor(events: Int)
+
     fun log(message: () -> String)
 
     companion object {
@@ -44,6 +46,8 @@ internal class SimulatorImpl(
     override var currentTime = START_TIME
         private set
 
+    private var eventCounter = 0
+
     init {
         startNodes()
     }
@@ -60,6 +64,7 @@ internal class SimulatorImpl(
         do {
             val nextEvent = diary.poll()
             nextEvent.action()
+            eventCounter++
         } while (diary.peek()?.time == startTime)
 
         metricReporter?.report(currentTime)
@@ -68,6 +73,12 @@ internal class SimulatorImpl(
     override fun runFor(duration: Duration) {
         val endTime = currentTime + duration
         while (!isFinished && (nextEventTime ?: Instant.DISTANT_FUTURE) < endTime) {
+            nextStep()
+        }
+    }
+
+    override fun runFor(events: Int) {
+        while (this.eventCounter < events) {
             nextStep()
         }
     }

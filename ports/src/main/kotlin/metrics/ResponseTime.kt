@@ -4,7 +4,8 @@ import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.Simulator
 import com.group7.properties.Container
-import com.group7.properties.Sink
+import com.group7.properties.LossSink
+import com.group7.properties.OutputSink
 import com.group7.properties.Source
 import com.group7.utils.suffix
 import kotlin.time.DurationUnit
@@ -33,6 +34,11 @@ sealed class ResponseTime(private val unit: DurationUnit) : InstantaneousMetric(
         notify(currentTime, (currentTime - entryTime).toDouble(unit))
     }
 
+    protected fun notifyLost(obj: Any?) {
+        val entryTime = entryTimes.remove(obj)
+        check(entryTime != null) { neverEntered(obj) }
+    }
+
     class Local(private val container: Container<*>, unit: DurationUnit = DurationUnit.SECONDS) : ResponseTime(unit) {
         init {
             container.onEnter { notifyEnter(it) }
@@ -51,8 +57,12 @@ sealed class ResponseTime(private val unit: DurationUnit) : InstantaneousMetric(
                 source.onEmit { notifyEnter(it) }
             }
 
-            for (sink in scenario.allNodes.asSequence().filterIsInstance<Sink<*>>()) {
+            for (sink in scenario.allNodes.asSequence().filterIsInstance<OutputSink<*>>()) {
                 sink.onEnter { notifyLeave(it) }
+            }
+
+            for (sink in scenario.allNodes.asSequence().filterIsInstance<LossSink<*>>()) {
+                sink.onEnter { notifyLost(it) }
             }
         }
 

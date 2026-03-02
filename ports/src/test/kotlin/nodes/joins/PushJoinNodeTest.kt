@@ -1,4 +1,4 @@
-package com.group7.joins
+package com.group7.nodes.joins
 
 import com.group7.channels.ClosedChannelException
 import com.group7.channels.newPushChannel
@@ -7,7 +7,6 @@ import com.group7.dsl.thenJoin
 import com.group7.dsl.thenSink
 import com.group7.nodes.DeadEndNode
 import com.group7.nodes.SinkNode
-import com.group7.nodes.joins.PushJoinNode
 import com.group7.utils.DSLAddons
 import com.group7.utils.Presets
 import com.group7.utils.TestVehicle

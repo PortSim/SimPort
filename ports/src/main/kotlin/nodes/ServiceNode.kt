@@ -10,9 +10,15 @@ class ServiceNode<T>(
     private val source: PushInputChannel<T>,
     private val destination: PushOutputChannel<T>,
     private val delayProvider: DelayProvider,
+    numServers: Int,
 ) : ContainerNode<T>(label, listOf(source), listOf(destination)), Service<T> {
 
-    override var isServing = false
+    override val capacity: Int = numServers
+
+    override val isServing: Boolean
+        get() = occupants > 0
+
+    override var occupants: Int = 0
         private set
 
     init {
@@ -21,15 +27,17 @@ class ServiceNode<T>(
 
     context(_: Simulator)
     private fun startServing(obj: T) {
-        isServing = true
+        occupants++
         notifyEnter(obj)
-        source.close()
+        if (occupants == capacity) {
+            source.close()
+        }
         scheduleDelayed(delayProvider.nextDelay()) { finishServing(obj) }
     }
 
     context(_: Simulator)
     private fun finishServing(obj: T) {
-        isServing = false
+        occupants--
         notifyLeave(obj)
         source.open()
         destination.send(obj)

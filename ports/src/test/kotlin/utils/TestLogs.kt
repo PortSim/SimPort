@@ -26,9 +26,10 @@ internal class QueryLog : EventLog {
     fun query(nodeLabel: String, directionality: VehicleTravelDirection): List<Instant> {
         val matchText =
             when (directionality) {
-                VehicleTravelDirection.OUTBOUND -> "from "
-                VehicleTravelDirection.INBOUND -> "to "
-            } + nodeLabel
+                VehicleTravelDirection.OUTBOUND -> "from $nodeLabel"
+                VehicleTravelDirection.INBOUND -> "to $nodeLabel"
+                VehicleTravelDirection.DROPPED -> "to $nodeLabel loss sink"
+            }
 
         return log.asSequence().filter { (_, loggedEvent) -> matchText in loggedEvent }.map { it.first }.toList()
     }

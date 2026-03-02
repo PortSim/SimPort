@@ -26,6 +26,7 @@ internal const val NUM_CHANNELS = 10
 internal enum class VehicleTravelDirection {
     OUTBOUND,
     INBOUND,
+    DROPPED,
 }
 
 // Required for fork policies, which need a simulator in context
