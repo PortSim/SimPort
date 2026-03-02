@@ -40,6 +40,8 @@ internal class AdaptiveBatchMeans(override val targetBatches: Int = 32) : BatchM
 
     override fun batchCount(): Int = batchMeans.size
 
+    override fun sampleCount(): Long = totalCount
+
     override fun batchVariance(): Double {
         val b = batchMeans.size
         require(b >= 2)

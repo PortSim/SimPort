@@ -5,6 +5,8 @@ interface BatchMeans {
 
     fun batchCount(): Int
 
+    fun sampleCount(): Long
+
     fun mean(): Double
 
     fun batchVariance(): Double
