@@ -4,7 +4,7 @@ import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.Simulator
 import com.group7.properties.Container
-import com.group7.properties.Sink
+import com.group7.properties.OutputSink
 import com.group7.utils.suffix
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
@@ -30,7 +30,7 @@ sealed class InterDepartureTime(private val unit: DurationUnit) : InstantaneousM
 
     class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : InterDepartureTime(unit) {
         init {
-            for (sink in scenario.allNodes.asSequence().filterIsInstance<Sink<*>>()) {
+            for (sink in scenario.allNodes.asSequence().filterIsInstance<OutputSink<*>>()) {
                 sink.onEnter { notifySeen() }
             }
         }

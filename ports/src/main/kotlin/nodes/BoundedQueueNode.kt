@@ -1,0 +1,61 @@
+package com.group7.nodes
+
+import com.group7.Simulator
+import com.group7.channels.*
+import com.group7.policies.queue.FIFOQueuePolicy
+import com.group7.policies.queue.QueuePolicy
+import com.group7.properties.BoundedContainer
+import com.group7.properties.Queue
+
+class BoundedQueueNode<T>(
+    label: String,
+    private val source: PushInputChannel<T>,
+    private val destination: PullOutputChannel<T>,
+    override val capacity: Int,
+    private val policy: QueuePolicy<T> = FIFOQueuePolicy(),
+) : ContainerNode<T>(label, listOf(source), listOf(destination)), Queue<T>, BoundedContainer<T> {
+
+    init {
+        source.onReceive { onArrive(it) }
+        destination.onPull { emit() }
+        require(capacity >= policy.reportOccupancy()) {
+            "Bounded queue is starting with ${policy.reportOccupancy()} occupants, but capacity is only $capacity"
+        }
+    }
+
+    context(_: Simulator)
+    override fun onStart() {
+        if (policy.reportOccupancy() > 0) {
+            destination.markReady()
+        }
+        for (initialOccupant in policy.contents) {
+            notifyEnter(initialOccupant)
+        }
+    }
+
+    override val occupants
+        get() = policy.reportOccupancy()
+
+    override fun supportsResidenceTime() = policy.supportsResidenceTime()
+
+    context(_: Simulator)
+    private fun onArrive(obj: T) {
+        policy.enqueue(obj)
+        notifyEnter(obj)
+        destination.markReady()
+        if (policy.reportOccupancy() >= capacity) {
+            source.close()
+        }
+    }
+
+    context(_: Simulator)
+    private fun emit(): T {
+        val result = policy.dequeue()
+        notifyLeave(result)
+        source.open()
+        if (policy.reportOccupancy() == 0) {
+            destination.markNotReady()
+        }
+        return result
+    }
+}

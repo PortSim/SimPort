@@ -30,5 +30,6 @@ class Port1Tests :
             }
             val eventsPerSecond = countingLogger.count.toDouble() / duration.toDouble(DurationUnit.SECONDS)
             eventsPerSecond shouldBeAtLeast 1_000_000.0
+            print("\nActual events per second = $eventsPerSecond\n\n")
         }
     })

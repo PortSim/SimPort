@@ -1,4 +1,4 @@
-package com.group7.joins
+package com.group7.nodes.joins
 
 import com.group7.channels.ClosedChannelException
 import com.group7.dsl.*

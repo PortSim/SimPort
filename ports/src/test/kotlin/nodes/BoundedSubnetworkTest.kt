@@ -1,12 +1,15 @@
 package com.group7.nodes
 
+import com.group7.channels.ClosedChannelException
 import com.group7.dsl.*
 import com.group7.generators.Delays
 import com.group7.generators.Generators
 import com.group7.generators.take
 import com.group7.utils.*
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.times
@@ -42,7 +45,7 @@ class BoundedSubnetworkTest :
             qlog.query("Internal Queue", VehicleTravelDirection.INBOUND) shouldBe expectedList
         }
 
-        test("Bounded subnetwork should accept inbound traffic upon any outbound direction") {
+        test("Bounded subnetwork should accept inbound traffic upon any outbound event") {
             val scenario = buildScenario {
                 arrivals("Arrivals", generator = Generators.constant({ TestVehicle }, Delays.fixed(5.seconds)).take(20))
                     .thenQueue("Inbound Queue")
@@ -55,5 +58,23 @@ class BoundedSubnetworkTest :
 
             qlog.query("Inbound Queue", VehicleTravelDirection.OUTBOUND) shouldBe
                 qlog.query("Outbound Queue", VehicleTravelDirection.INBOUND)
+        }
+
+        test("Bounded queue should throw when pushed to when at capacity") {
+            shouldThrow<ClosedChannelException> {
+                runSimulation(
+                    buildScenario {
+                        arrivals(
+                                "Arrivals",
+                                generator =
+                                    Generators.constant({ TestVehicle }, Delays.fixed(10.seconds)).take(NUM_VEHICLES),
+                            )
+                            .thenDelay("Some upstream nodes", Delays.fixed(5.seconds))
+                            .thenBoundedQueue("Bounded queue", 5)
+                            .thenService("Bottleneck service", Delays.fixed(3.hours))
+                            .thenSink("Sink")
+                    }
+                )
+            }
         }
     })
