@@ -29,4 +29,4 @@ internal enum class VehicleTravelDirection {
 }
 
 // Required for fork policies, which need a simulator in context
-internal val mockSimulator = Simulator(EventLog.noop(), Scenario(emptyList(), mutableSetOf()))
+internal val mockSimulator = Simulator(EventLog.noop(), Scenario(emptyList()))

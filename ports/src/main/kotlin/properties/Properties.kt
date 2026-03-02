@@ -29,5 +29,8 @@ interface BoundedContainer<out T> : Container<T>, HasDisplayProperties {
     val isFull
         get() = occupants >= capacity
 
+    val utilisation
+        get() = occupants.toDouble() / capacity
+
     override fun properties(): List<DisplayProperty> = listOf(FieldDisplayProperty("Capacity", "$capacity"))
 }

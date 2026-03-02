@@ -130,6 +130,7 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
             // previously selected scenarios don't exist, or after manually deselecting everything).
             if (intersection.isEmpty()) validScenarios else intersection
         }
+    val hasRaw = groups.values.any { it.raw != null }
     val hasMoments = groups.values.any { it.moments != null }
     val isInstantaneous = groups.values.any { it.raw is InstantaneousMetric }
 
@@ -141,17 +142,19 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
     val histogramHasData =
         isInstantaneous &&
             groups.entries.any { (simName, group) ->
-                simulations[simName]?.let { (it.getHistogram(group.raw)?.totalCount ?: 0) > 0 } == true
+                simulations[simName]?.let { metricsPanelState ->
+                    (group.raw?.let { metricsPanelState.getHistogram(it) }?.totalCount ?: 0) > 0
+                } == true
             }
 
     val availableModes = buildList {
-        add(ChartViewMode.Raw)
+        if (hasRaw) add(ChartViewMode.Raw)
         if (hasMoments) add(ChartViewMode.Average)
         if (isInstantaneous) add(ChartViewMode.Histogram)
     }
     val modeEnabled =
         mapOf(
-            ChartViewMode.Raw to true,
+            ChartViewMode.Raw to hasRaw,
             ChartViewMode.Average to averageHasData,
             ChartViewMode.Histogram to histogramHasData,
         )
@@ -240,27 +243,27 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, MetricsPanelState>) {
                         }
                     }
                 }
-                if (viewMode == ChartViewMode.Average) {
-                    LabeledSwitch("Show CI", checked = showCi, onCheckedChange = { showCi = it })
-                }
-                if (viewMode == ChartViewMode.Histogram) {
-                    LabeledSlider(
-                        value = (numBins ?: 25).toFloat(),
-                        onValueChange = { numBins = it.roundToInt() },
-                        valueRange = 3f..100f,
-                        steps = 96,
-                        minLabel = "3",
-                        maxLabel = "100",
-                        valueLabel = "Bins: ${numBins ?: "Auto"}",
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(
-                        onClick = { numBins = null },
-                        enabled = numBins != null,
-                        modifier = Modifier.alpha(if (numBins != null) 1f else 0f),
-                    ) {
-                        Text("Auto")
-                    }
+            }
+            if (viewMode == ChartViewMode.Average) {
+                LabeledSwitch("Show CI", checked = showCi, onCheckedChange = { showCi = it })
+            }
+            if (viewMode == ChartViewMode.Histogram) {
+                LabeledSlider(
+                    value = (numBins ?: 25).toFloat(),
+                    onValueChange = { numBins = it.roundToInt() },
+                    valueRange = 3f..100f,
+                    steps = 96,
+                    minLabel = "3",
+                    maxLabel = "100",
+                    valueLabel = "Bins: ${numBins ?: "Auto"}",
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    onClick = { numBins = null },
+                    enabled = numBins != null,
+                    modifier = Modifier.alpha(if (numBins != null) 1f else 0f),
+                ) {
+                    Text("Auto")
                 }
             }
         }

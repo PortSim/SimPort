@@ -5,8 +5,7 @@ import com.group7.channels.PushOutputChannel
 import com.group7.dsl.*
 import com.group7.generators.Delays
 import com.group7.generators.Generators
-import com.group7.metrics.InterDepartureTime
-import com.group7.metrics.Occupancy
+import com.group7.metrics.*
 import com.group7.policies.fork.ForkPolicy
 import com.group7.policies.generic_fj.RandomPolicy
 import com.group7.policies.generic_fj.RoundRobinPolicy
@@ -165,11 +164,21 @@ fun policyDemoPort(queuePolicy: DemoQueuePolicy, forkPolicy: DemoForkPolicy) =
                         }
                         .thenJoin("Lane Join")
                 }
+                .track(ArrivalRate)
+                .track(Throughput)
+                .track(Utilisation)
+                .track(ResponseTime)
+                .track(ResidenceTime)
                 .thenSink("Departures")
         }
         .withMetrics {
+            trackGlobal(ArrivalRate)
+            trackGlobal(InterArrivalTime)
             trackGlobal(InterDepartureTime)
+            trackGlobal(ResidenceTime)
+            trackGlobal(ResponseTime)
             trackGlobal(Occupancy)
+            trackGlobal(Throughput)
         }
 
 private class SmartForkPolicy(val good: Boolean, val largeQueues: List<Queue<*>>, val smallQueues: List<Queue<*>>) :

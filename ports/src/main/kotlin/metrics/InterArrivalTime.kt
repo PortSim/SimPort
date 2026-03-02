@@ -4,12 +4,12 @@ import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.Simulator
 import com.group7.properties.Container
-import com.group7.properties.Sink
+import com.group7.properties.Source
 import com.group7.utils.suffix
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
-sealed class InterDepartureTime(private val unit: DurationUnit) : InstantaneousMetric() {
+sealed class InterArrivalTime(private val unit: DurationUnit) : InstantaneousMetric() {
     private var lastSeen: Instant? = null
 
     context(sim: Simulator)
@@ -22,16 +22,16 @@ sealed class InterDepartureTime(private val unit: DurationUnit) : InstantaneousM
         this.lastSeen = currentTime
     }
 
-    class Local(container: Container<*>, unit: DurationUnit = DurationUnit.SECONDS) : InterDepartureTime(unit) {
+    class Local(container: Container<*>, unit: DurationUnit = DurationUnit.SECONDS) : InterArrivalTime(unit) {
         init {
-            container.onLeave { notifySeen() }
+            container.onEnter { notifySeen() }
         }
     }
 
-    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : InterDepartureTime(unit) {
+    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : InterArrivalTime(unit) {
         init {
-            for (sink in scenario.allNodes.asSequence().filterIsInstance<Sink<*>>()) {
-                sink.onEnter { notifySeen() }
+            for (source in scenario.allNodes.asSequence().filterIsInstance<Source<*>>()) {
+                source.onEmit { notifySeen() }
             }
         }
     }
@@ -45,7 +45,7 @@ sealed class InterDepartureTime(private val unit: DurationUnit) : InstantaneousM
             }
             val raw = Local(node, unit)
             val cis = InstantaneousConfidenceIntervals(raw)
-            return MetricGroup("Inter-departure time (${unit.suffix})", node as NodeGroup, raw, cis.moments())
+            return MetricGroup("Inter-arrival time (${unit.suffix})", node as NodeGroup, raw, cis.moments())
         }
 
         override fun create(scenario: Scenario) = create(scenario, DurationUnit.SECONDS)
@@ -53,7 +53,7 @@ sealed class InterDepartureTime(private val unit: DurationUnit) : InstantaneousM
         fun create(scenario: Scenario, unit: DurationUnit): MetricGroup {
             val raw = Global(scenario, unit)
             val cis = InstantaneousConfidenceIntervals(raw)
-            return MetricGroup("Inter-departure time (${unit.suffix})", null, raw, cis.moments())
+            return MetricGroup("Inter-arrival time (${unit.suffix})", null, raw, cis.moments())
         }
     }
 }

@@ -7,11 +7,13 @@ import com.group7.properties.Container
 import com.group7.properties.Sink
 import com.group7.properties.Source
 import com.group7.utils.suffix
+import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
-sealed class ResponseTime(private val unit: DurationUnit) : InstantaneousMetric() {
+sealed class ResidenceTime(private val unit: DurationUnit) : InstantaneousMetric() {
     private val entryTimes = mutableMapOf<Any?, Instant>()
+    private val totalDurations = mutableMapOf<Any?, Duration>()
 
     protected abstract fun alreadyEntered(obj: Any?): String
 
@@ -19,9 +21,8 @@ sealed class ResponseTime(private val unit: DurationUnit) : InstantaneousMetric(
 
     context(sim: Simulator)
     protected fun notifyEnter(obj: Any?) {
-        val existing = entryTimes.put(obj, contextOf<Simulator>().currentTime)
+        val existing = entryTimes.put(obj, sim.currentTime)
         check(existing == null) { alreadyEntered(obj) }
-        entryTimes[obj] = contextOf<Simulator>().currentTime
     }
 
     context(sim: Simulator)
@@ -30,48 +31,63 @@ sealed class ResponseTime(private val unit: DurationUnit) : InstantaneousMetric(
         check(entryTime != null) { neverEntered(obj) }
 
         val currentTime = contextOf<Simulator>().currentTime
-        notify(currentTime, (currentTime - entryTime).toDouble(unit))
+        totalDurations.compute(obj) { _, existing -> (existing ?: Duration.ZERO) + (currentTime - entryTime) }
     }
 
-    class Local(private val container: Container<*>, unit: DurationUnit = DurationUnit.SECONDS) : ResponseTime(unit) {
+    context(sim: Simulator)
+    protected fun notifyLeaveSimulation(obj: Any?) {
+        // TODO do we want to report for things which never entered? ask Giuliano
+        val totalDuration = totalDurations.remove(obj) ?: return
+        notify(sim.currentTime, totalDuration.toDouble(unit))
+    }
+
+    class Local(private val container: Container<*>, scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) :
+        ResidenceTime(unit) {
         init {
             container.onEnter { notifyEnter(it) }
             container.onLeave { notifyLeave(it) }
+
+            for (sink in scenario.allNodes.asSequence().filterIsInstance<Sink<*>>()) {
+                sink.onEnter { notifyLeaveSimulation(it) }
+            }
         }
 
         override fun alreadyEntered(obj: Any?) =
-            "Object $obj already entered $container! Make sure to use unique objects to allow calculating response time"
+            "Object $obj already entered $container! Make sure to use unique objects to allow calculating residence time"
 
         override fun neverEntered(obj: Any?) = "Object $obj never entered $container!"
     }
 
-    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : ResponseTime(unit) {
+    class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : ResidenceTime(unit) {
         init {
             for (source in scenario.allNodes.asSequence().filterIsInstance<Source<*>>()) {
                 source.onEmit { notifyEnter(it) }
             }
 
             for (sink in scenario.allNodes.asSequence().filterIsInstance<Sink<*>>()) {
-                sink.onEnter { notifyLeave(it) }
+                sink.onEnter {
+                    notifyLeave(it)
+                    notifyLeaveSimulation(it)
+                }
             }
         }
 
         override fun alreadyEntered(obj: Any?) =
-            "Object $obj was already emitted by a source! Make sure to use unique objects to allow calculating response time"
+            "Object $obj was already emitted by a source! Make sure to use unique objects to allow calculating residence time"
 
         override fun neverEntered(obj: Any?) = "Object $obj entered a sink but was never emitted by a source!"
     }
 
     companion object : MetricFactory<Container<*>>, GlobalMetricFactory {
-        override fun create(node: Container<*>, scenario: Scenario) = create(node, DurationUnit.SECONDS)
+        override fun create(node: Container<*>, scenario: Scenario) = create(node, scenario, DurationUnit.SECONDS)
 
-        fun create(node: Container<*>, unit: DurationUnit): MetricGroup? {
+        fun create(node: Container<*>, scenario: Scenario, unit: DurationUnit): MetricGroup? {
             if (!node.supportsResidenceTime()) {
                 return null
             }
-            val raw = Local(node, unit)
+            val raw = Local(node, scenario, unit)
             val cis = InstantaneousConfidenceIntervals(raw)
-            return MetricGroup("Response Time (${unit.suffix})", node as NodeGroup, raw, cis.moments())
+            return MetricGroup("Residence Time (${unit.suffix})", node as NodeGroup, raw, cis.moments())
         }
 
         override fun create(scenario: Scenario) = create(scenario, DurationUnit.SECONDS)
@@ -79,7 +95,7 @@ sealed class ResponseTime(private val unit: DurationUnit) : InstantaneousMetric(
         fun create(scenario: Scenario, unit: DurationUnit): MetricGroup {
             val raw = Global(scenario, unit)
             val cis = InstantaneousConfidenceIntervals(raw)
-            return MetricGroup("Response Time (${unit.suffix})", null, raw, cis.moments())
+            return MetricGroup("Residence Time (${unit.suffix})", null, raw, cis.moments())
         }
     }
 }
