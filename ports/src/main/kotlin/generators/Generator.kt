@@ -3,6 +3,7 @@ package com.group7.generators
 import com.group7.DisplayProperty
 import com.group7.FieldDisplayProperty
 import com.group7.GroupDisplayProperty
+import com.group7.utils.RandomContext
 import com.group7.utils.suffix
 import com.group7.utils.toStringWithBiggestUnit
 import kotlin.time.Duration
@@ -54,7 +55,9 @@ object Delays {
     }
 
     fun exponential(lambda: Double, unit: DurationUnit): DelayProvider {
-        val stream = MRG32k3a() // random number stream
+        val stream = MRG32k3a() // Random number stream to take from
+        stream.setSeed(LongArray(6) { RandomContext.nextLong().toInt().toLong() })
+
         val expGen = ExponentialGen(stream, lambda) // exponential distribution
         val displayProperty =
             GroupDisplayProperty(
