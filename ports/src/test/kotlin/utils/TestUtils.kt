@@ -13,6 +13,8 @@ internal data object TestVehicle2 : TestVehicleInterface
 
 internal data object TestVehicle3 : TestVehicleInterface
 
+internal class TestVehicleInstance
+
 interface TestVehicleInterface
 
 internal data object TestContainer

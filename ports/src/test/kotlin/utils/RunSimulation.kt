@@ -1,6 +1,7 @@
 package com.group7.utils
 
 import com.group7.EventLog
+import com.group7.MetricReporter
 import com.group7.Scenario
 import com.group7.Simulator
 import kotlin.time.Duration
@@ -16,8 +17,15 @@ internal fun <LoggerType : EventLog> runSimulation(
     scenario: Scenario,
     log: LoggerType,
     timeConstraint: Duration = Duration.INFINITE,
+    metricReporter: MetricReporter? = null,
 ): Pair<LoggerType, Instant> {
-    val simulator = Simulator(log, scenario)
+    val simulator: Simulator
+    if (metricReporter != null) {
+        simulator = Simulator(log, scenario, metricReporter)
+    } else {
+        simulator = Simulator(log, scenario)
+    }
+
     val startTime = simulator.currentTime
     val endTime = startTime + timeConstraint
     while (!simulator.isFinished && (simulator.nextEventTime ?: Instant.DISTANT_FUTURE) < endTime) {
@@ -26,5 +34,8 @@ internal fun <LoggerType : EventLog> runSimulation(
     return log to startTime
 }
 
-internal fun runSimulation(scenario: Scenario, timeConstraint: Duration = Duration.INFINITE) =
-    runSimulation(scenario, TimeLog(), timeConstraint)
+internal fun runSimulation(
+    scenario: Scenario,
+    timeConstraint: Duration = Duration.INFINITE,
+    metricReporter: MetricReporter? = null,
+) = runSimulation(scenario, TimeLog(), timeConstraint, metricReporter)

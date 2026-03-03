@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+
 plugins {
     kotlin("jvm")
     kotlin("plugin.power-assert")
@@ -44,7 +46,10 @@ kotlin {
     }
 }
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+    testLogging { exceptionFormat = TestExceptionFormat.FULL }
+}
 
 powerAssert { functions = listOf("io.kotest.matchers.shouldBe") }
 

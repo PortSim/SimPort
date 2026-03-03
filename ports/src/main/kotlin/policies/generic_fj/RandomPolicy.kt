@@ -1,14 +1,16 @@
 package com.group7.policies.generic_fj
 
 import com.group7.Simulator
+import com.group7.utils.RandomContext
 import java.util.*
 
 class RandomPolicy<ChannelT> : GenericPolicy<ChannelT>() {
+    private val random = RandomContext.newRandom()
     private val channelIndices = IdentityHashMap<ChannelT, Int>()
     private val openChannels = mutableListOf<ChannelT>()
 
     override fun selectChannel(): ChannelT {
-        return openChannels.random()
+        return openChannels.random(random)
     }
 
     override fun onChannelAvailable(channel: ChannelT) {
