@@ -5,6 +5,8 @@ import androidx.compose.ui.unit.sp
 
 object Dimensions {
     val controlBarHeight = 48.dp
+    val playbackDividerHeight = 32.dp
+    val playbackSurfaceElevation = 2.dp
 
     // Spacing (4dp grid)
     val spacingXxs = 2.dp
