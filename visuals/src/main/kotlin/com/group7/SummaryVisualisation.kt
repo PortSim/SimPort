@@ -55,6 +55,11 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, SimulationState>) {
             result as Map<String, Map<String?, Map<String, MetricGroup>>>
         }
 
+    if (metricIndex.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No metrics being tracked") }
+        return
+    }
+
     var selectedMetric by remember(metricIndex) { mutableStateOf(metricIndex.keys.first()) }
     var selectedNodeLabel by
         remember(metricIndex, selectedMetric) { mutableStateOf(metricIndex.getValue(selectedMetric).keys.first()) }
@@ -63,12 +68,7 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, SimulationState>) {
     // Persist user's selection across metric/node changes; effectiveScenarios intersects with what's valid.
     var selectedScenarios by remember { mutableStateOf(validScenarios) }
     val effectiveScenarios =
-        remember(selectedScenarios, validScenarios) {
-            val intersection = (selectedScenarios intersect validScenarios).toPersistentSet()
-            // Reset to all valid if the intersection is empty (e.g. switching to a metric where
-            // previously selected scenarios don't exist, or after manually deselecting everything).
-            if (intersection.isEmpty()) validScenarios else intersection
-        }
+        remember(selectedScenarios, validScenarios) { (selectedScenarios intersect validScenarios).toPersistentSet() }
     val hasRaw = groups.values.any { it.raw != null }
     val hasMoments = groups.values.any { it.moments != null }
     val isInstantaneous = groups.values.any { it.raw is InstantaneousMetric }

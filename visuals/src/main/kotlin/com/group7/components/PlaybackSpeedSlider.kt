@@ -23,8 +23,8 @@ fun PlaybackSpeedSlider(currentSpeed: Float, onSpeedChange: (Float) -> Unit, mod
         valueRange = -2f..2f, // -2 is 0.01, 0 is 1.0, 2 is 100
         minLabel = "0.01x",
         maxLabel = "100x",
-        valueLabel = formatSpeed(currentSpeed),
-        valueLabelPosition = ValueLabelPosition.Below,
+        valueLabel = "Speed: ${formatSpeed(currentSpeed)}",
+        valueLabelPosition = ValueLabelPosition.Left,
         modifier = modifier,
     )
 }
