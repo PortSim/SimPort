@@ -4,6 +4,11 @@ import com.group7.utils.studentT
 import kotlin.math.sqrt
 import kotlin.time.Instant
 
+/**
+ * Confidence intervals for batch means data based on a steady state detector.
+ *
+ * Each part of the confidence interval (mean, variance, lower, upper) is reported as a continuous metric.
+ */
 abstract class ConfidenceIntervals(
     private val alpha: Double,
     protected val steadyStateDetector: SteadyStateDetector,
@@ -44,6 +49,7 @@ abstract class ConfidenceIntervals(
 
     fun batchVariance() = batchMeans.batchVariance()
 
+    /** Returns a Moment of all the various metrics the CIs report. */
     fun moments() = Moments(mean, lower, upper, variance, sampleCount = { batchMeans.sampleCount() })
 
     private fun reportIntervals(currentTime: Instant): Intervals? {
@@ -52,6 +58,7 @@ abstract class ConfidenceIntervals(
         }
         lastTime = currentTime
 
+        // Wait for a steady state before reporting anything
         if (!steadyStateDetector.isSteady(currentTime)) {
             // Not steady yet
             return null
@@ -65,6 +72,7 @@ abstract class ConfidenceIntervals(
             return null
         }
 
+        // Work out each metric from the batch means values
         val mean = mean()
         val variance = batchVariance()
         val standardError = sqrt(variance / b)
