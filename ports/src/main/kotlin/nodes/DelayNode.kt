@@ -12,8 +12,15 @@ import com.group7.utils.andThen
 import kotlin.time.Duration
 
 /**
- * Takes in a vehicle, and sends it out through the designated destination output channel after some specified delay
- * provider
+ * Introduces a time delay to entities passing through. Receives entities and delays them before sending them to the
+ * destination, with the delay determined by the [delayProvider].
+ *
+ * @param T the type of entities passing through
+ * @param label the name of this node
+ * @param source the input channel from which entities are received
+ * @param destination the output channel where delayed entities are sent
+ * @param delayProvider the [DelayProvider] that determines delay duration for each entity
+ * @property occupants the current number of entities being delayed
  */
 class DelayNode<T>(
     label: String,

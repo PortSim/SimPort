@@ -6,6 +6,17 @@ import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import com.group7.properties.Queue
 
+/**
+ * A queue that receives entities through a push channel and outputs them through a pull channel. Entities are stored
+ * and ordered according to the provided [QueuePolicy] (defaults to FIFO). The queue remains open to receive entities
+ * and signals readiness when it contains items.
+ *
+ * @param T the type of entities in the queue
+ * @param label the name of this node
+ * @param source the input channel from which entities are received
+ * @param destination the output channel where entities are sent
+ * @param policy the [QueuePolicy] that determines entity ordering (defaults to FIFO)
+ */
 class QueueNode<T>(
     label: String,
     source: PushInputChannel<T>,

@@ -5,6 +5,13 @@ import com.group7.channels.PullInputChannel
 import com.group7.channels.PullOutputChannel
 import com.group7.policies.generic_fj.GenericPolicy
 
+/**
+ * Adapter that wraps a [GenericPolicy] to implement the [JoinPolicy] interface. Allows generic policies to be used for
+ * join node source selection.
+ *
+ * @param T the type of entities being merged
+ * @param policy the [GenericPolicy] that handles source selection logic
+ */
 class GenericJoinPolicy<T>(private val policy: GenericPolicy<PullInputChannel<T>>) : JoinPolicy<T> {
     override fun selectChannel() = policy.selectChannel()
 

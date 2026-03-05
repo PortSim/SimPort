@@ -7,6 +7,15 @@ import com.group7.channels.OutputChannel
 import com.group7.properties.Container
 import com.group7.utils.andThen
 
+/**
+ * Base class for nodes that hold entities. Provides callbacks for entity entry and exit events, allowing tracking of
+ * occupancy and behavior throughout the simulation.
+ *
+ * @param T the type of entities held
+ * @param label the name of this node
+ * @param incoming the list of input channels
+ * @param outgoing the list of output channels
+ */
 abstract class ContainerNode<T>(
     label: String,
     incoming: List<InputChannel<*, *>>,

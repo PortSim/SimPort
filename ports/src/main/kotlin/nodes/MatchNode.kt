@@ -5,6 +5,20 @@ import com.group7.channels.*
 import com.group7.properties.Match
 import com.group7.utils.andThen
 
+/**
+ * Combines entities from a main input and a side input into a single output. Each main entity is matched with a
+ * corresponding side entity using the [combiner] function. The node remains ready only when the side input is ready.
+ *
+ * @param MainInputT the type of main input entities
+ * @param SideInputT the type of side input entities
+ * @param OutputT the type of combined output entities
+ * @param ChannelT the channel type (Push or Pull)
+ * @param label the name of this node
+ * @param mainSource the main input channel from which entities are received
+ * @param sideSource the side input channel from which entities are pulled
+ * @param destination the output channel where combined entities are sent
+ * @param combiner the function that combines main and side entities into output entities
+ */
 class MatchNode<MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT>>(
     label: String,
     mainSource: InputChannel<MainInputT, ChannelT>,

@@ -3,6 +3,12 @@ package com.group7.policies.generic_fj
 import com.group7.Simulator
 import java.util.*
 
+/**
+ * Round-robin policy. Selects channels in a cyclic order, ensuring fair distribution across available channels. Each
+ * time a channel is selected, the pointer advances to the next channel.
+ *
+ * @param ChannelT the type of channel managed by the policy
+ */
 class RoundRobinPolicy<ChannelT> : GenericPolicy<ChannelT>() {
     private val channelIndices = IdentityHashMap<ChannelT, Int>()
     private val openChannels = sortedMapOf<Int, ChannelT>()

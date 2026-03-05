@@ -4,6 +4,15 @@ import com.group7.Node
 import com.group7.Simulator
 import com.group7.channels.*
 
+/**
+ * Converts from pull-based to push-based flow. Actively pulls entities from the source and pushes them to the
+ * destination when both are ready.
+ *
+ * @param T the type of entities being pumped
+ * @param label the name of this node
+ * @param source the input channel from which entities are pulled
+ * @param destination the output channel where entities are pushed
+ */
 class PumpNode<T>(
     label: String,
     private val source: PullInputChannel<T>,

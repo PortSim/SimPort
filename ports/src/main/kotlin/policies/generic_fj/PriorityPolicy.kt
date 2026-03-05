@@ -3,6 +3,12 @@ package com.group7.policies.generic_fj
 import com.group7.Simulator
 import java.util.*
 
+/**
+ * Priority policy. Selects the channel with the highest priority according to the provided comparator.
+ *
+ * @param ChannelT the type of channel managed by the policy
+ * @param comparator the [Comparator] that defines channel priorities
+ */
 open class PriorityPolicy<ChannelT>(comparator: Comparator<Int>) : GenericPolicy<ChannelT>() {
     private val openChannels = sortedMapOf<Int, ChannelT>(comparator.then(Int::compareTo))
     private val channelIndices = IdentityHashMap<ChannelT, Int>()

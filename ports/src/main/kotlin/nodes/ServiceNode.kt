@@ -8,6 +8,19 @@ import com.group7.properties.Service
 import com.group7.utils.andThen
 import kotlin.time.Duration
 
+/**
+ * Processes entities through parallel servers, each introducing a delay. When all servers are busy, the input channel
+ * closes to prevent additional arrivals. Reopens when a server becomes available.
+ *
+ * @param T the type of entities being served
+ * @param label the name of this node
+ * @param source the input channel from which entities arrive
+ * @param destination the output channel where processed entities are sent
+ * @param delayProvider the [DelayProvider] that determines service duration for each entity
+ * @param numServers the number of parallel servers
+ * @property capacity the number of servers
+ * @property occupants the current number of entities being served
+ */
 class ServiceNode<T>(
     label: String,
     private val source: PushInputChannel<T>,

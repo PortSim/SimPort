@@ -10,6 +10,13 @@ import com.group7.utils.walkDownstream
 import com.group7.utils.zipCompletely
 import java.util.*
 
+/**
+ * Fork policy that routes each entity to the destination with the least occupancy. Helps balance load across multiple
+ * branches.
+ *
+ * @param T the type of entities being routed
+ * @param tags the tags used to identify downstream containers for each destination
+ */
 class LeastFullForkPolicy<T>(
     private val tags: Iterable<OutputTag<Container<*>>> =
         generateSequence { newDynamicOutputTag { it.walkDownstream().filterIsInstance<Container<*>>().first() } }
