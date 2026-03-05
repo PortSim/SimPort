@@ -1,0 +1,17 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect x="0" y="0" width="200" height="200" fill="#ffccd5"/>
+
+    <!-- Vertical line -->
+    <line x1="100" y1="160" x2="100" y2="40" stroke="#f06292" stroke-width="16"/>
+
+    <!-- Central split circle -->
+    <circle cx="100" cy="100" r="40" fill="#f06292"/>
+
+    <!-- Line endings -->
+    <line x1="80" y1="160" x2="120" y2="160" stroke="#f06292" stroke-width="16"/>
+    <line x1="80" y1="40" x2="120" y2="40" stroke="#f06292" stroke-width="16"/>
+
+    <!-- Inner circle -->
+    <circle cx="100" cy="100" r="24" fill="#ffccd5"/>
+</svg>

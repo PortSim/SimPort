@@ -19,13 +19,20 @@ private object SimPickerDimensions {
 }
 
 @Composable
-fun IndividualStaticSimulationPicker(simulations: ImmutableMap<String, MetricsPanelState>) {
+fun IndividualStaticSimulationPicker(
+    simulations: ImmutableMap<String, MetricsPanelState>,
+    iconProvider: IconProvider?,
+) {
     val simulationNames = simulations.keys.sorted()
     var simulationTab by remember { mutableStateOf(0) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f)) {
-            StaticVisualisation(simulations.getValue(simulationNames[simulationTab]), simulationNames[simulationTab])
+            StaticVisualisation(
+                simulations.getValue(simulationNames[simulationTab]),
+                simulationNames[simulationTab],
+                iconProvider,
+            )
         }
 
         HorizontalDivider()

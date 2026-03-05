@@ -10,7 +10,6 @@ import com.group7.policies.fork.ForkPolicy
 import com.group7.policies.generic_fj.RandomPolicy
 import com.group7.policies.generic_fj.RoundRobinPolicy
 import com.group7.policies.generic_fj.forkPolicy
-import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import com.group7.policies.queue.RandomQueuePolicy
 import com.group7.properties.Queue
@@ -22,63 +21,6 @@ import kotlin.time.Duration.Companion.seconds
 enum class DemoQueuePolicy(private val description: String) {
     RANDOM("Random") {
         override fun make() = RandomQueuePolicy<Vehicle>()
-    },
-    FIFO("FIFO") {
-        override fun make() = FIFOQueuePolicy<Vehicle>()
-    },
-    PRIORITISE_LARGE("Prioritise Large") {
-        override fun make() =
-            object : QueuePolicy<Vehicle> {
-                private var large = ArrayDeque<Vehicle>()
-                private var small = ArrayDeque<Vehicle>()
-
-                override val contents
-                    get() = large.asSequence() + small.asSequence()
-
-                override fun enqueue(obj: Vehicle) {
-                    if (obj.isLarge) {
-                        large.addLast(obj)
-                    } else {
-                        small.addLast(obj)
-                    }
-                }
-
-                override fun dequeue(): Vehicle {
-                    if (large.isNotEmpty()) {
-                        return large.removeFirst()
-                    }
-                    return small.removeFirst()
-                }
-
-                override fun reportOccupancy() = large.size + small.size
-            }
-    },
-    PRIORITISE_SMALL("Prioritise Small") {
-        override fun make() =
-            object : QueuePolicy<Vehicle> {
-                private var large = ArrayDeque<Vehicle>()
-                private var small = ArrayDeque<Vehicle>()
-
-                override val contents
-                    get() = small.asSequence() + large.asSequence()
-
-                override fun enqueue(obj: Vehicle) {
-                    if (obj.isLarge) {
-                        large.addLast(obj)
-                    } else {
-                        small.addLast(obj)
-                    }
-                }
-
-                override fun dequeue(): Vehicle {
-                    if (small.isNotEmpty()) {
-                        return small.removeFirst()
-                    }
-                    return large.removeFirst()
-                }
-
-                override fun reportOccupancy() = small.size + large.size
-            }
     };
 
     override fun toString() = description

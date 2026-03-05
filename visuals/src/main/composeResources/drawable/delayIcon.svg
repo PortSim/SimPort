@@ -1,0 +1,19 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect x="0" y="0" width="200" height="200" fill="#C77DFF" stroke-width="2"/>
+
+    <!-- Incoming line -->
+    <line x1="40" y1="100" x2="160" y2="100" stroke="#5A189A" stroke-width="16"/>
+    <!-- Vertical line -->
+    <line x1="40" y1="80" x2="40" y2="120" stroke="#5A189A" stroke-width="16"/>
+
+    <!-- Middle circle -->
+    <circle cx="100" cy="100" r="40" fill="#5A189A"/>
+    <circle cx="100" cy="100" r="24" fill="#C77DFF"/>
+
+    <!-- Diagonal line through circle -->
+    <line x1="80" y1="80" x2="120" y2="120" stroke="#5A189A" stroke-width="16"/>
+
+    <!-- Circle at end -->
+    <circle cx="160" cy="100" r="14" fill="#5A189A"/>
+</svg>

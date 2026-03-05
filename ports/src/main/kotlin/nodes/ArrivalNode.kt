@@ -5,8 +5,10 @@ import com.group7.SourceNode
 import com.group7.channels.PushOutputChannel
 import com.group7.channels.send
 import com.group7.generators.Generator
+import com.group7.properties.DisplayProgressBars
 import com.group7.properties.Source
 import com.group7.utils.andThen
+import kotlin.time.Duration
 
 /**
  * Simulates connection to the outside world, generates based on some script (Generator) and sends this traffic
@@ -16,11 +18,16 @@ class ArrivalNode<OutputT>(
     label: String,
     private val destination: PushOutputChannel<OutputT>,
     private val generator: Generator<OutputT>,
-) : SourceNode(label, listOf(destination)), Source<OutputT> {
+) : SourceNode(label, listOf(destination)), Source<OutputT>, DisplayProgressBars {
 
     private var emitCallback:
         (context(Simulator)
         (OutputT) -> Unit)? =
+        null
+
+    private var createProgressBarCallback:
+        (context(Simulator)
+        (label: String, delay: Duration) -> Unit)? =
         null
 
     context(_: Simulator)
@@ -28,10 +35,13 @@ class ArrivalNode<OutputT>(
         scheduleNext()
     }
 
-    context(_: Simulator)
+    private var itemServed = 0
+
+    context(sim: Simulator)
     private fun scheduleNext() {
         if (generator.hasNext()) {
             val (obj, delay) = generator.next()
+            createProgressBarCallback?.let { it("Servicing ${itemServed++}th item", delay) }
             scheduleDelayed(delay) {
                 scheduleNext()
                 emitCallback?.let { it(obj) }
@@ -49,4 +59,12 @@ class ArrivalNode<OutputT>(
     }
 
     override fun properties() = listOf(generator.displayProperty)
+
+    override fun createProgressBar(
+        callback:
+            context(Simulator)
+            (label: String, delay: Duration) -> Unit
+    ) {
+        createProgressBarCallback = createProgressBarCallback.andThen(callback)
+    }
 }

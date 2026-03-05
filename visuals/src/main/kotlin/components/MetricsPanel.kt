@@ -1,18 +1,20 @@
 package components
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.snapshots.SnapshotStateSet
 import com.dynatrace.dynahist.Histogram
 import com.dynatrace.dynahist.layout.LogQuadraticLayout
 import com.group7.MetricReporter
+import com.group7.NodeGroup
 import com.group7.Scenario
+import com.group7.Simulator
 import com.group7.metrics.ContinuousMetric
 import com.group7.metrics.InstantaneousMetric
 import com.group7.metrics.Metric
+import com.group7.properties.DisplayProgressBars
+import com.group7.properties.ProgressBar
 import kotlin.time.Instant
 
 /** Samples metrics from nodes at regular intervals, storing data as Compose-observable mutable state. */
@@ -32,6 +34,9 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
     var latestTimeSeen by mutableStateOf(Instant.DISTANT_PAST)
         private set
 
+    var latestTimeDisplayed by mutableStateOf(Instant.DISTANT_PAST)
+        private set
+
     private var samplesSeen = 0
 
     /** Per-metric histograms for instantaneous metrics, recorded incrementally via onFire. */
@@ -39,6 +44,26 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
         allMetrics.filterIsInstance<InstantaneousMetric>().associateWith {
             Histogram.createDynamic(LogQuadraticLayout.create(1e-5, 1e-2, -1e15, 1e15))
         }
+
+    /** Per-nodegroup delay queue events that are still ongoing */
+    private val bufferProgressBars: Map<NodeGroup, MutableList<ProgressBar>> =
+        scenario.allNodes.associateWith { node ->
+            val unprocessedProgressBars = mutableListOf<ProgressBar>()
+            if (node is DisplayProgressBars) {
+                node.createProgressBar { label, delay ->
+                    unprocessedProgressBars.add(
+                        ProgressBar(
+                            label,
+                            contextOf<Simulator>().currentTime,
+                            contextOf<Simulator>().currentTime + delay,
+                        )
+                    )
+                }
+            }
+            unprocessedProgressBars
+        }
+    private val activeProgressBars: Map<NodeGroup, SnapshotStateSet<ProgressBar>> =
+        scenario.allNodes.associateWith { mutableStateSetOf<ProgressBar>() }
 
     init {
         for (metric in allMetrics) {
@@ -54,6 +79,8 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
     }
 
     fun getHistogram(metric: Metric): Histogram? = histograms[metric]
+
+    fun getProgressBars(nodeGroup: NodeGroup): SnapshotStateSet<ProgressBar> = activeProgressBars.getValue(nodeGroup)
 
     /** Get time series data for a specific node */
     fun getMetricData(metric: Metric): List<Pair<Instant, Double>> = downsample(metricData.getValue(metric))
@@ -81,6 +108,7 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
     /** End batch mode - flush all buffered samples to UI in one update */
     fun endBatch() {
         if (isBatching) {
+            flushGraphBuffer()
             flushBuffer()
             isBatching = false
         }
@@ -101,9 +129,22 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
                 }
                 metricData.getValue(metric).addAll(buffered)
             }
+            buffer.values.forEach { it.clear() }
+            samplesSinceRedraw = 0
         }
-        buffer.values.forEach { it.clear() }
-        samplesSinceRedraw = 0
+    }
+
+    /* This buffer needs to be flushed on every event so the graph live view displays smoothly */
+    private fun flushGraphBuffer() {
+        Snapshot.withMutableSnapshot {
+            /* Update progress bars with latest values */
+            bufferProgressBars.forEach { (node, events) ->
+                activeProgressBars[node]?.addAll(events)
+                events.clear()
+            }
+            activeProgressBars.forEach { (_, events) -> events.removeIf { it.endTime < latestTimeSeen } }
+            latestTimeDisplayed = latestTimeSeen
+        }
     }
 
     override fun report(currentTime: Instant) {
@@ -112,6 +153,7 @@ class MetricsPanelState(val scenario: Scenario, private val redrawEveryNSamples:
 
         if (!isBatching) {
             samplesSinceRedraw++
+            flushGraphBuffer()
             if (samplesSinceRedraw >= redrawEveryNSamples) {
                 flushBuffer()
             }

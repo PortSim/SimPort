@@ -152,6 +152,7 @@ internal class PullInputChannelImpl<T> : ConnectablePullInputChannel<T> {
 internal class PullOutputChannelImpl<T> : ConnectablePullOutputChannel<T> {
     override var downstream: PullInputChannelImpl<*> by Delegates.setOnce()
     override var upstreamNode: Node by Delegates.setOnce()
+    override var transmissionCount = 0
 
     var callback:
         context(Simulator)
@@ -172,6 +173,7 @@ internal class PullOutputChannelImpl<T> : ConnectablePullOutputChannel<T> {
     fun receive(): T {
         val data = callback()
         sim.asImpl().notifySend(upstreamNode, downstream.downstreamNode, data)
+        transmissionCount++
         return data
     }
 
