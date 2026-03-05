@@ -1,0 +1,17 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="200" height="200" fill="#ffad33" stroke-width="2"/>
+
+    <!-- Incoming lines from left -->
+    <line x1="40" y1="60" x2="100" y2="100" stroke="#aa5500" stroke-width="16"/>
+    <line x1="40" y1="140" x2="100" y2="100" stroke="#aa5500" stroke-width="16"/>
+
+    <!-- Vertical caps on left -->
+    <line x1="40" y1="42" x2="40" y2="82" stroke="#aa5500" stroke-width="16"/>
+    <line x1="40" y1="118" x2="40" y2="158" stroke="#aa5500" stroke-width="16"/>
+
+    <!-- Outgoing merged line -->
+    <line x1="100" y1="100" x2="160" y2="100" stroke="#aa5500" stroke-width="16"/>
+
+    <!-- Single node at right end -->
+    <circle cx="160" cy="100" r="14" fill="#aa5500"/>
+</svg>

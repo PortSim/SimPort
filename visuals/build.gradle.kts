@@ -9,6 +9,7 @@ configurations.compileClasspath { exclude(group = "org.jetbrains.compose.materia
 dependencies {
     implementation(project(":demos"))
     api(compose.desktop.currentOs)
+    implementation("org.jetbrains.compose.components:components-resources:1.10.0")
     implementation("org.jetbrains.compose.material3:material3:1.9.0")
     implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
     /* Stuff for the ELK layout algorithm */

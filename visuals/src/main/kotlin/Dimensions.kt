@@ -14,6 +14,7 @@ object Dimensions {
     // Strokes
     val strokeWidth = 2.dp
     val strokeWidthThin = 1.5.dp
+    val strokeWidthExtraThin = 1.dp
 
     // Chart axes
     val axisTickLength = 4.dp // length of tick marks protruding from the axis line

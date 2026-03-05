@@ -1,12 +1,39 @@
 package com.group7.properties
 
 import com.group7.Simulator
+import kotlin.time.Duration
+import kotlin.time.Instant
 
 interface Source<out T> {
     fun onEmit(
         callback:
             context(Simulator)
             (T) -> Unit
+    )
+}
+
+data class ProgressBar(val label: String, val startTime: Instant, val endTime: Instant) {
+    fun duration(): Duration {
+        return endTime - startTime
+    }
+
+    fun percentageRemaining(currentTime: Instant): Double {
+        val totalDuration = endTime - startTime
+        val remainingDuration = endTime - currentTime
+        val percentageOfTimeRemaining = remainingDuration / totalDuration
+        return percentageOfTimeRemaining.coerceAtLeast(0.0)
+    }
+
+    fun shouldShow(currentTime: Instant): Boolean {
+        return percentageRemaining(currentTime) >= 0.001f
+    }
+}
+
+interface DisplayProgressBars {
+    fun createProgressBar(
+        callback:
+            context(Simulator)
+            (label: String, delay: Duration) -> Unit
     )
 }
 

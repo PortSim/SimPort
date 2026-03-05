@@ -21,6 +21,7 @@ internal fun InputChannel<*, *>.setDownstreamNode(node: Node) {
 }
 
 sealed interface OutputChannel<in ItemT, ChannelT : ChannelType<ChannelT>> {
+    val transmissionCount: Int
     val downstream: InputChannel<*, ChannelT>
     val upstreamNode: Node
 }

@@ -16,6 +16,7 @@ import components.DebugPanel
 import components.MetricsPanelState
 import components.ResultsTablePage
 import components.SimpleGraphViewer
+import kotlin.time.Instant
 import kotlinx.collections.immutable.persistentMapOf
 
 enum class SimulationTab(val label: String) {
@@ -29,6 +30,9 @@ fun SimulationTabLayout(
     simulationName: String,
     metricsPanelState: MetricsPanelState,
     showResultsToolbar: Boolean = false,
+    iconProvider: IconProvider?,
+    getAnimatableTime: () -> Instant,
+    // simulation is batched
     bottomBar: @Composable ColumnScope.() -> Unit = {},
 ) {
     var selectedTab by remember { mutableStateOf(SimulationTab.GraphViewer) }
@@ -59,7 +63,8 @@ fun SimulationTabLayout(
         val simulations = persistentMapOf(simulationName to metricsPanelState)
         Box(Modifier.weight(1f).clipToBounds()) {
             when (selectedTab) {
-                SimulationTab.GraphViewer -> SimpleGraphViewer(simulationName, metricsPanelState)
+                SimulationTab.GraphViewer ->
+                    SimpleGraphViewer(simulationName, metricsPanelState, getAnimatableTime, iconProvider)
                 SimulationTab.Metrics -> SummaryVisualisation(simulations)
                 SimulationTab.ResultsTable -> ResultsTablePage(simulations, showToolbar = showResultsToolbar)
             }

@@ -1,24 +1,22 @@
 package components
 
 import DefaultColorPalette
+import Dimensions
 import EdgeStatus
+import IconProvider
 import Metrics
+import NodeIcon
 import ScenarioLayout
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateSet
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -27,16 +25,17 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import com.group7.*
 import com.group7.channels.ChannelType
+import com.group7.properties.ProgressBar
+import com.group7.utils.toRateStringWithBestUnit
+import com.group7.utils.toStringWithBestUnit
 import kotlin.math.atan2
+import kotlin.time.Instant
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 import utils.isRoot
@@ -50,6 +49,25 @@ fun DrawScope.drawArrowHead(
     backgroundColor: Color,
     channelType: ChannelType<*>,
 ) {
+    fun drawArcFromCenter(
+        color: Color,
+        arcDiameter: Float,
+        center: Offset,
+        ringThickness: Float,
+        startAngle: Float,
+        sweepAngle: Float,
+    ) {
+        val arcSize = Size(arcDiameter - ringThickness, arcDiameter - ringThickness)
+        drawArc(
+            brush = SolidColor(color),
+            startAngle = startAngle,
+            sweepAngle = sweepAngle,
+            useCenter = false,
+            topLeft = center - Offset(arcSize.width / 2, arcSize.height / 2),
+            size = arcSize,
+            style = Stroke(width = ringThickness, cap = StrokeCap.Butt),
+        )
+    }
     when (channelType) {
         ChannelType.Pull -> {
             withTransform({ rotate(degrees = angleDegrees, pivot = end) }) {
@@ -58,20 +76,8 @@ fun DrawScope.drawArrowHead(
                 // offset the circle so that it ends slightly before the box, making the shape of a hand
                 val circleCenter = Offset(end.x - width - 2.0f, end.y)
 
-                fun drawTwoThirdsArc(color: Color, arcDiameter: Float) {
-                    val arcSize = Size(arcDiameter - ringThickness, arcDiameter - ringThickness)
-                    drawArc(
-                        brush = SolidColor(color),
-                        startAngle = -120f,
-                        sweepAngle = 240f,
-                        useCenter = false,
-                        topLeft = circleCenter - Offset(arcSize.width / 2, arcSize.height / 2),
-                        size = arcSize,
-                        style = Stroke(width = ringThickness, cap = StrokeCap.Butt),
-                    )
-                }
-                drawTwoThirdsArc(color, (ringThickness * 4) * 2)
-                drawTwoThirdsArc(backgroundColor, (ringThickness * 3) * 2)
+                drawArcFromCenter(color, (ringThickness * 4) * 2, circleCenter, ringThickness, -120f, 240f)
+                drawArcFromCenter(backgroundColor, (ringThickness * 3) * 2, circleCenter, ringThickness, -120f, 240f)
 
                 drawCircle(color = color, radius = ringThickness * 2, center = circleCenter)
             }
@@ -87,84 +93,21 @@ fun DrawScope.drawArrowHead(
 
                 val radius = width / 2f
                 val circleCenter = Offset(end.x - radius, end.y)
+
+                val ringThickness = width / 4f
+                val ringDiameter = width + ringThickness * 2
+                val sweepAngle = 40f
+                drawArcFromCenter(
+                    backgroundColor,
+                    ringDiameter,
+                    circleCenter,
+                    ringThickness,
+                    180f - sweepAngle / 2f,
+                    sweepAngle,
+                )
                 drawCircle(color = color, radius = radius, center = circleCenter)
             }
         }
-    }
-}
-
-/**
- * Detects if the current node is hovered and, if it's smaller than the currently hovered node, sets the hovered node to
- * be this node.
- */
-fun Modifier.exclusiveHover(node: ElkNode, hoveredNode: MutableState<ElkNode?>): Modifier =
-    this.pointerInput(node) {
-        awaitPointerEventScope {
-            while (true) {
-                val event = awaitPointerEvent(PointerEventPass.Main)
-                val isPointerInside = size.toIntRect().toRect().contains(event.changes.first().position)
-                // Semi-hack to figure out if we're the smallest node being hovered, this does not
-                // consume events so doesn't interfere with panning around
-                if (isPointerInside && (hoveredNode.value?.width ?: Double.MAX_VALUE) >= node.width) {
-                    hoveredNode.value = node
-                }
-                if (!isPointerInside && hoveredNode.value == node) {
-                    hoveredNode.value = null
-                }
-            }
-        }
-    }
-
-@Composable
-fun ElkNodes(
-    node: ElkNode,
-    nodeMetrics: Map<ElkNode, State<Metrics>>,
-    onClickNode: (ElkNode) -> Unit,
-    hoveredNode: MutableState<ElkNode?>,
-) {
-    val isHovered = hoveredNode.value == node && !node.isRoot
-    Box(
-        modifier =
-            Modifier.wrapContentSize(unbounded = true)
-                .absoluteOffset(node.x.dp, node.y.dp)
-                .requiredSize(node.width.dp, node.height.dp)
-                .background(if (isHovered) Color.LightGray.copy(alpha = 0.5f) else Color.Transparent)
-                .border(1.dp, Color.Black)
-                .exclusiveHover(node, hoveredNode)
-                .clickable(
-                    interactionSource = remember(node) { MutableInteractionSource() },
-                    indication = null,
-                    enabled = !node.isRoot,
-                    onClick = { onClickNode(node) },
-                ),
-        contentAlignment = Alignment.TopStart,
-    ) {
-        if (node.parent != null) {
-            val metricsString = nodeMetrics.getValue(node).value.toString().let { if (it.isEmpty()) it else "\n$it" }
-            if (node.children.isNotEmpty()) {
-                Box(
-                    modifier = Modifier.matchParentSize().background(Color.Transparent).padding(5.dp),
-                    contentAlignment = Alignment.TopStart,
-                ) {
-                    if (node.identifier != null) {
-                        Text(text = "${node.identifier}$metricsString", fontSize = 24.sp)
-                    }
-                }
-            } else {
-                val nameStr = node.identifier ?: "Unnamed Node"
-
-                Box(Modifier.matchParentSize().padding(5.dp), contentAlignment = Alignment.Center) {
-                    AutoSizedText(
-                        text = "$nameStr$metricsString",
-                        color = Color.Black,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-        }
-
-        node.children.forEach { ElkNodes(it, nodeMetrics, onClickNode, hoveredNode) }
     }
 }
 
@@ -220,31 +163,45 @@ fun DrawScope.drawElkEdges(
             )
         }
         /* Draw each edge */
-
         node.containedEdges.forEach { edge ->
-            val points =
-                edge.sections.flatMap { section ->
-                    buildList {
-                        add(Offset(section.startX.toFloat().dp.toPx(), section.startY.toFloat().dp.toPx()))
-                        section.bendPoints.forEach { pt ->
-                            add(Offset(pt.x.toFloat().dp.toPx(), pt.y.toFloat().dp.toPx()))
-                        }
-                        add(Offset(section.endX.toFloat().dp.toPx(), section.endY.toFloat().dp.toPx()))
-                    }
+            val edgeColor =
+                when (edgeStatuses[edge]?.value?.openStatus) {
+                    null -> Color.Black
+                    true -> DefaultColorPalette.greens._4
+                    false -> DefaultColorPalette.reds._4
                 }
-            drawArrow(
-                points,
-                edgeStatuses[edge]?.value?.openStatus ?: false,
-                edgeStatuses[edge]!!.value.channelType,
-                backgroundColor,
-            )
+
+            edge.sections.forEach { section ->
+                val path =
+                    Path().apply {
+                        moveTo(section.startX.toFloat().dp.toPx(), section.startY.toFloat().dp.toPx())
+                        section.bendPoints.forEach { pt -> lineTo(pt.x.toFloat().dp.toPx(), pt.y.toFloat().dp.toPx()) }
+                        lineTo(section.endX.toFloat().dp.toPx(), section.endY.toFloat().dp.toPx())
+                    }
+                drawPath(path, edgeColor, style = Stroke(width = 2.dp.toPx()))
+
+                val end = Offset(section.endX.toFloat().dp.toPx(), section.endY.toFloat().dp.toPx())
+                val prevX =
+                    section.bendPoints.lastOrNull()?.x?.toFloat()?.dp?.toPx() ?: section.startX.toFloat().dp.toPx()
+                val prevY =
+                    section.bendPoints.lastOrNull()?.y?.toFloat()?.dp?.toPx() ?: section.startY.toFloat().dp.toPx()
+                drawArrowHead(
+                    end = end,
+                    angleDegrees = Math.toDegrees(atan2(end.y - prevY, end.x - prevX).toDouble()).toFloat(),
+                    height = 12f.dp.toPx(),
+                    width = 6f.dp.toPx(),
+                    channelType = edgeStatuses[edge]!!.value.channelType,
+                    color = edgeColor,
+                    backgroundColor = backgroundColor,
+                )
+            }
         }
         node.children.forEach { child -> drawElkEdges(node = child, backgroundColor, edgeStatuses) }
     }
 }
 
 @Composable
-fun drawLegend(modifier: Modifier = Modifier) {
+fun GraphLegend(modifier: Modifier = Modifier, enableIcons: Boolean, onToggleIcons: () -> Unit) {
     Box(
         modifier =
             modifier
@@ -262,6 +219,16 @@ fun drawLegend(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(Dimensions.spacingMd),
         ) {
             Text("Legend", fontWeight = FontWeight.Bold, fontSize = Dimensions.fontSizeSmall)
+
+            LegendToggle("Node Icons", enableIcons, onToggleIcons)
+
+            val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+            LegendItem("Average Throughput") {
+                val cornerPercentage = 0.05f
+                val offset = (size * cornerPercentage).let { Offset(it.width, it.height) }
+                val rectSize = size * (1 - cornerPercentage * 2.0f)
+                drawRect(onBackgroundColor, offset, rectSize, style = Stroke(Dimensions.borderWidthThin.toPx()))
+            }
 
             val backgroundColor = MaterialTheme.colorScheme.background
             fun DrawScope.legendDrawEdge(channelType: ChannelType<*>, ready: Boolean) {
@@ -290,178 +257,175 @@ fun LegendItem(label: String, drawIcon: DrawScope.() -> Unit) {
 }
 
 @Composable
-fun PropertyLine(fieldName: String, fieldValue: String?) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), // Add breathing room between rows
-        horizontalArrangement = Arrangement.SpaceBetween, // Pushes Label left, Value right
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "${fieldName}${if (fieldValue == null) "" else ":"}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f), // Let label take available space if needed
+fun LegendToggle(text: String, enabled: Boolean, onClick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(
+            modifier = Modifier.size(width = Dimensions.spacingLg, height = Dimensions.spacingLg),
+            checked = enabled,
+            onCheckedChange = { onClick() },
         )
-
-        if (fieldValue != null) {
-            Text(
-                text = fieldValue,
-                style =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        fontFeatureSettings = "tnum",
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
+        Spacer(modifier = Modifier.width(Dimensions.spacingMd))
+        Text(text = text, fontSize = Dimensions.fontSizeSmall)
     }
 }
 
 @Composable
-fun GroupDisplayProperty(
-    group: GroupDisplayProperty,
-    metricsPanel: MetricsPanelState,
-    simulationName: String,
-    modifier: Modifier = Modifier,
-) {
-    key(group) {
-        Box(modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                Text(
-                    text = group.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 4.dp),
-                )
-
-                Column(modifier = Modifier.fillMaxWidth().padding(start = 12.dp)) {
-                    for (property in group.list) {
-                        key(property) {
-                            when (property) {
-                                is GroupDisplayProperty -> GroupDisplayProperty(property, metricsPanel, simulationName)
-
-                                is MetricGroupDisplayProperty -> {} // Possible future feature of small graphs
-                                is FieldDisplayProperty -> PropertyLine(property.fieldName, property.value)
-                                is DoubleDisplayProperty ->
-                                    PropertyLine(
-                                        property.label,
-                                        "${"%.2f".format(property.value)}${property.unitSuffix}",
-                                    )
-
-                                is TextDisplayProperty -> PropertyLine(property.string, null)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DisplayPropertyPanel(
-    node: NodeGroup,
-    onPanelClose: () -> Unit,
-    displayProperty: GroupDisplayProperty,
-    metricsPanel: MetricsPanelState,
-    simulationName: String,
-) {
-    Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 1.dp) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            IconButton(onClick = onPanelClose, modifier = Modifier.align(Alignment.TopEnd).padding(2.dp)) {
-                Icon(Icons.Default.Close, contentDescription = "Close Sidebar")
-            }
-            Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                GroupDisplayProperty(displayProperty, metricsPanel, simulationName, Modifier.weight(2f))
-                Spacer(Modifier.weight(1f))
-
-                Text("Defined At:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Pannable(Modifier.fillMaxHeight(0.2f).fillMaxWidth()) { NodeStackTrace(node) }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-fun GraphViewer(scenarioData: ScenarioLayout, onClickNode: (ElkNode) -> Unit) {
-    var viewOffset by remember { mutableStateOf(Offset.Zero) }
-    var scale by remember { mutableStateOf(1f) }
-    var innerElementSize by remember { mutableStateOf(Size.Zero) }
-    var outerElementSize by remember { mutableStateOf(Size.Zero) }
-    val hoveredNode = remember { mutableStateOf<ElkNode?>(null) }
-
-    fun clampOffsetToKeepCanvasOnScreen() {
-        // Keep 20% of the canvas on screen or keep the screen 20% canvas whichever is possible
-        val visibilityPercentage = 0.20f
-        fun calcClampValues(innerSize: Float, outerSize: Float): ClosedFloatingPointRange<Float> =
-            if (scale * innerSize >= outerSize) {
-                val max = innerSize * scale / 2.0f - 2.0f * (visibilityPercentage - 0.5f) * outerSize / 2.0f
-                (-max)..(max)
-            } else {
-                val min = 2.0f * (visibilityPercentage - 0.5f) * (innerSize * scale / 2.0f) - outerSize / 2.0f
-                (min)..(-min)
-            }
-        val innerWidthWithPadding = innerElementSize.width + 10.0f
-        val xRange = calcClampValues(innerWidthWithPadding, outerElementSize.width)
-        val outerHeightWithPadding = innerElementSize.height + 10.0f
-        val yRange = calcClampValues(outerHeightWithPadding, outerElementSize.height)
-        viewOffset = Offset(viewOffset.x.coerceIn(xRange), viewOffset.y.coerceIn(yRange))
-    }
-
-    // We use a Box with no size constraints to act as a coordinate plane
+fun ProgressBar(event: ProgressBar, getAnimatableTime: () -> Instant) {
     Box(
-        modifier =
-            Modifier.fillMaxSize()
-                // 1. Handle Mouse Wheel Zooming
-                // This only fires on actual wheel movement, never on clicks/drags.
-                .onPointerEvent(PointerEventType.Scroll) { event ->
-                    val change = event.changes.first()
-                    val delta = change.scrollDelta.y
-
-                    // Calculate the multiplier (negative delta usually means zoom in on some systems,
-                    // strictly depends on preference, here we assume standard scrolling)
-                    val zoomMultiplier = (1 - delta * 0.1f)
-
-                    val newScale = (scale * zoomMultiplier).coerceIn(0.1f, 20f)
-
-                    // Recalculate zoomFactor based on the clamped newScale to prevent offset jumps
-                    val effectiveZoomFactor = newScale / scale
-
-                    // Calculate where the mouse is relative to the center (matching your original logic)
-                    // change.position gives coordinates relative to the top-left of the modifier
-                    val center = Offset(size.width / 2f, size.height / 2f)
-                    val mouseOffset = change.position - center
-
-                    // Apply math: Keep the point under the mouse stationary
-                    viewOffset += (mouseOffset - viewOffset) * (1 - effectiveZoomFactor)
-                    scale = newScale
-
-                    clampOffsetToKeepCanvasOnScreen()
-                }
-                // 2. Handle Panning (Drag)
-                // detectTransformGestures handles dragging nicely and won't conflict with clicks
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, _, _ ->
-                        viewOffset += pan
-                        clampOffsetToKeepCanvasOnScreen()
-                    }
-                }
-                .background(MaterialTheme.colorScheme.background)
-                .graphicsLayer(translationX = viewOffset.x, translationY = viewOffset.y, scaleX = scale, scaleY = scale)
-                .onSizeChanged { size -> outerElementSize = size.toSize() },
-        contentAlignment = Alignment.Center,
+        Modifier.fillMaxWidth()
+            .height(Dimensions.spacingMd)
+            .border(Dimensions.strokeWidthExtraThin, Color.Black)
+            .padding(Dimensions.strokeWidthExtraThin)
+            .background(MaterialTheme.colorScheme.background),
+        Alignment.CenterStart,
     ) {
         Box(
             modifier =
-                Modifier.wrapContentSize(unbounded = true).onSizeChanged { size -> innerElementSize = size.toSize() }
-        ) {
-            val backgroundColor = MaterialTheme.colorScheme.background
-            Canvas(Modifier.matchParentSize()) {
-                drawElkEdges(scenarioData.elkGraphRoot, backgroundColor, scenarioData.edgeStatuses)
+                Modifier.fillMaxWidth(1.0f - event.percentageRemaining(getAnimatableTime()).toFloat())
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.primary)
+        )
+        AutoSizedText(
+            "${event.label}: ${event.duration().toStringWithBestUnit()}",
+            modifier = Modifier.align(Alignment.Center),
+        )
+    }
+}
+
+/**
+ * Detects if the current node is hovered and, if it's smaller than the currently hovered node, sets the hovered node to
+ * be this node.
+ */
+fun Modifier.exclusiveHover(node: ElkNode, hoveredNode: MutableState<ElkNode?>): Modifier =
+    this.pointerInput(node) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Main)
+                val isPointerInside = size.toIntRect().toRect().contains(event.changes.first().position)
+                // Semi-hack to figure out if we're the smallest node being hovered, this does not
+                // consume events so doesn't interfere with panning around
+                if (isPointerInside && (hoveredNode.value?.width ?: Double.MAX_VALUE) >= node.width) {
+                    hoveredNode.value = node
+                } else if (!isPointerInside && hoveredNode.value == node) {
+                    hoveredNode.value = null
+                }
             }
-            ElkNodes(scenarioData.elkGraphRoot, scenarioData.nodeMetrics, onClickNode, hoveredNode)
+        }
+    }
+
+@Composable
+fun ElkNodes(
+    node: ElkNode,
+    nodeMetrics: Map<ElkNode, State<Metrics>>,
+    edgeCounts: Map<ElkEdge, MutableState<Int>>,
+    onClickNode: (ElkNode) -> Unit,
+    hoveredNode: MutableState<ElkNode?>,
+    getAnimatableTime: () -> Instant,
+    getProgressBars: (ElkNode) -> SnapshotStateSet<ProgressBar>,
+    icons: Map<ElkNode, NodeIcon>,
+    enableIcons: Boolean,
+) {
+    val isHovered = hoveredNode.value == node && !node.isRoot
+    Box(
+        modifier =
+            Modifier.wrapContentSize(unbounded = true)
+                .absoluteOffset(node.x.dp, node.y.dp)
+                .requiredSize(node.width.dp, node.height.dp)
+                .exclusiveHover(node, hoveredNode)
+                .clickable(
+                    interactionSource = remember(node) { MutableInteractionSource() },
+                    indication = null,
+                    enabled = !node.isRoot,
+                    onClick = { onClickNode(node) },
+                ),
+        contentAlignment = Alignment.TopStart,
+    ) {
+        Box(
+            Modifier.fillMaxSize()
+                .background(if (isHovered) Color.LightGray.copy(alpha = 0.5f) else Color.Transparent)
+                .border(Dimensions.borderWidthThin, MaterialTheme.colorScheme.onBackground)
+        ) {
+            if (!node.isRoot) {
+                val metricsString =
+                    nodeMetrics.getValue(node).value.toString().let { if (it.isEmpty()) it else "\n$it" }
+                if (node.children.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(Color.Transparent),
+                        contentAlignment = Alignment.TopStart,
+                    ) {
+                        if (node.identifier != null) {
+                            Text(text = "${node.identifier}$metricsString", fontSize = 24.sp)
+                        }
+                    }
+                } else if (enableIcons && !isHovered && icons[node] != null) {
+                    icons.getValue(node).content()
+                } else {
+                    val nameStr = node.identifier ?: "Unnamed Node"
+                    AutoSizedText(
+                        text = "$nameStr$metricsString",
+                        color = Color.Black,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(Dimensions.spacingXs).align(Alignment.Center),
+                    )
+                }
+            }
+        }
+
+        // Progress bars under node
+        var displayAllProgressBars by remember { mutableStateOf(false) }
+        if (node.children.isEmpty()) {
+            val progressBars = getProgressBars(node).filter { it.shouldShow(getAnimatableTime()) }
+            Column(
+                Modifier.fillMaxWidth()
+                    .absoluteOffset(y = node.height.dp + Dimensions.spacingXs)
+                    .wrapContentHeight(align = Alignment.Top, unbounded = true)
+                    .clickable(onClick = { displayAllProgressBars = !displayAllProgressBars }),
+                verticalArrangement = Arrangement.spacedBy(Dimensions.spacingXs),
+            ) {
+                if (displayAllProgressBars) {
+                    progressBars.sortedBy { it.endTime }.forEach { ProgressBar(it, getAnimatableTime) }
+                } else {
+                    progressBars.minByOrNull { it.endTime }?.let { ProgressBar(it, getAnimatableTime) }
+                }
+            }
+        }
+
+        node.containedEdges.forEach { edge ->
+            edge.labels.forEach { label ->
+                Box(
+                    Modifier.width(label.width.toFloat().dp)
+                        .height(label.height.toFloat().dp)
+                        .absoluteOffset(label.x.toFloat().dp, label.y.toFloat().dp)
+                        .border(1.dp, Color.Black)
+                        .background(Color.Transparent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AutoSizedText(
+                        text =
+                            edgeCounts
+                                .getValue(edge)
+                                .value
+                                .toRateStringWithBestUnit(getAnimatableTime() - Simulator.START_TIME, dp = 1),
+                        color = Color.Black,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
+
+        node.children.forEach {
+            ElkNodes(
+                it,
+                nodeMetrics,
+                edgeCounts,
+                onClickNode,
+                hoveredNode,
+                getAnimatableTime,
+                getProgressBars,
+                icons,
+                enableIcons,
+            )
         }
     }
 }
@@ -472,30 +436,52 @@ fun SimpleGraphViewer(
     simulationName: String,
     // the data for graphing
     metricsPanelState: MetricsPanelState,
+    // get the current time in a way that animates between simulation timesteps, see SimulationModel getCurrentTime
+    getAnimatableTime: () -> Instant,
+    iconProvider: IconProvider?,
 ) {
     key(metricsPanelState) {
         // Whether a side panel is open
+        var enableIcons by remember { mutableStateOf(true) }
         var focusedNode by remember { mutableStateOf<ElkNode?>(null) }
-        val elkGraph = remember { ScenarioLayout(metricsPanelState.scenario) }
-        LaunchedEffect(metricsPanelState.latestTimeSeen) { elkGraph.refresh() }
+        val scenarioData = remember { ScenarioLayout(metricsPanelState.scenario, iconProvider) }
+        LaunchedEffect(metricsPanelState.latestTimeDisplayed) { scenarioData.refresh() }
 
-        Column(modifier = Modifier.fillMaxHeight()) {
-            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    GraphViewer(elkGraph, { focusedNode = it })
-                    drawLegend(modifier = Modifier.align(Alignment.BottomEnd))
-                }
-                if (focusedNode?.isRoot == false) {
-                    val mutableDisplayProperty = elkGraph.nodeDisplayProperties.getValue(focusedNode!!)
-                    Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
-                        DisplayPropertyPanel(
-                            elkGraph.getNodeGroupFromElkNode(focusedNode!!)!!,
-                            { focusedNode = null },
-                            mutableDisplayProperty.value,
-                            metricsPanelState,
-                            simulationName,
-                        )
+        Row(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                val hoveredNode = remember { mutableStateOf<ElkNode?>(null) }
+                DraggableZoomableBox {
+                    val backgroundColor = MaterialTheme.colorScheme.background
+                    Canvas(Modifier.fillMaxSize()) {
+                        drawElkEdges(scenarioData.elkGraphRoot, backgroundColor, scenarioData.edgeStatuses)
                     }
+                    ElkNodes(
+                        scenarioData.elkGraphRoot,
+                        scenarioData.nodeMetrics,
+                        scenarioData.edgeCounts,
+                        { focusedNode = it },
+                        hoveredNode,
+                        getAnimatableTime,
+                        {
+                            val nodeGroup = scenarioData.getNodeGroupFromElkNode(it)!!
+                            metricsPanelState.getProgressBars(nodeGroup)
+                        },
+                        scenarioData.iconConfig,
+                        enableIcons,
+                    )
+                }
+                GraphLegend(modifier = Modifier.align(Alignment.BottomEnd), enableIcons, { enableIcons = !enableIcons })
+            }
+            if (focusedNode?.isRoot == false) {
+                val mutableDisplayProperty = scenarioData.nodeDisplayProperties.getValue(focusedNode!!)
+                Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
+                    DisplayPropertyPanel(
+                        scenarioData.getNodeGroupFromElkNode(focusedNode!!)!!,
+                        { focusedNode = null },
+                        mutableDisplayProperty.value,
+                        metricsPanelState,
+                        simulationName,
+                    )
                 }
             }
         }

@@ -29,15 +29,20 @@ import kotlinx.coroutines.launch
 private val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS yyyy-MM-dd").withZone(ZoneOffset.UTC)
 
 @Composable
-fun LiveVisualisation(scenario: Scenario, logger: EventLog = EventLog.noop()) {
+fun LiveVisualisation(scenario: Scenario, logger: EventLog = EventLog.noop(), iconProvider: IconProvider?) {
     val metricsPanelState = remember { MetricsPanelState(scenario) }
     val simulation = remember { SimulationModel(Simulator(logger, scenario, metricsPanelState)) }
-    val scenarioLayout = remember { ScenarioLayout(scenario) }
+    val scenarioLayout = remember { ScenarioLayout(scenario, iconProvider) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) { simulation.run { scenarioLayout.refresh() } }
 
-    SimulationTabLayout("Simulation", metricsPanelState) {
+    SimulationTabLayout(
+        "Simulation",
+        metricsPanelState,
+        getAnimatableTime = { simulation.currentTime },
+        iconProvider = iconProvider,
+    ) {
         // Playback controls at bottom - fixed height
         Row(
             modifier = Modifier.fillMaxWidth().background(Color.White).border(Dimensions.borderWidth, Color.Black),

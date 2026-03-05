@@ -5,7 +5,7 @@ import com.group7.FieldDisplayProperty
 import com.group7.GroupDisplayProperty
 import com.group7.utils.RandomContext
 import com.group7.utils.suffix
-import com.group7.utils.toStringWithBiggestUnit
+import com.group7.utils.toStringWithBestUnit
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -49,7 +49,7 @@ object Delays {
         val displayProperty =
             GroupDisplayProperty(
                 "Fixed Delay Provider Parameters",
-                FieldDisplayProperty("Delay", delay.toStringWithBiggestUnit),
+                FieldDisplayProperty("Delay", delay.toStringWithBestUnit()),
             )
         return DelayProvider(displayProperty) { delay }
     }
@@ -71,7 +71,7 @@ object Delays {
         val displayProperty =
             GroupDisplayProperty(
                 "Exponential Delay Provider",
-                FieldDisplayProperty("Mean", mean.toStringWithBiggestUnit),
+                FieldDisplayProperty("Mean", mean.toStringWithBestUnit()),
             )
         val exp = exponential(1 / mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS)
         return DelayProvider(displayProperty, { exp.nextDelay() })

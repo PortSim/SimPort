@@ -10,12 +10,13 @@ import org.eclipse.elk.alg.layered.options.*
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
 import org.eclipse.elk.core.data.LayoutMetaDataService
 import org.eclipse.elk.core.options.CoreOptions
+import org.eclipse.elk.core.options.EdgeLabelPlacement
 import org.eclipse.elk.core.options.HierarchyHandling
 import org.eclipse.elk.core.util.BasicProgressMonitor
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.util.ElkGraphUtil
 
-class ScenarioLayout(scenario: Scenario) {
+class ScenarioLayout(scenario: Scenario, iconProvider: IconProvider?) {
     private val nodesOrderedByBFS = scenario.bfs()
     private val edgesWithChannels =
         nodesOrderedByBFS.flatMap { upstream ->
@@ -81,6 +82,16 @@ class ScenarioLayout(scenario: Scenario) {
                     simulationNodeGroupToElkNode[destination],
                 )
             ElkGraphUtil.updateContainment(edge)
+            val label =
+                ElkGraphUtil.createLabel(
+                    "1", // placeholder text of 1 so that ELK layouts the labels appropriately
+                    edge,
+                )
+            edge.labels.add(label)
+            label.setProperty(LayeredOptions.EDGE_LABELS_PLACEMENT, EdgeLabelPlacement.CENTER)
+            label.setProperty(CoreOptions.EDGE_LABELS_INLINE, false)
+            label.width = 60.0
+            label.height = 20.0
             put(channel, edge)
         }
     }
@@ -107,11 +118,29 @@ class ScenarioLayout(scenario: Scenario) {
         }
     val edgeStatuses =
         simulationEdgeToElkEdge.entries.associate { (channel, edge) -> edge to mutableStateOf(channel.openStatus()) }
+    val edgeCounts =
+        simulationEdgeToElkEdge.entries.associate { (channel, edge) ->
+            edge to mutableStateOf(channel.transmissionCount)
+        }
     val nodeDisplayProperties: Map<ElkNode, MutableState<GroupDisplayProperty>> = buildMap {
         simulationNodeGroupToElkNode.forEach { (nodeGroup, elkNode) ->
             put(elkNode, mutableStateOf(getDisplayPropertyForNodeGroup(nodeGroup)))
         }
         put(elkGraphRoot, mutableStateOf(getDisplayPropertyForGlobalNode()))
+    }
+
+    val iconConfig: Map<ElkNode, NodeIcon> = buildMap {
+        nodesOrderedByBFS.forEach { node ->
+            // 1. Generate the icon for the simulation node
+            val icon = iconProvider?.generateIcon(node)
+
+            // 2. Find the ElkNode that corresponds to THIS simulation node
+            val elkNode = simulationNodeGroupToElkNode[node]
+
+            if (icon != null && elkNode != null) {
+                put(elkNode, icon)
+            }
+        }
     }
 
     fun refresh() {
@@ -120,6 +149,9 @@ class ScenarioLayout(scenario: Scenario) {
         }
         simulationEdgeToElkEdge.forEach { (channel, elkEdge) ->
             edgeStatuses.getValue(elkEdge).value = channel.openStatus()
+        }
+        simulationEdgeToElkEdge.forEach { (channel, elkEdge) ->
+            edgeCounts.getValue(elkEdge).value = channel.transmissionCount
         }
         simulationNodeGroupToElkNode.forEach { (nodeGroup, elkNode) ->
             nodeDisplayProperties.getValue(elkNode).value = getDisplayPropertyForNodeGroup(nodeGroup)
@@ -134,7 +166,7 @@ class ScenarioLayout(scenario: Scenario) {
     }
 }
 
-class EdgeStatus(val openStatus: Boolean = false, val channelType: ChannelType<*>) {}
+class EdgeStatus(val openStatus: Boolean = false, val channelType: ChannelType<*>)
 
 private fun OutputChannel<*, *>.openStatus(): EdgeStatus =
     EdgeStatus(

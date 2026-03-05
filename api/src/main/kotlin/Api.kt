@@ -1,5 +1,6 @@
 package com.group7
 
+import IconProvider
 import LiveVisualisation
 import MultiVisualisation
 import StaticVisualisation
@@ -9,30 +10,41 @@ import kotlin.time.Duration
 import kotlinx.collections.immutable.toImmutableMap
 import runVisualisation
 
-fun runSimulation(scenario: Scenario, duration: Duration, logger: EventLog = EventLog.noop()) {
+fun runSimulation(
+    scenario: Scenario,
+    duration: Duration,
+    logger: EventLog = EventLog.noop(),
+    iconProvider: IconProvider? = null,
+) {
     val sampler = MetricsPanelState(scenario)
     val simulator = Simulator(logger, scenario, sampler)
     sampler.beginBatch()
     simulator.runFor(duration)
     sampler.endBatch()
 
-    runVisualisation { StaticVisualisation(sampler) }
+    runVisualisation { StaticVisualisation(sampler, iconProvider = iconProvider) }
 }
 
-fun runSimulation(scenario: Scenario, events: Int, logger: EventLog = EventLog.noop()) {
+fun runSimulation(
+    scenario: Scenario,
+    events: Int,
+    logger: EventLog = EventLog.noop(),
+    iconProvider: IconProvider? = null,
+) {
     val sampler = MetricsPanelState(scenario)
     val simulator = Simulator(logger, scenario, sampler)
     sampler.beginBatch()
     simulator.runFor(events)
     sampler.endBatch()
 
-    runVisualisation { StaticVisualisation(sampler) }
+    runVisualisation { StaticVisualisation(sampler, iconProvider = iconProvider) }
 }
 
 fun runSimulations(
     scenarios: Map<String, Scenario>,
     duration: Duration,
     logger: (String) -> EventLog = { EventLog.noop() },
+    iconProvider: IconProvider? = null,
 ) {
     val simulations =
         scenarios.entries
@@ -54,9 +66,9 @@ fun runSimulations(
                 )
             )
             .toImmutableMap()
-    runVisualisation { MultiVisualisation(simulations) }
+    runVisualisation { MultiVisualisation(simulations, iconProvider = iconProvider) }
 }
 
-fun runLiveSimulation(scenario: Scenario, logger: EventLog = EventLog.noop()) {
-    runVisualisation { LiveVisualisation(scenario, logger) }
+fun runLiveSimulation(scenario: Scenario, logger: EventLog = EventLog.noop(), iconProvider: IconProvider? = null) {
+    runVisualisation { LiveVisualisation(scenario, logger, iconProvider = iconProvider) }
 }

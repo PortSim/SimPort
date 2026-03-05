@@ -112,6 +112,7 @@ internal class PushInputChannelImpl<T> : ConnectablePushInputChannel<T> {
 internal class PushOutputChannelImpl<T> : ConnectablePushOutputChannel<T> {
     override var downstream: PushInputChannelImpl<in T> by Delegates.setOnce()
     override var upstreamNode: Node by Delegates.setOnce()
+    override var transmissionCount = 0
 
     internal var isOpen = true
         private set
@@ -157,6 +158,7 @@ internal class PushOutputChannelImpl<T> : ConnectablePushOutputChannel<T> {
         }
 
         downstream.send(data)
+        transmissionCount++
     }
 
     context(sim: Simulator)
