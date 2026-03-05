@@ -4,6 +4,11 @@ import com.group7.Simulator
 import com.group7.utils.RandomContext
 import java.util.*
 
+/**
+ * Random policy. Randomly selects from the available channels with equal probability.
+ *
+ * @param ChannelT the type of channel managed by the policy
+ */
 class RandomPolicy<ChannelT> : GenericPolicy<ChannelT>() {
     private val random = RandomContext.newRandom()
     private val channelIndices = IdentityHashMap<ChannelT, Int>()

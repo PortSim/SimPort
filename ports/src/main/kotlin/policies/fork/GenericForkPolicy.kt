@@ -5,6 +5,13 @@ import com.group7.channels.PushInputChannel
 import com.group7.channels.PushOutputChannel
 import com.group7.policies.generic_fj.GenericPolicy
 
+/**
+ * Adapter that wraps a [GenericPolicy] to implement the [ForkPolicy] interface. Allows generic policies to be used for
+ * fork node routing.
+ *
+ * @param T the type of entities being routed
+ * @param policy the [GenericPolicy] that handles channel selection logic
+ */
 class GenericForkPolicy<T>(private val policy: GenericPolicy<PushOutputChannel<T>>) : ForkPolicy<T> {
     override fun selectChannel(obj: T) = policy.selectChannel()
 

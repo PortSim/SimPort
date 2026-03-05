@@ -5,6 +5,20 @@ import com.group7.channels.*
 import com.group7.properties.Split
 import com.group7.utils.andThen
 
+/**
+ * Splits entities into two outputs: a main output and a side output. Each incoming entity is processed by the
+ * [splitter] function to produce both outputs. The node remains ready only when the side destination is open.
+ *
+ * @param InputT the type of incoming entities
+ * @param MainOutputT the type of entities sent to the main output
+ * @param SideOutputT the type of entities sent to the side output
+ * @param ChannelT the channel type (Push or Pull)
+ * @param label the name of this node
+ * @param source the input channel from which entities are received
+ * @param mainDestination the output channel for main entities
+ * @param sideDestination the output channel for side entities
+ * @param splitter the function that splits an entity into main and side outputs
+ */
 class SplitNode<InputT, MainOutputT, SideOutputT, ChannelT : ChannelType<ChannelT>>(
     label: String,
     source: InputChannel<InputT, ChannelT>,

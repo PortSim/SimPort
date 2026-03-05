@@ -4,6 +4,19 @@ import com.group7.Node
 import com.group7.Simulator
 import com.group7.channels.*
 
+/**
+ * Base class for nodes that process entities one-to-one from input to output while managing readiness. Subclasses
+ * implement [process] to transform entities and [isReady] to control flow. Automatically adapts to push/pull channel
+ * types.
+ *
+ * @param InputT the type of incoming entities @param OutputT the type of outgoing entities @param ChannelT the channel
+ *   type (Push or Pull)
+ * @param label the name of this node
+ * @param source the input channel from which entities are received
+ * @param destination the output channel where entities are sent
+ * @param sources the complete list of input channels
+ * @param destinations the complete list of output channels
+ */
 abstract class PassthroughNode<InputT, OutputT, ChannelT : ChannelType<ChannelT>>(
     label: String,
     source: InputChannel<InputT, ChannelT>,

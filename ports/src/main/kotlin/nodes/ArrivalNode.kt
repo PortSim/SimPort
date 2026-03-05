@@ -11,8 +11,13 @@ import com.group7.utils.andThen
 import kotlin.time.Duration
 
 /**
- * Simulates connection to the outside world, generates based on some script (Generator) and sends this traffic
- * generated to its Output channel
+ * Simulates connections to the outside world. Generates entities according to a provided [Generator] and sends them to
+ * its output channel at scheduled times. Acts as the entry point for traffic into the simulation.
+ *
+ * @param OutputT the type of entities generated
+ * @param label the name of this node
+ * @param destination the output channel where generated entities are sent
+ * @param generator the [Generator] that produces entities and their inter-arrival times
  */
 class ArrivalNode<OutputT>(
     label: String,

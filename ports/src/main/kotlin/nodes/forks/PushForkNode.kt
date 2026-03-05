@@ -10,7 +10,16 @@ import com.group7.policies.fork.ForkPolicy
 import com.group7.policies.generic_fj.RandomPolicy
 import com.group7.policies.generic_fj.forkPolicy
 
-/** Takes in a vehicle, and emits it in any one of its destination, as long as the output channel is open */
+/**
+ * Routes incoming entities to one of multiple output destinations based on a [ForkPolicy]. Each entity is sent to a
+ * single chosen destination. The input remains open only if at least one output destination is open.
+ *
+ * @param T the type of entities being routed
+ * @param label the name of this node
+ * @param source the input channel from which entities are received
+ * @param destinations the list of output channels to route entities to
+ * @param policy the [ForkPolicy] that determines which destination receives each entity (defaults to random)
+ */
 class PushForkNode<T>(
     label: String,
     private val source: PushInputChannel<T>,

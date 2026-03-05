@@ -11,6 +11,13 @@ import com.group7.utils.walkUpstream
 import com.group7.utils.zipCompletely
 import java.util.*
 
+/**
+ * Join policy that pulls from the source with the highest occupancy. Helps balance load by pulling from the busiest
+ * source.
+ *
+ * @param T the type of entities being merged
+ * @param tags the tags used to identify upstream containers for each source
+ */
 class MostFullJoinPolicy<T>(
     private val tags: Iterable<InputTag<Container<*>>> =
         generateSequence { newDynamicInputTag { it.walkUpstream().filterIsInstance<Container<*>>().first() } }
