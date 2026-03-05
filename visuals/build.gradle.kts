@@ -26,4 +26,4 @@ dependencies {
     implementation("com.dynatrace.dynahist:dynahist:1.4")
 }
 
-compose.desktop { application { mainClass = "MainKt" } }
+compose.desktop { application { mainClass = "com.group7.MainKt" } }
