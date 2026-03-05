@@ -12,6 +12,11 @@
 
 image: eclipse-temurin:21-jdk
 
+stages:
+  - build
+  - test
+  - docs
+
 before_script:
   - GRADLE_USER_HOME="$(pwd)/.gradle"
   - export GRADLE_USER_HOME
@@ -36,3 +41,15 @@ test:
       - build
       - .gradle
       
+generate_dokka:
+  stage: docs
+  script:
+    - ./gradlew dokkaGenerateHtml
+    - mkdir -p public
+    - cp -r build/dokka/* public/
+  artifacts:
+    paths:
+      - public
+  dependencies:
+    - build
+    - test
