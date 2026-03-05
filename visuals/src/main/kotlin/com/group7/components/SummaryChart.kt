@@ -57,10 +57,23 @@ fun SummaryChart(
         }
     var lineProvider by remember { mutableStateOf(LineCartesianLayer.LineProvider.series()) }
     var hasData by remember { mutableStateOf(false) }
+    var steadyStateSeconds by remember { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(metricByScenario, showRaw, showCi, simulations.values.map { it.chartsState.latestTimeSeen }) {
         val lines = mutableListOf<LineCartesianLayer.Line>()
         val actions = mutableListOf<LineCartesianLayerModel.BuilderScope.() -> Unit>()
+
+        // Compute steady state time (single-scenario only using the first mean value timestamp)
+        steadyStateSeconds =
+            metricByScenario.entries.singleOrNull()?.let { (simName, metricGroup) ->
+                val metricsState = simulations.getValue(simName)
+                metricGroup.moments?.mean?.let { meanMetric ->
+                    metricsState.chartsState.getMetricData(meanMetric).firstOrNull()?.let { (time, _) ->
+                        (time - Simulator.START_TIME).inWholeSeconds
+                    }
+                }
+            }
+
         for ((simName, metricGroup) in metricByScenario) {
             val baseColor = scenarioColors.getValue(simName)
             val metricsState = simulations.getValue(simName)
@@ -178,6 +191,13 @@ fun SummaryChart(
                             ),
                         scrollState = rememberVicoScrollState(scrollEnabled = false),
                     )
+
+                    steadyStateSeconds?.let { seconds ->
+                        val pixelX = layerBoundsCapture.dataToPixelX(seconds.toFloat())
+                        if (pixelX in layerBoundsCapture.layerBounds.left..layerBoundsCapture.layerBounds.right) {
+                            SteadyStateGuideLine(pixelX, layerBoundsCapture.layerBounds, Modifier.matchParentSize())
+                        }
+                    }
 
                     markerRecorder.marker
                         ?.takeIf { it.canvasY.toInt() in 0..constraints.maxHeight }

@@ -7,7 +7,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.group7.components.*
 import com.group7.metrics.InstantaneousMetric
@@ -104,6 +103,8 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, SimulationState>) {
     var viewMode by remember { mutableStateOf(ChartViewMode.Average) }
     var showCi by remember { mutableStateOf(true) }
     var numBins by remember { mutableStateOf<Int?>(null) } // null = auto (Sturges' rule)
+    var showDensity by remember { mutableStateOf(false) }
+    var logScale by remember { mutableStateOf(false) }
 
     // Coerce to a valid enabled mode when available modes change
     LaunchedEffect(availableModes, modeEnabled) {
@@ -113,13 +114,13 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, SimulationState>) {
     }
 
     Column(
-        Modifier.fillMaxSize().background(Color(0xFFF5F5F5)).padding(Dimensions.spacingLg),
-        verticalArrangement = Arrangement.spacedBy(Dimensions.spacingLg),
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLow).padding(Dimensions.spacingMd),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.spacingSm),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingLg),
-            verticalAlignment = Alignment.CenterVertically,
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingSm),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.spacingXs),
+            itemVerticalAlignment = Alignment.CenterVertically,
         ) {
             Dropdown(
                 options = metricIndex.keys,
@@ -188,27 +189,41 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, SimulationState>) {
                 LabeledSwitch("Show CI", checked = showCi, onCheckedChange = { showCi = it })
             }
             if (viewMode == ChartViewMode.Histogram) {
-                LabeledSlider(
-                    value = (numBins ?: 25).toFloat(),
-                    onValueChange = { numBins = it.roundToInt() },
-                    valueRange = 3f..100f,
-                    steps = 96,
-                    minLabel = "3",
-                    maxLabel = "100",
-                    valueLabel = "Bins: ${numBins ?: "Auto"}",
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    onClick = { numBins = null },
-                    enabled = numBins != null,
-                    modifier = Modifier.alpha(if (numBins != null) 1f else 0f),
+                Row(
+                    modifier = Modifier.weight(1f).widthIn(min = 250.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Auto")
+                    LabeledSlider(
+                        // Place the slider somewhere reasonable if auto is used
+                        // We cannot easily determine where it'll be here since it depends on the values
+                        value = (numBins ?: 25).toFloat(),
+                        onValueChange = { numBins = it.roundToInt() },
+                        valueRange = 3f..100f,
+                        steps = 96,
+                        minLabel = "3",
+                        maxLabel = "100",
+                        valueLabel = "Bins: ${numBins ?: "Auto"}",
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = { numBins = null },
+                        enabled = numBins != null,
+                        modifier = Modifier.alpha(if (numBins != null) 1f else 0f),
+                    ) {
+                        Text("Auto")
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingSm)) {
+                    LabeledSwitch("Probability", checked = showDensity, onCheckedChange = { showDensity = it })
+                    LabeledSwitch("Log X", checked = logScale, onCheckedChange = { logScale = it })
                 }
             }
         }
 
-        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(Dimensions.spacingLg)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.spacingLg),
+        ) {
             if (effectiveScenarios.isNotEmpty()) {
                 val filteredMetrics =
                     metricIndex
@@ -241,6 +256,8 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, SimulationState>) {
                                 metricByScenario = filteredMetrics,
                                 simulations = simulations,
                                 numBins = numBins,
+                                showDensity = showDensity,
+                                logScale = logScale,
                             )
                     }
                 }

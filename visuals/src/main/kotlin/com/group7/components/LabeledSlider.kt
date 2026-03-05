@@ -30,7 +30,7 @@ fun LabeledSlider(
     steps: Int = 0,
     valueLabelPosition: ValueLabelPosition = ValueLabelPosition.Left,
 ) {
-    Column(modifier = modifier.padding(Dimensions.spacingLg), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = modifier.padding(Dimensions.spacingXs), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (valueLabelPosition == ValueLabelPosition.Left) {
                 Text(text = valueLabel, style = MaterialTheme.typography.bodyMedium)

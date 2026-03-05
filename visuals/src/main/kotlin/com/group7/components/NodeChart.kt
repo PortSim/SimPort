@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
@@ -150,14 +152,92 @@ internal fun DisplayNear(
 }
 
 @Composable
-internal fun GuideLine(x: Float, layerBounds: Rect, modifier: Modifier = Modifier) {
+internal fun GuideLine(x: Float, layerBounds: Rect, modifier: Modifier = Modifier, color: Color = Color.Gray) {
     Canvas(modifier = modifier) {
         drawLine(
-            color = Color.Gray,
+            color = color,
             start = Offset(x, layerBounds.bottom),
             end = Offset(x, layerBounds.top),
             strokeWidth = 2.dp.toPx(),
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), phase = 0f),
         )
+    }
+}
+
+private val SteadyStateColor = Color(0xFFFF9800)
+
+@Composable
+internal fun SteadyStateGuideLine(x: Float, layerBounds: Rect, modifier: Modifier = Modifier) {
+    GuideLine(x, layerBounds, modifier, color = SteadyStateColor)
+
+    // Label at the top of the guideline — two layout variants measured and the best one placed
+    Layout(
+        modifier = modifier,
+        content = {
+            // Variant 0: centered above the line, triangle pointing down
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                SteadyStatePill()
+                TrianglePointer(PointerDirection.Down)
+            }
+            // Variant 1: to the right of the line, triangle pointing left
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TrianglePointer(PointerDirection.Left)
+                SteadyStatePill()
+            }
+        },
+    ) { measurables, constraints ->
+        val childConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+        val centered = measurables[0].measure(childConstraints)
+        val rightOf = measurables[1].measure(childConstraints)
+
+        val centeredX = (x - centered.width / 2f).toInt()
+        val wouldOverlap = centeredX < layerBounds.left.toInt()
+
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            if (wouldOverlap) {
+                rightOf.placeRelative(x.toInt(), layerBounds.top.toInt())
+            } else {
+                centered.placeRelative(centeredX, layerBounds.top.toInt())
+            }
+        }
+    }
+}
+
+@Composable
+private fun SteadyStatePill() {
+    Box(
+        modifier =
+            Modifier.background(SteadyStateColor, shape = RoundedCornerShape(4.dp))
+                .padding(horizontal = Dimensions.spacingSm, vertical = Dimensions.spacingXxs)
+    ) {
+        Text(text = "Steady State", style = MaterialTheme.typography.labelSmall, color = Color.White)
+    }
+}
+
+private enum class PointerDirection {
+    Down,
+    Left,
+}
+
+@Composable
+private fun TrianglePointer(direction: PointerDirection) {
+    Canvas(modifier = Modifier.size(8.dp)) {
+        val path =
+            Path().apply {
+                when (direction) {
+                    PointerDirection.Down -> {
+                        moveTo(0f, 0f)
+                        lineTo(size.width, 0f)
+                        lineTo(size.width / 2f, size.height)
+                    }
+                    PointerDirection.Left -> {
+                        moveTo(size.width, 0f)
+                        lineTo(size.width, size.height)
+                        lineTo(0f, size.height / 2f)
+                    }
+                }
+                close()
+            }
+        drawPath(path, SteadyStateColor)
     }
 }

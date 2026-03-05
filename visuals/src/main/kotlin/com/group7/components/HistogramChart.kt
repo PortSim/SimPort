@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -19,7 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
@@ -32,28 +30,24 @@ import com.group7.Dimensions
 import com.group7.generateDistinctColors
 import com.group7.metrics.MetricGroup
 import com.group7.state.SimulationState
-import com.patrykandpatrick.vico.compose.cartesian.*
-import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.compose.cartesian.data.columnSeries
-import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.common.Fill
-import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import kotlin.math.*
 import kotlinx.collections.immutable.ImmutableMap
 
 internal data class HistogramBin(val lowerBound: Double, val upperBound: Double)
 
-internal data class HistogramData(val bins: List<HistogramBin>, val frequenciesByScenario: Map<String, List<Int>>)
+internal data class HistogramData(
+    val bins: List<HistogramBin>,
+    val frequenciesByScenario: Map<String, List<Int>>,
+    val logScale: Boolean = false,
+) {
+    fun formatBoundary(value: Double): String =
+        if (logScale && value > 0) "%.2f".format(log10(value)) else "%.2f".format(value)
+}
 
 internal fun computeHistogram(
     histogramsByScenario: Map<String, Histogram>,
     requestedBinCount: Int? = null,
+    logScale: Boolean = false,
 ): HistogramData {
     val nonEmpty = histogramsByScenario.filterValues { !it.isEmpty }
     if (nonEmpty.isEmpty()) return HistogramData(emptyList(), emptyMap())
@@ -80,11 +74,22 @@ internal fun computeHistogram(
             // Sturges' rule
             ceil(log2(totalCount.toDouble()) + 1).toInt().coerceIn(3, 100)
         }
-    val binWidth = (globalMax - globalMin) / binCount
+
+    // Work in log10 space when logScale is enabled and all values are positive; otherwise linear.
+    val useLog = logScale && globalMin > 0
+    val transform: (Double) -> Double = if (useLog) ::log10 else { x -> x }
+    val untransform: (Double) -> Double = if (useLog) { x -> 10.0.pow(x) } else { x -> x }
+
+    val effMin = transform(globalMin)
+    val effMax = transform(globalMax)
+    val binWidth = (effMax - effMin) / binCount
 
     val bins =
         (0 until binCount).map { i ->
-            HistogramBin(lowerBound = globalMin + i * binWidth, upperBound = globalMin + (i + 1) * binWidth)
+            HistogramBin(
+                lowerBound = untransform(effMin + i * binWidth),
+                upperBound = untransform(effMin + (i + 1) * binWidth),
+            )
         }
 
     val frequenciesByScenario =
@@ -92,37 +97,63 @@ internal fun computeHistogram(
             val counts = IntArray(binCount)
             for (bin in histogram.nonEmptyBinsAscending()) {
                 val midpoint = (bin.lowerBound + bin.upperBound) / 2.0
-                val index = ((midpoint - globalMin) / binWidth).toInt().coerceIn(0, binCount - 1)
+                val index = ((transform(midpoint) - effMin) / binWidth).toInt().coerceIn(0, binCount - 1)
                 counts[index] += bin.binCount.toInt()
             }
             counts.toList()
         }
 
-    return HistogramData(bins, frequenciesByScenario)
+    return HistogramData(bins, frequenciesByScenario, logScale)
 }
 
-/** Compute a nice round maximum and tick step for integer frequency axes. Want a step in [1,2,5,10]. */
-internal fun computeNiceMaxAndStep(maxValue: Int): Pair<Int, Int> {
-    if (maxValue <= 0) return 1 to 1
+/** Compute a nice round maximum and tick step for Double-valued axes (used for density mode). */
+internal fun computeNiceMaxAndStepDouble(maxValue: Double): Pair<Double, Double> {
+    if (maxValue <= 0.0) return 1.0 to 1.0
 
     val targetStepCount = 10
-    val roughStep = maxValue / targetStepCount.toDouble()
-    val magnitude = 10.0.pow(floor(log10(roughStep.coerceAtLeast(1.0)))).toInt().coerceAtLeast(1)
+    val roughStep = maxValue / targetStepCount
+    val magnitude = 10.0.pow(floor(log10(roughStep.coerceAtLeast(1e-10))))
 
-    // Pick the nearest (linear distance) "nice" step from allowed values
-    val niceSteps = listOf(1, 2, 5, 10)
+    val niceSteps = listOf(1.0, 2.0, 5.0, 10.0)
     val normalisedRoughStep = roughStep / magnitude
-    val step = (niceSteps.minByOrNull { abs(it - normalisedRoughStep) } ?: 1) * magnitude
+    val step = (niceSteps.minBy { abs(it - normalisedRoughStep) }) * magnitude
 
-    val niceMax = ceil(maxValue / step.toDouble()).toInt() * step
+    val niceMax = ceil(maxValue / step) * step
     return niceMax to step
 }
+
+/**
+ * Converts raw integer frequency counts to display values, optionally applying density normalization: density = count /
+ * totalCount (relative frequency). When multiple normalises each based on their individual totalCount not
+ * globalTotalCount.
+ */
+internal fun computeDisplayValues(data: HistogramData, showDensity: Boolean): Map<String, List<Double>> {
+    if (!showDensity) {
+        return data.frequenciesByScenario.mapValues { (_, freqs) -> freqs.map { it.toDouble() } }
+    }
+    if (data.bins.isEmpty()) return data.frequenciesByScenario.mapValues { emptyList() }
+    return data.frequenciesByScenario.mapValues { (_, freqs) ->
+        val totalCount = freqs.sum()
+        if (totalCount == 0) freqs.map { 0.0 } else freqs.map { count -> count.toDouble() / totalCount }
+    }
+}
+
+/** Adaptive formatting for density values — avoids showing 0.0000 for small numbers. */
+private fun formatDensityValue(value: Double): String =
+    when {
+        value == 0.0 -> "0"
+        value >= 0.01 -> "%.3f".format(value)
+        // 3 s.f. scientific notation
+        else -> "%.3g".format(value)
+    }
 
 @Composable
 fun HistogramChart(
     metricByScenario: ImmutableMap<String, MetricGroup>,
     simulations: Map<String, SimulationState>,
     numBins: Int? = null,
+    showDensity: Boolean = false,
+    logScale: Boolean = false,
 ) {
     val scenarioColors =
         remember(metricByScenario) {
@@ -138,7 +169,7 @@ fun HistogramChart(
 
     var histogramData by remember { mutableStateOf<HistogramData?>(null) }
 
-    LaunchedEffect(metricByScenario, numBins, simulations.values.map { it.histogramsState.latestTimeSeen }) {
+    LaunchedEffect(metricByScenario, numBins, logScale, simulations.values.map { it.histogramsState.latestTimeSeen }) {
         val histogramsByScenario =
             metricByScenario
                 .mapNotNull { (simName, metricGroup) ->
@@ -153,7 +184,7 @@ fun HistogramChart(
             histogramData = null
             return@LaunchedEffect
         }
-        val data = computeHistogram(histogramsByScenario, numBins)
+        val data = computeHistogram(histogramsByScenario, numBins, logScale)
         histogramData = if (data.bins.isEmpty()) null else data
     }
 
@@ -175,122 +206,9 @@ fun HistogramChart(
                 ChartLegend(items = legendItems)
             }
 
-            if (metricByScenario.size == 1) {
-                SingleHistogramVico(data, scenarioColors, metricByScenario)
-            } else {
-                MultiHistogramCanvas(data, scenarioColors, metricByScenario)
-            }
+            HistogramCanvas(data, scenarioColors, metricByScenario, showDensity)
         } else {
             Text("No data to display")
-        }
-    }
-}
-
-/** Single-scenario histogram rendered with Vico ColumnCartesianLayer. */
-@Composable
-private fun SingleHistogramVico(
-    data: HistogramData,
-    scenarioColors: Map<String, Color>,
-    metricByScenario: ImmutableMap<String, MetricGroup>,
-) {
-    val (simName, _) = metricByScenario.entries.single()
-    val color = scenarioColors.getValue(simName)
-    val modelProducer = remember { CartesianChartModelProducer() }
-
-    val columnProvider =
-        ColumnCartesianLayer.ColumnProvider.series(
-            rememberLineComponent(
-                fill = Fill(color),
-                strokeFill = Fill.Black,
-                strokeThickness = Dimensions.borderWidthThin,
-            )
-        )
-
-    LaunchedEffect(data) {
-        val frequencies = data.frequenciesByScenario[simName] ?: return@LaunchedEffect
-        modelProducer.runTransaction {
-            columnSeries {
-                // x-axis is from 0->n so +0.5 centres it for that bin
-                series(x = frequencies.indices.map { it.toDouble() + 0.5 }, y = frequencies.map { it as Number })
-            }
-        }
-    }
-
-    val binWidth = data.bins[0].upperBound - data.bins[0].lowerBound
-    val globalMin = data.bins[0].lowerBound
-    val boundaryFormatter =
-        remember(data) { CartesianValueFormatter { _, value, _ -> "%.2f".format(globalMin + value * binWidth) } }
-
-    // Vico's internal state uses rememberSaveable for animation/zoom tracking.
-    // When the histogram data changes, Vico's remembered type can change and cause
-    // ClassCastExceptions when restoring stale state. Setting the registry to null
-    // prevents rememberSaveable from persisting anything inside this chart.
-    CompositionLocalProvider(LocalSaveableStateRegistry provides null) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(bottom = 16.dp)) {
-            val markerRecorder = remember { MarkerRecorder() }
-            val layerBoundsCapture = remember { LayerBoundsCapture() }
-
-            CartesianChartHost(
-                chart =
-                    rememberCartesianChart(
-                        rememberColumnCartesianLayer(
-                            columnProvider = columnProvider,
-                            columnCollectionSpacing = 0.dp,
-                            rangeProvider =
-                                remember(data) {
-                                    CartesianLayerRangeProvider.fixed(minX = 0.0, maxX = data.bins.size.toDouble())
-                                },
-                        ),
-                        startAxis =
-                            VerticalAxis.rememberStart(
-                                label =
-                                    rememberAxisLabelComponent(
-                                        style = TextStyle(color = MaterialTheme.colorScheme.onSurface)
-                                    )
-                            ),
-                        bottomAxis =
-                            HorizontalAxis.rememberBottom(
-                                label =
-                                    rememberAxisLabelComponent(
-                                        style = TextStyle(color = MaterialTheme.colorScheme.onSurface)
-                                    ),
-                                valueFormatter = boundaryFormatter,
-                                itemPlacer = remember { HorizontalAxis.ItemPlacer.aligned() },
-                            ),
-                        markerController = markerRecorder,
-                        marker = NoOpMarker,
-                        decorations = listOf(layerBoundsCapture),
-                    ),
-                modelProducer = modelProducer,
-                modifier = Modifier.matchParentSize().graphicsLayer(),
-                zoomState =
-                    rememberVicoZoomState(
-                        initialZoom = Zoom.Content,
-                        minZoom = Zoom.Content,
-                        maxZoom = Zoom.Content,
-                        zoomEnabled = false,
-                    ),
-                scrollState = rememberVicoScrollState(scrollEnabled = false),
-            )
-
-            markerRecorder.marker
-                ?.takeIf { it.canvasY.toInt() in 0..constraints.maxHeight }
-                ?.let { (x, _, canvasY) ->
-                    val binIndex = (x - 0.5).toInt()
-                    if (binIndex in data.bins.indices) {
-                        val binCenterX = layerBoundsCapture.dataToPixelX(binIndex + 0.5f)
-                        GuideLine(binCenterX, layerBoundsCapture.layerBounds, Modifier.matchParentSize())
-                        DisplayNear(anchorX = binCenterX.toInt(), anchorY = canvasY.toInt()) {
-                            HistogramTooltip(
-                                data.bins[binIndex],
-                                data.frequenciesByScenario,
-                                binIndex,
-                                scenarioColors,
-                                metricByScenario.keys,
-                            )
-                        }
-                    }
-                }
         }
     }
 }
@@ -307,16 +225,17 @@ private data class ChartGeometry(
 /** Dashed horizontal lines at each Y tick and dashed vertical lines at each bin boundary. */
 private fun DrawScope.drawHistogramGrid(
     geo: ChartGeometry,
-    niceMax: Int,
-    tickStep: Int,
+    niceMax: Double,
+    tickStep: Double,
     binCount: Int,
     color: Color,
     dash: PathEffect,
 ) {
     val stroke = Dimensions.borderWidth.toPx()
     var gridTick = tickStep
-    while (gridTick <= niceMax) {
-        val y = geo.chartBottom - (gridTick.toFloat() / niceMax) * geo.chartHeight
+    // 0.01 * tickStep is a guard against floating point addition errors
+    while (gridTick <= niceMax + tickStep * 0.01) {
+        val y = geo.chartBottom - (gridTick / niceMax).toFloat() * geo.chartHeight
         drawLine(
             color,
             Offset(geo.chartLeft, y),
@@ -339,17 +258,18 @@ private fun DrawScope.drawHistogramGrid(
 private fun DrawScope.drawHistogramBars(
     geo: ChartGeometry,
     data: HistogramData,
+    displayValues: Map<String, List<Double>>,
     scenarios: Set<String>,
     colors: Map<String, Color>,
-    niceMax: Int,
+    niceMax: Double,
 ) {
     for (binIndex in data.bins.indices) {
         scenarios
-            .map { it to (data.frequenciesByScenario[it]?.get(binIndex) ?: 0) }
+            .map { it to (displayValues[it]?.get(binIndex) ?: 0.0) }
             .sortedByDescending { it.second }
-            .forEach { (simName, freq) ->
-                if (freq <= 0) return@forEach
-                val barHeight = (freq.toFloat() / niceMax) * geo.chartHeight
+            .forEach { (simName, value) ->
+                if (value <= 0.0) return@forEach
+                val barHeight = (value / niceMax).toFloat().coerceIn(0f, 1f) * geo.chartHeight
                 val topLeft = Offset(geo.chartLeft + binIndex * geo.binPixelWidth, geo.chartBottom - barHeight)
                 val size = Size(geo.binPixelWidth, barHeight)
                 drawRect(color = colors.getValue(simName), topLeft = topLeft, size = size)
@@ -366,8 +286,9 @@ private fun DrawScope.drawHistogramBars(
 /** Y-axis line with evenly spaced tick marks and right-aligned numeric labels. */
 private fun DrawScope.drawHistogramYAxis(
     geo: ChartGeometry,
-    niceMax: Int,
-    tickStep: Int,
+    niceMax: Double,
+    tickStep: Double,
+    showDensity: Boolean,
     axisColor: Color,
     textMeasurer: TextMeasurer,
     labelStyle: TextStyle,
@@ -380,11 +301,12 @@ private fun DrawScope.drawHistogramYAxis(
         Offset(geo.chartLeft, geo.chartBottom),
         strokeWidth = Dimensions.borderWidth.toPx(),
     )
-    var tick = 0
-    while (tick <= niceMax) {
-        val y = geo.chartBottom - (tick.toFloat() / niceMax) * geo.chartHeight
+    var tick = 0.0
+    while (tick <= niceMax + tickStep * 0.01) {
+        val y = geo.chartBottom - (tick / niceMax).toFloat() * geo.chartHeight
         drawLine(axisColor, Offset(geo.chartLeft - tickPx, y), Offset(geo.chartLeft, y))
-        val result = textMeasurer.measure(tick.toString(), labelStyle)
+        val label = if (showDensity) formatDensityValue(tick) else "%.0f".format(tick)
+        val result = textMeasurer.measure(label, labelStyle)
         drawText(
             result,
             topLeft = Offset(geo.chartLeft - tickPx - gapPx - result.size.width, y - result.size.height / 2f),
@@ -401,14 +323,15 @@ private fun DrawScope.xAxisLabelMinSpacing(
     textMeasurer: TextMeasurer,
     labelStyle: TextStyle,
 ): Float {
-    val firstWidth = textMeasurer.measure("%.2f".format(data.bins.first().lowerBound), labelStyle).size.width
-    val lastWidth = textMeasurer.measure("%.2f".format(data.bins.last().upperBound), labelStyle).size.width
+    val firstWidth = textMeasurer.measure(data.formatBoundary(data.bins.first().lowerBound), labelStyle).size.width
+    val lastWidth = textMeasurer.measure(data.formatBoundary(data.bins.last().upperBound), labelStyle).size.width
     return maxOf(firstWidth, lastWidth) + Dimensions.spacingXs.toPx() * 2
 }
 
 /**
  * X-axis line with centred bin-boundary labels. Label count is capped to avoid overlap, using the actual measured width
- * of the widest boundary label plus a small margin as the minimum spacing.
+ * of the widest boundary label plus a small margin as the minimum spacing. In log mode, labels show log10 of the
+ * boundary value.
  */
 private fun DrawScope.drawHistogramXAxis(
     geo: ChartGeometry,
@@ -431,35 +354,51 @@ private fun DrawScope.drawHistogramXAxis(
         val x = geo.chartLeft + i * geo.binPixelWidth
         drawLine(axisColor, Offset(x, geo.chartBottom), Offset(x, geo.chartBottom + tickPx))
         val value = if (i < data.bins.size) data.bins[i].lowerBound else data.bins.last().upperBound
-        val result = textMeasurer.measure("%.2f".format(value), labelStyle)
+        val result = textMeasurer.measure(data.formatBoundary(value), labelStyle)
         drawText(result, topLeft = Offset(x - result.size.width / 2f, geo.chartBottom + tickPx + gapPx))
     }
 }
 
-/** Multi-scenario histogram rendered with custom Canvas (per-bin draw ordering). */
 @Composable
-private fun MultiHistogramCanvas(
+private fun HistogramCanvas(
     data: HistogramData,
     scenarioColors: Map<String, Color>,
     metricByScenario: ImmutableMap<String, MetricGroup>,
+    showDensity: Boolean,
 ) {
+    val metricName = metricByScenario.values.first().name
+    val xAxisTitle = if (data.logScale) "log\u2081\u2080( $metricName )" else metricName
+
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant
     val labelStyle = MaterialTheme.typography.labelSmall.copy(color = axisColor)
 
-    val maxFreq = data.frequenciesByScenario.values.maxOfOrNull { freqs -> freqs.maxOrNull() ?: 0 } ?: 0
-    val (niceMax, tickStep) = remember(maxFreq) { computeNiceMaxAndStep(maxFreq) }
-    // for ints width of widest Y label = width of max label
+    val displayValues = remember(data, showDensity) { computeDisplayValues(data, showDensity) }
+    val maxDisplayValue = displayValues.values.maxOfOrNull { freqs -> freqs.maxOrNull() ?: 0.0 } ?: 0.0
+
+    val (niceMax, tickStep) = remember(maxDisplayValue) { computeNiceMaxAndStepDouble(maxDisplayValue) }
+
     val yLabelWidth =
-        remember(niceMax, textMeasurer, labelStyle) {
-            textMeasurer.measure(niceMax.toString(), labelStyle).size.width.toFloat()
+        remember(niceMax, showDensity, textMeasurer, labelStyle) {
+            val label = if (showDensity) formatDensityValue(niceMax) else "%.0f".format(niceMax)
+            textMeasurer.measure(label, labelStyle).size.width.toFloat()
         }
     val leftPaddingPx = yLabelWidth + with(density) { 8.dp.toPx() }
-    val bottomPaddingPx = with(density) { 32.dp.toPx() }
+    // Measure actual rendered text to get line height (labelStyle.lineHeight may be Unspecified)
+    val textLineHeight = textMeasurer.measure(xAxisTitle, labelStyle).size.height.toFloat()
+    // tick + gap + 2 text lines (x-axis boundary labels + x-axis title) + gap between them
+    val bottomPaddingPx =
+        with(density) {
+            Dimensions.axisTickLength.toPx() +
+                Dimensions.axisLabelGap.toPx() +
+                2 * textLineHeight +
+                Dimensions.spacingXs.toPx()
+        }
     val rightLabelWidth =
         remember(data, textMeasurer, labelStyle) {
-            textMeasurer.measure("%.2f".format(data.bins.last().upperBound), labelStyle).size.width.toFloat()
+            val label = data.formatBoundary(data.bins.last().upperBound)
+            textMeasurer.measure(label, labelStyle).size.width.toFloat()
         }
     // half the width of the last X label + 4dp gap
     val rightPaddingPx = rightLabelWidth / 2f + with(density) { 4.dp.toPx() }
@@ -468,7 +407,7 @@ private fun MultiHistogramCanvas(
     var hoverBinIndex by remember { mutableStateOf(-1) }
     var hoverOffset by remember { mutableStateOf(Offset.Zero) }
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(bottom = Dimensions.spacingMd)) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // DisplayNear is a composable, so binCenterX must be computed during composition.
         // size.width (Canvas draw scope) is only available during the draw phase (too late).
         // BoxWithConstraints exposes constraints.maxWidth during composition; since the Canvas
@@ -517,9 +456,14 @@ private fun MultiHistogramCanvas(
                 )
 
             drawHistogramGrid(geo, niceMax, tickStep, data.bins.size, Color.Gray, dashEffect)
-            drawHistogramBars(geo, data, metricByScenario.keys, scenarioColors, niceMax)
-            drawHistogramYAxis(geo, niceMax, tickStep, axisColor, textMeasurer, labelStyle)
+            drawHistogramBars(geo, data, displayValues, metricByScenario.keys, scenarioColors, niceMax)
+            drawHistogramYAxis(geo, niceMax, tickStep, showDensity, axisColor, textMeasurer, labelStyle)
             drawHistogramXAxis(geo, data, axisColor, textMeasurer, labelStyle)
+
+            // X-axis title centred below the axis labels
+            val titleResult = textMeasurer.measure(xAxisTitle, labelStyle)
+            val titleX = geo.chartLeft + (geo.chartWidth - titleResult.size.width) / 2f
+            drawText(titleResult, topLeft = Offset(titleX, size.height - titleResult.size.height))
 
             if (hoverBinIndex in data.bins.indices) {
                 val snapX = geo.chartLeft + (hoverBinIndex + 0.5f) * geo.binPixelWidth
@@ -541,6 +485,7 @@ private fun MultiHistogramCanvas(
                     hoverBinIndex,
                     scenarioColors,
                     metricByScenario.keys,
+                    densityValues = if (showDensity) displayValues else null,
                 )
             }
         }
@@ -554,11 +499,18 @@ internal fun HistogramTooltip(
     binIndex: Int,
     scenarioColors: Map<String, Color>,
     scenarios: Set<String>,
+    densityValues: Map<String, List<Double>>? = null,
 ) {
     val entries =
         scenarios
-            .map { simName -> simName to (frequenciesByScenario[simName]?.getOrNull(binIndex) ?: 0) }
-            .sortedByDescending { it.second }
+            .map { simName ->
+                Triple(
+                    simName,
+                    frequenciesByScenario[simName]?.getOrNull(binIndex) ?: 0,
+                    densityValues?.get(simName)?.getOrNull(binIndex),
+                )
+            }
+            .sortedByDescending { it.third ?: it.second.toDouble() }
     val total = entries.sumOf { it.second }
 
     Column(modifier = Modifier.background(Color.Black, shape = RoundedCornerShape(8.dp)).padding(8.dp)) {
@@ -567,7 +519,7 @@ internal fun HistogramTooltip(
             style = MaterialTheme.typography.labelSmall,
             color = Color.White.copy(alpha = 0.7f),
         )
-        for ((simName, count) in entries) {
+        for ((simName, count, density) in entries) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingXs),
                 verticalAlignment = Alignment.CenterVertically,
@@ -577,7 +529,13 @@ internal fun HistogramTooltip(
                         Modifier.size(Dimensions.spacingSm)
                             .background(scenarioColors.getValue(simName), shape = CircleShape)
                 )
-                Text(text = "$simName: $count", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                val text =
+                    if (density != null) {
+                        "$simName: $count (density: ${formatDensityValue(density)})"
+                    } else {
+                        "$simName: $count"
+                    }
+                Text(text = text, style = MaterialTheme.typography.labelSmall, color = Color.White)
             }
         }
         if (entries.size > 1) {

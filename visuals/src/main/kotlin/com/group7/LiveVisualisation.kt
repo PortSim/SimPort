@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -61,7 +62,7 @@ fun LiveVisualisation(
             PlaybackSpeedSlider(
                 currentSpeed = simulator.playbackSpeed,
                 onSpeedChange = { simulator.playbackSpeed = it },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).padding(Dimensions.spacingLg),
             )
 
             if (simulator.isStepping) {
