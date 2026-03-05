@@ -5,6 +5,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
+/** For continuous metrics, weight new samples by time and do batch means. */
 class AdaptiveTimeWeightedBatchMeans(
     initialBatchInterval: Duration = 1.milliseconds,
     override val targetBatches: Int = 32,
@@ -21,6 +22,7 @@ class AdaptiveTimeWeightedBatchMeans(
     private var isFirstUpdate = true
     private var updateCount = 0L
 
+    /** Add a new value at `currentTime` */
     fun update(currentTime: Instant, value: Double) {
         if (currentTime < lastUpdateTime) {
             throw IllegalArgumentException("Time cannot go backwards")
@@ -44,6 +46,8 @@ class AdaptiveTimeWeightedBatchMeans(
     private fun updateBatches(currentTime: Instant) {
         var processTime = lastUpdateTime
 
+        // Any number of batches could have passed since we last got a sample
+        // so we need to spread this value over that whole time
         while (processTime < currentTime) {
             val batchEnd = currentBatchStart + batchInterval
             val segmentEnd = minOf(batchEnd, currentTime)
@@ -52,6 +56,7 @@ class AdaptiveTimeWeightedBatchMeans(
             currentBatchArea += lastValue * segmentDuration.toDouble(durationUnit)
             processTime = segmentEnd
 
+            // Finish batches when necessary
             if (processTime >= batchEnd) {
                 closeBatch()
             }
@@ -65,6 +70,7 @@ class AdaptiveTimeWeightedBatchMeans(
         currentBatchArea = 0.0
         currentBatchStart += batchInterval
 
+        // Squash if too many batches
         if (batchMeans.size >= 2 * targetBatches) {
             collapseBatches()
         }
