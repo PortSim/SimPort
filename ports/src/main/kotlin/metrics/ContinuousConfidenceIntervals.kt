@@ -2,6 +2,7 @@ package com.group7.metrics
 
 import kotlin.time.Instant
 
+/** Confidence intervals for continuous metrics, using time-weighted batch means */
 class ContinuousConfidenceIntervals(
     private val metric: ContinuousMetric,
     alpha: Double = 0.05, // 95% CI
