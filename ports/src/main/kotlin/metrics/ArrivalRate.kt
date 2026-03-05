@@ -8,6 +8,7 @@ import com.group7.properties.Source
 import com.group7.utils.suffix
 import kotlin.time.DurationUnit
 
+/** Local and global arrival rate. */
 sealed class ArrivalRate(unit: DurationUnit) : RateMetric(unit) {
 
     context(sim: Simulator)
@@ -29,12 +30,18 @@ sealed class ArrivalRate(unit: DurationUnit) : RateMetric(unit) {
         }
     }
 
+    /**
+     * Rate metric for local and global rate of arrivals.
+     *
+     * Local arrival rate tracks objects entering a node. Global arrival rate tracks objects leaving source nodes.
+     */
     companion object : MetricFactory<Container<*>>, GlobalMetricFactory {
         override fun create(node: Container<*>, scenario: Scenario): MetricGroup = create(node, DurationUnit.HOURS)
 
         fun create(node: Container<*>, unit: DurationUnit): MetricGroup {
             val raw = Local(node, unit)
             val cis = RateConfidenceIntervals(raw, R5Instantaneous(InterArrivalTime.Local(node, unit)))
+            // Do not record raw values for a rate metric
             return MetricGroup("Arrival rate (objects / ${unit.suffix})", node as NodeGroup, null, cis.moments())
         }
 
@@ -43,6 +50,7 @@ sealed class ArrivalRate(unit: DurationUnit) : RateMetric(unit) {
         fun create(scenario: Scenario, unit: DurationUnit): MetricGroup {
             val raw = Global(scenario, unit)
             val cis = RateConfidenceIntervals(raw, R5Instantaneous(InterArrivalTime.Global(scenario, unit)))
+            // Do not record raw values for a rate metric
             return MetricGroup("Arrival rate (objects / ${unit.suffix})", null, null, cis.moments())
         }
     }

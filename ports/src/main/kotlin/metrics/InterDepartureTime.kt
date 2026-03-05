@@ -9,6 +9,7 @@ import com.group7.utils.suffix
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
+/** Time between departures instantaneous metric */
 sealed class InterDepartureTime(private val unit: DurationUnit) : InstantaneousMetric() {
     private var lastSeen: Instant? = null
 
@@ -24,18 +25,26 @@ sealed class InterDepartureTime(private val unit: DurationUnit) : InstantaneousM
 
     class Local(container: Container<*>, unit: DurationUnit = DurationUnit.SECONDS) : InterDepartureTime(unit) {
         init {
+            // Notify when any object leaves the container
             container.onLeave { notifySeen() }
         }
     }
 
     class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : InterDepartureTime(unit) {
         init {
+            // Notify when any object entering an output sink
             for (sink in scenario.allNodes.asSequence().filterIsInstance<OutputSink<*>>()) {
                 sink.onEnter { notifySeen() }
             }
         }
     }
 
+    /**
+     * Instantaneous metric for time between departures, instantaneous metric.
+     *
+     * Local inter-departure time triggered by objects leaving nodes. Global inter-arrival time based on gaps between
+     * arrivals at any sink nodes.
+     */
     companion object : MetricFactory<Container<*>>, GlobalMetricFactory {
         override fun create(node: Container<*>, scenario: Scenario) = create(node, DurationUnit.SECONDS)
 
