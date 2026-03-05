@@ -12,6 +12,8 @@
     <!-- Outgoing merged line -->
     <line x1="100" y1="100" x2="160" y2="100" stroke="#aa5500" stroke-width="16"/>
 
-    <!-- Single node at right end -->
-    <circle cx="160" cy="100" r="14" fill="#aa5500"/>
+    <!-- Arrow -->
+    <polygon points="150,115 150,85 180,100"
+             fill="#aa5500"
+             stroke="#aa5500"/>
 </svg>

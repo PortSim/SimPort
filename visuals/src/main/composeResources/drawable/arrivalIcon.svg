@@ -10,6 +10,9 @@
     <circle cx="0" cy="100" r="64" fill="#cce5ff"/>
     <circle cx="0" cy="100" r="48" fill="#0077cc"/>
 
-    <!-- Optional nodes -->
-    <circle cx="160" cy="100" r="14" fill="#0077cc"/>
+    <!-- Arrow -->
+    <polygon points="150,115 150,85 180,100"
+             fill="#0077cc"
+             stroke="#0077cc"/>
+
 </svg>

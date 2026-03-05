@@ -3,15 +3,20 @@
     <rect x="0" y="0" width="200" height="200" fill="#ffccd5"/>
 
     <!-- Vertical line -->
-    <line x1="100" y1="160" x2="100" y2="40" stroke="#f06292" stroke-width="16"/>
+    <line x1="100" y1="160" x2="100" y2="100" stroke="#f06292" stroke-width="16"/>
 
-    <!-- Central split circle -->
-    <circle cx="100" cy="100" r="40" fill="#f06292"/>
+    <!-- Horizontal line -->
+    <line x1="40" y1="100" x2="160" y2="100" stroke="#f06292" stroke-width="16"/>
+
+    <!-- Horizontal line left stub -->
+    <line x1="40" y1="80" x2="40" y2="120" stroke="#f06292" stroke-width="16"/>
 
     <!-- Line endings -->
     <line x1="80" y1="160" x2="120" y2="160" stroke="#f06292" stroke-width="16"/>
-    <line x1="80" y1="40" x2="120" y2="40" stroke="#f06292" stroke-width="16"/>
+    <!-- Arrow -->
+    <polygon points="150,115 150,85 180,100"
+             fill="#f06292"
+             stroke="#f06292"/>
 
     <!-- Inner circle -->
-    <circle cx="100" cy="100" r="24" fill="#ffccd5"/>
 </svg>
