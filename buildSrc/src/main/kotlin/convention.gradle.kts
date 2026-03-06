@@ -5,7 +5,6 @@ plugins {
     kotlin("plugin.power-assert")
     id("io.kotest")
     id("com.ncorti.ktfmt.gradle")
-    id("org.jetbrains.dokka")
     `maven-publish`
 }
 
@@ -38,9 +37,6 @@ dependencies {
     testImplementation("io.kotest:kotest-framework-engine:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
-
-    // Dokka
-    implementation("org.jetbrains.dokka:dokka-gradle-plugin:1.9.20")
 }
 
 kotlin {
@@ -60,16 +56,6 @@ powerAssert { functions = listOf("io.kotest.matchers.shouldBe") }
 ktfmt {
     kotlinLangStyle()
     maxWidth = 120
-}
-
-dokka {
-    dokkaSourceSets.configureEach {
-        skipDeprecated = true // Skips deprecated API
-        reportUndocumented = true // Reports if any public API are undocumented
-
-        jdkVersion = 21
-        moduleName = project.name
-    }
 }
 
 publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
