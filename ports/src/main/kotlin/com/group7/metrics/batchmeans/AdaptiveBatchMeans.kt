@@ -1,5 +1,7 @@
 package com.group7.metrics.batchmeans
 
+import com.group7.utils.andThen
+
 /**
  * Does batch means on data as new values come in by:
  * - storing data into up to `2 * targetBatches` batches, and report the mean of each of these
@@ -7,8 +9,14 @@ package com.group7.metrics.batchmeans
  */
 abstract class AdaptiveBatchMeans(val targetBatches: Int) {
     private val batchMeans: MutableList<Double> = ArrayList(targetBatches * 2)
+    private var closeBatchCallback: (() -> Unit)? = null
+
+    fun onCloseBatch(callback: () -> Unit) {
+        closeBatchCallback = closeBatchCallback.andThen(callback)
+    }
 
     protected fun addBatchAndCollapse(x: Double): Boolean {
+        closeBatchCallback?.invoke()
         batchMeans.add(x)
         return collapseBatchesIfNeeded()
     }

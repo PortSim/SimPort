@@ -18,14 +18,11 @@ import com.group7.properties.Sink
 sealed class DefaultSinkNode<InputT>(label: String, source: PushInputChannel<InputT>) :
     ContainerNode<InputT>(label, listOf(source), emptyList()), Sink<InputT> {
 
-    private val results = mutableMapOf<InputT, Int>()
-
     final override var occupants = 0
         private set
 
     init {
         source.onReceive {
-            results.compute(it) { _, count -> (count ?: 0) + 1 }
             occupants++
             notifyEnter(it)
         }

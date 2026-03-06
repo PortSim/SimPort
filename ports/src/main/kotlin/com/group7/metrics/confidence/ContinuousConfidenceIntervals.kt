@@ -1,6 +1,9 @@
-package com.group7.metrics
+package com.group7.metrics.confidence
 
+import com.group7.metrics.ContinuousMetric
 import com.group7.metrics.batchmeans.AdaptiveTimeWeightedBatchMeans
+import com.group7.metrics.steady.R5Continuous
+import com.group7.metrics.steady.SteadyStateDetector
 import kotlin.time.Instant
 
 /** Confidence intervals for continuous metrics, using time-weighted batch means */

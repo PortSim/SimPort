@@ -12,12 +12,12 @@ import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.util.ElkGraphUtil
 
-class ScenarioLayout(scenario: Scenario) {
+class ScenarioLayout(scenario: Scenario, enableEdgeLabels: Boolean) {
     val elkGraphRoot: ElkNode = ElkGraphUtil.createGraph()
 
     private val nodesOrderedByBFS = scenario.bfs()
     private val elkNodeToNodeGroup = createElkNodes(nodesOrderedByBFS, elkGraphRoot)
-    private val elkEdgeToChannel = createElkEdges(nodesOrderedByBFS, elkNodeToNodeGroup)
+    private val elkEdgeToChannel = createElkEdges(nodesOrderedByBFS, elkNodeToNodeGroup, enableEdgeLabels)
 
     init {
         setElkContainerNodeProperties(elkGraphRoot)
@@ -86,6 +86,7 @@ class ScenarioLayout(scenario: Scenario) {
         private fun createElkEdges(
             nodesOrderedByBFS: List<Node>,
             elkNodeToNodeGroup: Map<ElkNode, NodeGroup>,
+            enableEdgeLabels: Boolean,
         ): Map<ElkEdge, OutputChannel<*, *>> {
             val nodeGroupToElkNode = elkNodeToNodeGroup.entries.associate { it.value to it.key }
             val elkEdgeToChannel = mutableMapOf<ElkEdge, OutputChannel<*, *>>()
@@ -98,16 +99,18 @@ class ScenarioLayout(scenario: Scenario) {
                             nodeGroupToElkNode.getValue(destination),
                         )
                     ElkGraphUtil.updateContainment(edge)
-                    val label =
-                        ElkGraphUtil.createLabel(
-                            "1", // placeholder text of 1 so that ELK layouts the labels appropriately
-                            edge,
-                        )
-                    edge.labels.add(label)
-                    label.setProperty(LayeredOptions.EDGE_LABELS_PLACEMENT, EdgeLabelPlacement.CENTER)
-                    label.setProperty(CoreOptions.EDGE_LABELS_INLINE, false)
-                    label.width = EDGE_LABEL_WIDTH
-                    label.height = EDGE_LABEL_HEIGHT
+                    if (enableEdgeLabels) {
+                        val label =
+                            ElkGraphUtil.createLabel(
+                                "1", // placeholder text of 1 so that ELK layouts the labels appropriately
+                                edge,
+                            )
+                        edge.labels.add(label)
+                        label.setProperty(LayeredOptions.EDGE_LABELS_PLACEMENT, EdgeLabelPlacement.CENTER)
+                        label.setProperty(CoreOptions.EDGE_LABELS_INLINE, false)
+                        label.width = EDGE_LABEL_WIDTH
+                        label.height = EDGE_LABEL_HEIGHT
+                    }
                     elkEdgeToChannel[edge] = channel
                 }
             }

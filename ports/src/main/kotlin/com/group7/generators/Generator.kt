@@ -1,8 +1,8 @@
 package com.group7.generators
 
-import com.group7.DisplayProperty
-import com.group7.FieldDisplayProperty
-import com.group7.GroupDisplayProperty
+import com.group7.properties.DisplayProperty
+import com.group7.properties.FieldDisplayProperty
+import com.group7.properties.GroupDisplayProperty
 import com.group7.utils.RandomContext
 import com.group7.utils.suffix
 import com.group7.utils.toStringWithBestUnit

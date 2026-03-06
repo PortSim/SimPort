@@ -5,8 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.group7.*
 import com.group7.channels.*
+import com.group7.properties.FieldDisplayProperty
+import com.group7.properties.GroupDisplayProperty
 
-class PortDisplayState(scenario: Scenario, iconProvider: IconProvider = ByTypeIconProvider()) {
+class PortDisplayState(scenario: Scenario, iconProvider: IconProvider = IconProvider.defaultProvider()) {
     private val nodesOrderedByBFS = scenario.bfs()
     private val allChannels = nodesOrderedByBFS.flatMap { it.outgoing }
 

@@ -5,7 +5,7 @@ import com.group7.SourceNode
 import com.group7.channels.PushOutputChannel
 import com.group7.channels.send
 import com.group7.generators.Generator
-import com.group7.properties.DisplayProgressBars
+import com.group7.properties.HasProgressBars
 import com.group7.properties.Source
 import com.group7.utils.andThen
 import kotlin.time.Duration
@@ -23,7 +23,7 @@ class ArrivalNode<OutputT>(
     label: String,
     private val destination: PushOutputChannel<OutputT>,
     private val generator: Generator<OutputT>,
-) : SourceNode(label, listOf(destination)), Source<OutputT>, DisplayProgressBars {
+) : SourceNode(label, listOf(destination)), Source<OutputT>, HasProgressBars {
 
     private var emitCallback:
         (context(Simulator)

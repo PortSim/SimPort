@@ -2,6 +2,7 @@ package com.group7.demos
 
 import com.group7.*
 import com.group7.state.SimulationState
+import kotlin.streams.asSequence
 import kotlin.time.Duration.Companion.days
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.toImmutableMap
@@ -24,7 +25,8 @@ private fun sweep(scenarios: List<Pair<String, Scenario>>): ImmutableMap<String,
     // Run simulations
     val runFor = 5.days
     return scenarios
-        .associate { (name, scenario) ->
+        .parallelStream()
+        .map { (name, scenario) ->
             val simulation = SimulationState(scenario)
             val simulator = Simulator(EventLog.noop(), scenario, simulation)
             simulation.beginBatch()
@@ -33,5 +35,7 @@ private fun sweep(scenarios: List<Pair<String, Scenario>>): ImmutableMap<String,
 
             name to simulation
         }
+        .asSequence()
+        .toMap()
         .toImmutableMap()
 }

@@ -3,6 +3,8 @@ package com.group7.metrics
 import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.Simulator
+import com.group7.metrics.confidence.RateConfidenceIntervals
+import com.group7.metrics.steady.R5Instantaneous
 import com.group7.properties.Container
 import com.group7.properties.Source
 import com.group7.utils.suffix
@@ -24,7 +26,7 @@ sealed class ArrivalRate(unit: DurationUnit) : RateMetric(unit) {
 
     class Global(scenario: Scenario, unit: DurationUnit) : ArrivalRate(unit) {
         init {
-            for (source in scenario.allNodeGroups.asSequence().filterIsInstance<Source<*>>()) {
+            for (source in scenario.every<Source<*>>()) {
                 source.onEmit { notify() }
             }
         }

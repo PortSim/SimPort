@@ -1,6 +1,10 @@
-package com.group7.metrics
+package com.group7.metrics.confidence
 
+import com.group7.metrics.ContinuousMetric
+import com.group7.metrics.Metric
+import com.group7.metrics.Moments
 import com.group7.metrics.batchmeans.AdaptiveBatchMeans
+import com.group7.metrics.steady.SteadyStateDetector
 import com.group7.utils.studentT
 import kotlin.math.sqrt
 import kotlin.time.Instant
@@ -18,6 +22,11 @@ abstract class ConfidenceIntervals(
 ) {
     private var lastTime = Instant.DISTANT_PAST
     private var lastIntervals: Intervals? = null
+    private var hasChanged = true
+
+    init {
+        batchMeans.onCloseBatch { hasChanged = true }
+    }
 
     val mean =
         object : ContinuousMetric() {
@@ -67,6 +76,11 @@ abstract class ConfidenceIntervals(
         }
 
         update(currentTime)
+
+        if (!hasChanged) {
+            return lastIntervals
+        }
+        hasChanged = false
 
         val b = batchCount()
         if (b < batchMeans.targetBatches) {

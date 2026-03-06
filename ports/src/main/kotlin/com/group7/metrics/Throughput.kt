@@ -3,6 +3,8 @@ package com.group7.metrics
 import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.Simulator
+import com.group7.metrics.confidence.RateConfidenceIntervals
+import com.group7.metrics.steady.R5Instantaneous
 import com.group7.properties.Container
 import com.group7.properties.OutputSink
 import com.group7.utils.suffix
@@ -26,7 +28,7 @@ sealed class Throughput(unit: DurationUnit) : RateMetric(unit) {
     class Global(scenario: Scenario, unit: DurationUnit) : Throughput(unit) {
         init {
             // Global events are when objects enter output sinks
-            for (sink in scenario.allNodeGroups.asSequence().filterIsInstance<OutputSink<*>>()) {
+            for (sink in scenario.every<OutputSink<*>>()) {
                 sink.onEnter { notify() }
             }
         }

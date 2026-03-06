@@ -1,5 +1,6 @@
 package com.group7.metrics
 
+import com.group7.metrics.steady.R5SteadyStateDetector
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlin.time.Duration.Companion.minutes

@@ -1,6 +1,16 @@
 package com.group7.utils
 
-internal fun <A, B> ((A, B) -> Unit)?.andThen(other: (A, B) -> Unit): (A, B) -> Unit =
+fun (() -> Unit)?.andThen(other: () -> Unit): () -> Unit =
+    if (this == null) {
+        other
+    } else {
+        {
+            this()
+            other()
+        }
+    }
+
+fun <A, B> ((A, B) -> Unit)?.andThen(other: (A, B) -> Unit): (A, B) -> Unit =
     if (this == null) {
         other
     } else {
@@ -10,7 +20,7 @@ internal fun <A, B> ((A, B) -> Unit)?.andThen(other: (A, B) -> Unit): (A, B) -> 
         }
     }
 
-internal fun <A, B, C> ((A, B, C) -> Unit)?.andThen(other: (A, B, C) -> Unit): (A, B, C) -> Unit =
+fun <A, B, C> ((A, B, C) -> Unit)?.andThen(other: (A, B, C) -> Unit): (A, B, C) -> Unit =
     if (this == null) {
         other
     } else {
@@ -20,7 +30,7 @@ internal fun <A, B, C> ((A, B, C) -> Unit)?.andThen(other: (A, B, C) -> Unit): (
         }
     }
 
-internal fun <A, B, C, D> ((A, B, C, D) -> Unit)?.andThen(other: (A, B, C, D) -> Unit): (A, B, C, D) -> Unit =
+fun <A, B, C, D> ((A, B, C, D) -> Unit)?.andThen(other: (A, B, C, D) -> Unit): (A, B, C, D) -> Unit =
     if (this == null) {
         other
     } else {

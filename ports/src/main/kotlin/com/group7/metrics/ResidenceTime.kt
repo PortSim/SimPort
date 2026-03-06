@@ -3,6 +3,7 @@ package com.group7.metrics
 import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.Simulator
+import com.group7.metrics.confidence.InstantaneousConfidenceIntervals
 import com.group7.properties.Container
 import com.group7.properties.LossSink
 import com.group7.properties.OutputSink
@@ -21,7 +22,7 @@ sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) :
 
     init {
         // Notice when objects disappear into non-output sinks
-        for (sink in scenario.allNodeGroups.asSequence().filterIsInstance<LossSink<*>>()) {
+        for (sink in scenario.every<LossSink<*>>()) {
             sink.onEnter { notifyLost(it) }
         }
     }
@@ -68,7 +69,7 @@ sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) :
             container.onEnter { notifyEnter(it) }
             container.onLeave { notifyLeave(it) }
 
-            for (sink in scenario.allNodeGroups.asSequence().filterIsInstance<OutputSink<*>>()) {
+            for (sink in scenario.every<OutputSink<*>>()) {
                 sink.onEnter { notifyLeaveSimulation(it) }
             }
         }
@@ -82,11 +83,11 @@ sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) :
     // Global counts total time across all nodes from source -> output sink
     class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : ResidenceTime(scenario, unit) {
         init {
-            for (source in scenario.allNodeGroups.asSequence().filterIsInstance<Source<*>>()) {
+            for (source in scenario.every<Source<*>>()) {
                 source.onEmit { notifyEnter(it) }
             }
 
-            for (sink in scenario.allNodeGroups.asSequence().filterIsInstance<OutputSink<*>>()) {
+            for (sink in scenario.every<OutputSink<*>>()) {
                 sink.onEnter {
                     notifyLeave(it)
                     notifyLeaveSimulation(it)

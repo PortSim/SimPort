@@ -20,12 +20,12 @@ class ChartsState(private val metricsTracker: MetricsTracker, private val redraw
             latestTimeSeen = currentTime
             samplesSinceRedraw = 0
             for (metric in metricsTracker.allMetrics) {
-                metricData.getValue(metric).value = metricsTracker.getMetricDataPoints(metric)
+                metricData.getValue(metric).value = metricsTracker.getMetricDataPoints(currentTime, metric)
             }
         }
     }
 
-    fun getMetricData(metric: Metric): List<MetricValue> = downsample(metricData.getValue(metric).value)
+    fun getMetricData(metric: Metric): List<MetricValue> = metricData.getValue(metric).value
 
     fun getMetricSample(metric: Metric, time: Instant): MetricValue? {
         val data = metricData.getValue(metric).value
@@ -41,25 +41,4 @@ class ChartsState(private val metricsTracker: MetricsTracker, private val redraw
 
     /** Get the most recent value for a metric, or null if no data yet. */
     fun getLatestValue(metric: Metric): Double? = metricData[metric]?.value?.lastOrNull()?.value
-}
-
-private const val DESIRED_SAMPLES = 2000
-
-private fun downsample(samples: List<MetricValue>): MutableList<MetricValue> {
-    val result = samples.toMutableList()
-    while (result.size >= 2 * DESIRED_SAMPLES) {
-        val newCount = result.size / 2
-        for (i in 0..<newCount) {
-            val b1 = result[2 * i]
-            val b2 = result[2 * i + 1]
-            result[i] =
-                MetricValue(
-                    Instant.fromEpochMilliseconds((b1.time.toEpochMilliseconds() + b2.time.toEpochMilliseconds()) / 2),
-                    (b1.value + b2.value) / 2,
-                )
-        }
-
-        result.subList(newCount, result.size).clear()
-    }
-    return result
 }

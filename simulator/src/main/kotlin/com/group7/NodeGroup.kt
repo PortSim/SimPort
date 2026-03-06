@@ -2,6 +2,7 @@ package com.group7
 
 import com.group7.channels.InputChannel
 import com.group7.channels.OutputChannel
+import com.group7.properties.HasDisplayProperties
 
 /**
  * Base class representing a group of nodes or individual node in the simulation network.

@@ -2,6 +2,7 @@ package com.group7.metrics
 
 import com.group7.NodeGroup
 import com.group7.Scenario
+import com.group7.metrics.confidence.ContinuousConfidenceIntervals
 import com.group7.properties.Container
 import com.group7.properties.Sink
 import com.group7.properties.Source
@@ -26,12 +27,12 @@ sealed class Occupancy : ContinuousMetric() {
 
         init {
             // Whenever something is emitted from a source increment global occupancy
-            for (source in scenario.allNodeGroups.asSequence().filterIsInstance<Source<*>>()) {
+            for (source in scenario.every<Source<*>>()) {
                 source.onEmit { current++ }
             }
 
             // And then when anything leaves decrement occupancy
-            for (sink in scenario.allNodeGroups.asSequence().filterIsInstance<Sink<*>>()) {
+            for (sink in scenario.every<Sink<*>>()) {
                 sink.onEnter { current-- }
             }
         }

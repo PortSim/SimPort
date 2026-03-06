@@ -1,5 +1,7 @@
-package com.group7.metrics
+package com.group7.metrics.steady
 
+import com.group7.metrics.ContinuousMetric
+import com.group7.metrics.mean.ContinuousMean
 import kotlin.time.Instant
 
 /**
