@@ -11,6 +11,20 @@ import com.group7.properties.Match
 import com.group7.properties.Split
 import com.group7.utils.andThen
 
+/**
+ * A limited capacity compound node compiling the subnetwork, defined by `inner`, and attaching appropriate
+ * access-control nodes.
+ *
+ * For metric tracking purposes, entities should not be converted to instances of other types within the network
+ *
+ * @param ItemT Type of entity to passing through the subnetwork.
+ * @param InputChannelT Type of channel, upper bound by [ChannelType], the subnetwork takes in as input
+ * @param OutputChannelT Type of channel, upper bound by [ChannelType], the subnetwork produces
+ * @param capacity Maximum capacity of the bounded subnetwork
+ * @param input Connection into the bounded subnetwork
+ * @param inner Internal contents of the subnetwork
+ * @param output Output reference for the subnetwork's output to be connected to
+ */
 class BoundedSubnetwork<
     ItemT,
     InputChannelT : ChannelType<InputChannelT>,
@@ -23,15 +37,23 @@ class BoundedSubnetwork<
     output: OutputRef<ItemT, OutputChannelT>,
 ) : CompoundNode(label, listOf(input), listOf(output)), BoundedContainer<ItemT> {
 
+    /** Callback invoked when an entity enters the subnetwork */
     private var enterCallback:
         (context(Simulator)
         (ItemT) -> Unit)? =
         null
+
+    /** Callback invoked when an entity leaves the subnetwork */
     private var leaveCallback:
         (context(Simulator)
         (ItemT) -> Unit)? =
         null
 
+    /*
+    Bounded subnetworks are implemented by matching incoming entities with a limited number of tokens stored in some
+    token queue. When an entity leaves the bounded subnetwork, the token is extracted via an exit split node, and
+    returned to a token queue
+     */
     private val tokens: Container<Token>
     private val tokenMatch: Match<ItemT, Token, ItemT>
     private val tokenSplit: Split<ItemT, ItemT, Token>
@@ -59,6 +81,7 @@ class BoundedSubnetwork<
     override val occupants
         get() = capacity - tokens.occupants
 
+    // Chains callback with other previous callbacks that may be associated with this node
     override fun onEnter(
         callback:
             context(Simulator)

@@ -16,12 +16,14 @@ Properties are inherited by nodes with these properties, and thus must have meth
 interface Container<out T> {
     val occupants: Int
 
+    /** Callback to execute when an entity enters the container */
     fun onEnter(
         callback:
             context(Simulator)
             (T) -> Unit
     )
 
+    /** Callback to execute when an entity leaves the container */
     fun onLeave(
         callback:
             context(Simulator)
