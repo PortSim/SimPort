@@ -2,6 +2,17 @@ package com.group7.properties
 
 import com.group7.Simulator
 
+/*
+Properties are inherited by nodes with these properties, and thus must have methods for Metrics to link into
+ */
+
+/**
+ * Indicates a node is an unbounded container with no maximum capacity.
+ *
+ * @property occupants The number of occupants held by the container
+ * @property onEnter Callback invoked by the node when an entity enters the container
+ * @property onLeave Callback invoked by the node when an entity leaves the container
+ */
 interface Container<out T> {
     val occupants: Int
 
@@ -17,9 +28,17 @@ interface Container<out T> {
             (T) -> Unit
     )
 
+    // By default, all containers support residence time, as entities that enter should eventually leave
     fun supportsResidenceTime(): Boolean = true
 }
 
+/**
+ * Indicates a node is a bounded container with some maximum capacity defined.
+ *
+ * @property capacity The maximum capacity of the container
+ * @property isFull Whether the container is at max occupancy
+ * @property utilisation Percentage of how much of the container's max capacity is used at the moment
+ */
 interface BoundedContainer<out T> : Container<T>, HasDisplayProperties {
     val capacity: Int
 
