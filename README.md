@@ -5,7 +5,8 @@ theory. SimPort makes designing ports fast and easy, features a clean
 UI, and runs fast.
 
 Detailed documentation (including a user guide and examples) is available
-at [simport.xhirp.com](http://simport.xhirp.com).
+at [simport.xhirp.com](http://simport.xhirp.com), and API docs
+at [portsim.github.io/SimPort/](https://portsim.github.io/SimPort/).
 
 ## 🚀 Features
 
