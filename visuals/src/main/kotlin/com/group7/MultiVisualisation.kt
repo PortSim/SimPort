@@ -16,10 +16,7 @@ import kotlinx.collections.immutable.ImmutableMap
 
 /** MultiVisualisation displays multiple completed simulations. */
 @Composable
-fun MultiVisualisation(
-    simulations: ImmutableMap<String, SimulationState>,
-    iconProvider: IconProvider = IconProvider.defaultProvider(),
-) {
+fun MultiVisualisation(simulations: ImmutableMap<String, SimulationState>) {
 
     var topTab by remember { mutableStateOf(0) }
 
@@ -31,7 +28,7 @@ fun MultiVisualisation(
 
         Box(Modifier.weight(1f).clipToBounds()) {
             when (topTab) {
-                0 -> IndividualStaticSimulationPicker(simulations, iconProvider)
+                0 -> IndividualStaticSimulationPicker(simulations)
                 1 -> SummarySubPage(simulations)
             }
         }

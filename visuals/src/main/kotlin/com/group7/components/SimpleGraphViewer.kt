@@ -36,8 +36,10 @@ import com.group7.state.PortDisplayState
 import com.group7.state.ProgressBar
 import com.group7.state.SimulationState
 import com.group7.utils.toRateStringWithBestUnit
+import com.group7.utils.toRateWithUnit
 import com.group7.utils.toStringWithBestUnit
 import kotlin.math.atan2
+import kotlin.time.DurationUnit
 import kotlin.time.Instant
 import org.eclipse.elk.graph.ElkNode
 
@@ -390,6 +392,7 @@ private fun EdgeLabels(
     simulation: SimulationState,
     layout: ScenarioLayout,
     getAnimatableTime: () -> Instant,
+    throughputUnit: State<DurationUnit?>,
 ) {
     node.containedEdges.forEach { edge ->
         edge.labels.forEach { label ->
@@ -403,10 +406,13 @@ private fun EdgeLabels(
             ) {
                 AutoSizedText(
                     text =
-                        simulation.portDisplayState
-                            .getEdgeState(layout.getChannel(edge))
-                            .transmissionCount
-                            .toRateStringWithBestUnit(getAnimatableTime() - Simulator.START_TIME, dp = 1),
+                        simulation.portDisplayState.getEdgeState(layout.getChannel(edge)).transmissionCount.let {
+                            transmissionCount ->
+                            val duration = getAnimatableTime() - Simulator.START_TIME
+                            throughputUnit.value?.let { throughputUnit ->
+                                transmissionCount.toRateWithUnit(duration, throughputUnit, dp = 1)
+                            } ?: transmissionCount.toRateStringWithBestUnit(duration, dp = 1)
+                        },
                     color = Color.Black,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
@@ -430,6 +436,7 @@ fun ElkNodes(
     getAnimatableTime: () -> Instant,
     enableIcons: State<Boolean>,
     enableEdgeLabels: Boolean,
+    throughputUnit: State<DurationUnit?>,
 ) {
     Box(
         modifier =
@@ -462,11 +469,21 @@ fun ElkNodes(
         }
 
         if (enableEdgeLabels) {
-            EdgeLabels(node, simulation, layout, getAnimatableTime)
+            EdgeLabels(node, simulation, layout, getAnimatableTime, throughputUnit)
         }
 
         node.children.forEach {
-            ElkNodes(it, simulation, layout, onClickNode, hoveredNode, getAnimatableTime, enableIcons, enableEdgeLabels)
+            ElkNodes(
+                it,
+                simulation,
+                layout,
+                onClickNode,
+                hoveredNode,
+                getAnimatableTime,
+                enableIcons,
+                enableEdgeLabels,
+                throughputUnit,
+            )
         }
     }
 }
@@ -480,7 +497,12 @@ fun ElkNodes(
  * @param getAnimatableTime provides the interpolated simulation time (see [SimulatorModel.currentTime])
  */
 @Composable
-fun SimpleGraphViewer(simulationName: String, simulation: SimulationState, getAnimatableTime: () -> Instant) {
+fun SimpleGraphViewer(
+    simulationName: String,
+    simulation: SimulationState,
+    getAnimatableTime: () -> Instant,
+    throughputUnit: State<DurationUnit?>,
+) {
     key(simulation) {
         // Whether a side panel is open
         val enableIcons = remember { mutableStateOf(true) }
@@ -510,6 +532,7 @@ fun SimpleGraphViewer(simulationName: String, simulation: SimulationState, getAn
                         getAnimatableTime,
                         enableIcons,
                         enableEdgeLabels,
+                        throughputUnit,
                     )
                 }
                 GraphLegend(

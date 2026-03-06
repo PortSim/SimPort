@@ -18,16 +18,20 @@ private val durationUnits =
 
 /** Numeric text field paired with a unit dropdown for entering a [Duration]. Returns `null` on invalid input. */
 @Composable
-fun DurationPicker(duration: Duration?, onDurationChange: (Duration?) -> Unit) {
-    var text by remember { mutableStateOf(duration?.toLong(DurationUnit.SECONDS)?.toString() ?: "") }
-    var unit by remember { mutableStateOf(DurationUnit.SECONDS) }
+fun DurationPicker(
+    duration: Duration?,
+    defaultStepUnit: DurationUnit = DurationUnit.DAYS,
+    onDurationChange: (Duration?, DurationUnit) -> Unit,
+) {
+    var unit by remember { mutableStateOf(defaultStepUnit) }
+    var text by remember { mutableStateOf(duration?.toLong(unit)?.toString() ?: "") }
 
     Row {
         OutlinedTextField(
             value = text,
             onValueChange = { new ->
                 text = new
-                onDurationChange(new.toLongOrNull()?.toDuration(unit))
+                onDurationChange(new.toLongOrNull()?.toDuration(unit), unit)
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             isError = duration == null,
@@ -40,7 +44,7 @@ fun DurationPicker(duration: Duration?, onDurationChange: (Duration?) -> Unit) {
             selected = unit,
             onSelected = {
                 unit = it
-                onDurationChange(text.toLongOrNull()?.toDuration(it))
+                onDurationChange(text.toLongOrNull()?.toDuration(it), unit)
             },
             label = { Text("Unit") },
             displayText = { it.name.lowercase() },
