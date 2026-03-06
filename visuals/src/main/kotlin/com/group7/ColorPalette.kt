@@ -5,8 +5,8 @@ import androidx.compose.ui.graphics.Color
 /**
  * Generates distinct colors for charting, preferring a predefined palette and falling back to HSL generation.
  *
- * For small counts (≤ palette size), uses hand-picked colors. For larger counts, generates evenly-spaced
- * HSL colors around the color wheel.
+ * For small counts (≤ palette size), uses hand-picked colors. For larger counts, generates evenly-spaced HSL colors
+ * around the color wheel.
  *
  * @param count the number of distinct colors to generate
  * @return a list of [count] colors

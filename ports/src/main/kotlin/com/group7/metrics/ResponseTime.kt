@@ -88,7 +88,8 @@ sealed class ResponseTime(private val unit: DurationUnit) : InstantaneousMetric(
          *
          * @param node the container to track response time for
          * @param scenario the scenario containing all nodes
-         * @return a metric group containing response times and statistical moments, or null if node doesn't support residence time
+         * @return a metric group containing response times and statistical moments, or null if node doesn't support
+         *   residence time
          */
         override fun create(node: Container<*>, scenario: Scenario) = create(node, DurationUnit.SECONDS)
 
@@ -97,7 +98,8 @@ sealed class ResponseTime(private val unit: DurationUnit) : InstantaneousMetric(
          *
          * @param node the container to track response time for
          * @param unit the time unit for durations (default: seconds)
-         * @return a metric group containing response times and statistical moments, or null if node doesn't support residence time
+         * @return a metric group containing response times and statistical moments, or null if node doesn't support
+         *   residence time
          */
         fun create(node: Container<*>, unit: DurationUnit): MetricGroup? {
             if (!node.supportsResidenceTime()) {

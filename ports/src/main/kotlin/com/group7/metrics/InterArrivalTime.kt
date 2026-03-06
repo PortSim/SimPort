@@ -54,7 +54,8 @@ sealed class InterArrivalTime(private val unit: DurationUnit) : InstantaneousMet
          *
          * @param node the container to track inter-arrival time for
          * @param scenario the scenario containing all nodes
-         * @return a metric group containing inter-arrival times and statistical moments, or null if node doesn't support residence time
+         * @return a metric group containing inter-arrival times and statistical moments, or null if node doesn't
+         *   support residence time
          */
         override fun create(node: Container<*>, scenario: Scenario) = create(node, DurationUnit.SECONDS)
 
@@ -63,7 +64,8 @@ sealed class InterArrivalTime(private val unit: DurationUnit) : InstantaneousMet
          *
          * @param node the container to track inter-arrival time for
          * @param unit the time unit for intervals (default: seconds)
-         * @return a metric group containing inter-arrival times and statistical moments, or null if node doesn't support residence time
+         * @return a metric group containing inter-arrival times and statistical moments, or null if node doesn't
+         *   support residence time
          */
         fun create(node: Container<*>, unit: DurationUnit): MetricGroup? {
             if (!node.supportsResidenceTime()) {

@@ -46,8 +46,8 @@ abstract class AdaptiveBatchMeans(
     /**
      * Returns the current variance of batch means.
      *
-     * This represents the variance across batches, which is used for confidence interval calculations.
-     * Requires at least 2 batches to compute.
+     * This represents the variance across batches, which is used for confidence interval calculations. Requires at
+     * least 2 batches to compute.
      *
      * @return the bias-corrected variance of batch means
      * @throws IllegalArgumentException if fewer than 2 batches are available

@@ -27,8 +27,8 @@ class AdaptiveRateBatchMeans(
     /**
      * Updates the batch means with a new event at the given simulation time.
      *
-     * Processes any elapsed time, closing batches as needed based on the batch interval.
-     * Batch intervals double when batches collapse to maintain a target number of batches.
+     * Processes any elapsed time, closing batches as needed based on the batch interval. Batch intervals double when
+     * batches collapse to maintain a target number of batches.
      *
      * @param currentTime the simulation time at which this event occurred
      * @throws IllegalArgumentException if time moves backwards

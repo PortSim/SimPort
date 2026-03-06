@@ -7,10 +7,10 @@ import kotlinx.collections.immutable.toPersistentList
 /**
  * Downsamples instantaneous metric data using reservoir sampling.
  *
- * For instantaneous metrics, this implementation maintains approximately [DESIRED_SAMPLES] samples
- * using Algorithm R (standard reservoir sampling). While this is visually lossy, scatter plots are
- * primarily used to identify general patterns. Every sample has an equal probability of being preserved,
- * providing uniform and unbiased sampling across the entire time series.
+ * For instantaneous metrics, this implementation maintains approximately [DESIRED_SAMPLES] samples using Algorithm R
+ * (standard reservoir sampling). While this is visually lossy, scatter plots are primarily used to identify general
+ * patterns. Every sample has an equal probability of being preserved, providing uniform and unbiased sampling across
+ * the entire time series.
  */
 class DownsampledInstantaneousMetricData : MetricData {
     private var totalSamplesSeen = 0L
@@ -27,8 +27,8 @@ class DownsampledInstantaneousMetricData : MetricData {
     /**
      * A single metric sample at a specific point in time.
      *
-     * The sequence ID serves as a tie-breaker for samples with identical timestamps, ensuring
-     * they are treated as distinct in the sorted set and don't accidentally overwrite each other.
+     * The sequence ID serves as a tie-breaker for samples with identical timestamps, ensuring they are treated as
+     * distinct in the sorted set and don't accidentally overwrite each other.
      *
      * @property sequenceId unique identifier assigning this sample a position in the overall sequence
      * @property time the simulation time at which this sample was recorded
@@ -45,9 +45,8 @@ class DownsampledInstantaneousMetricData : MetricData {
     /**
      * Adds a new metric value using reservoir sampling (Algorithm R).
      *
-     * For the first [DESIRED_SAMPLES] values, all are stored. Afterward, each subsequent value has
-     * a [DESIRED_SAMPLES] / [totalSamplesSeen] probability of being included, with older samples
-     * having equal probability of being evicted.
+     * For the first [DESIRED_SAMPLES] values, all are stored. Afterward, each subsequent value has a [DESIRED_SAMPLES]
+     * / [totalSamplesSeen] probability of being included, with older samples having equal probability of being evicted.
      *
      * @param currentTime the simulation time at which the value was recorded
      * @param value the numeric value of the metric
@@ -82,9 +81,7 @@ class DownsampledInstantaneousMetricData : MetricData {
         }
     }
 
-    /**
-     * Target number of samples to maintain during downsampling.
-     */
+    /** Target number of samples to maintain during downsampling. */
     internal companion object {
         internal const val DESIRED_SAMPLES = 5000
     }

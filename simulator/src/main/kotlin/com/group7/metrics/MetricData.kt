@@ -7,9 +7,9 @@ import kotlinx.collections.immutable.persistentListOf
 /**
  * Storage interface for metric data points.
  *
- * Implementations handle storing and optionally downsampling metric values collected during simulation.
- * Different implementations may apply optimizations like downsampling to manage memory usage while
- * preserving important features in the data.
+ * Implementations handle storing and optionally downsampling metric values collected during simulation. Different
+ * implementations may apply optimizations like downsampling to manage memory usage while preserving important features
+ * in the data.
  */
 internal sealed interface MetricData {
     /** All metric values stored in this data object, in chronological order. */
@@ -29,7 +29,8 @@ internal sealed interface MetricData {
  *
  * Selects between raw storage and downsampling strategies based on metric type and configuration.
  *
- * @param isContinuous whether the metric is continuous (reports at each time step) or instantaneous (reports on discrete events)
+ * @param isContinuous whether the metric is continuous (reports at each time step) or instantaneous (reports on
+ *   discrete events)
  * @param downsample whether to apply downsampling for performance optimization
  * @return a [MetricData] implementation suitable for the given configuration
  */

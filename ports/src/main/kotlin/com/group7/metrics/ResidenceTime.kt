@@ -114,7 +114,8 @@ sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) :
          *
          * @param node the container to track residence time for
          * @param scenario the scenario containing all nodes
-         * @return a metric group containing residence times and statistical moments, or null if node doesn't support residence time
+         * @return a metric group containing residence times and statistical moments, or null if node doesn't support
+         *   residence time
          */
         override fun create(node: Container<*>, scenario: Scenario) = create(node, scenario, DurationUnit.SECONDS)
 
@@ -124,7 +125,8 @@ sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) :
          * @param node the container to track residence time for
          * @param scenario the scenario containing all nodes
          * @param unit the time unit for durations (default: seconds)
-         * @return a metric group containing residence times and statistical moments, or null if node doesn't support residence time
+         * @return a metric group containing residence times and statistical moments, or null if node doesn't support
+         *   residence time
          */
         fun create(node: Container<*>, scenario: Scenario, unit: DurationUnit): MetricGroup? {
             if (!node.supportsResidenceTime()) {

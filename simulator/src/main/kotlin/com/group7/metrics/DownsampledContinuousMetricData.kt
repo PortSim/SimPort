@@ -10,9 +10,9 @@ import kotlinx.collections.immutable.persistentListOf
 /**
  * Downsamples continuous metric data using the Largest-Triangle-Three-Buckets (LTTB) algorithm.
  *
- * For continuous metrics, this implementation maintains approximately [DESIRED_SAMPLES] samples while
- * preserving visual features and local minima/maxima important for understanding metric behavior.
- * This is more effective than simple reservoir sampling for time-series data.
+ * For continuous metrics, this implementation maintains approximately [DESIRED_SAMPLES] samples while preserving visual
+ * features and local minima/maxima important for understanding metric behavior. This is more effective than simple
+ * reservoir sampling for time-series data.
  */
 internal class DownsampledContinuousMetricData : MetricData {
     private val buckets = Array(DESIRED_SAMPLES - 2) { mutableListOf<MetricValue>() }
@@ -57,8 +57,8 @@ internal class DownsampledContinuousMetricData : MetricData {
     /**
      * Applies the Largest-Triangle-Three-Buckets (LTTB) algorithm to reduce samples to [DESIRED_SAMPLES].
      *
-     * LTTB distributes data into uniform time buckets and selects points that form the largest triangles,
-     * preserving the visual shape of the time series while dramatically reducing the number of samples.
+     * LTTB distributes data into uniform time buckets and selects points that form the largest triangles, preserving
+     * the visual shape of the time series while dramatically reducing the number of samples.
      */
     private fun downsampleTimeLTTB() {
         val startT = values.first().time.elapsedTime()

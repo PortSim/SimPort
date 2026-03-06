@@ -17,10 +17,7 @@ import kotlin.time.Duration.Companion.seconds
 internal fun main() {
     val scenario =
         buildScenario {
-                arrivalsWithLoss(
-                        "Arrivals",
-                        Generators.constant({ Vehicle(isLarge = true) }, Delays.exponentialWithMean(2.seconds)),
-                    )
+                arrivalsWithLoss("Arrivals", Generators.constant(Vehicle::Car, Delays.exponentialWithMean(2.seconds)))
                     .thenBoundedQueue("Bounded buffer", 25)
                     .thenPushFork("Fork", 8) { i, lane ->
                         lane.thenSubnetwork("Subnetwork $i", 5) { lane ->
