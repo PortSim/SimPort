@@ -11,17 +11,18 @@ import kotlin.math.roundToInt
 @Composable
 fun PlaybackSpeedSlider(currentSpeed: Float, onSpeedChange: (Float) -> Unit, modifier: Modifier = Modifier) {
     // Convert the actual speed (0.01 - 100) to the slider's internal exponent range (-2 to 2)
+    // E.g., 0.01 -> log10(0.01) = -2, 1.0 -> log10(1.0) = 0, 100 -> log10(100) = 2
     val sliderValue = remember(currentSpeed) { log10(currentSpeed.coerceAtLeast(0.01f)) }
 
     LabeledSlider(
         value = sliderValue,
         onValueChange = { newValue ->
-            // 2. Convert the slider's exponent (-2 to 2) back to actual speed
-            // 10^newValue
+            // Convert the slider's exponent (-2 to 2) back to actual speed using 10^x
+            // E.g., -2 -> 0.01x, 0 -> 1.0x, 2 -> 100x
             val convertedSpeed = 10f.pow(newValue)
             onSpeedChange(convertedSpeed)
         },
-        valueRange = -2f..2f, // -2 is 0.01, 0 is 1.0, 2 is 100
+        valueRange = -2f..2f,
         minLabel = "0.01x",
         maxLabel = "100x",
         valueLabel = "Speed: ${formatSpeed(currentSpeed)}",

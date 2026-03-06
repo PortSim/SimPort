@@ -15,12 +15,14 @@ sealed class Occupancy : ContinuousMetric() {
 
     override fun reportImpl(previousTime: Instant, currentTime: Instant) = current.toDouble()
 
+    /** Local occupancy metric tracking the current number of objects in a single container. */
     class Local(private val container: Container<*>) : Occupancy() {
         // All containers reocrd their occupancy so just get it from there
         override val current
             get() = container.occupants
     }
 
+    /** Global occupancy metric tracking the total number of objects currently in the entire simulation. */
     class Global(scenario: Scenario) : Occupancy() {
         override var current = 0
             private set
@@ -45,12 +47,25 @@ sealed class Occupancy : ContinuousMetric() {
      * objects are in the system overall.
      */
     companion object : MetricFactory<Container<*>>, GlobalMetricFactory {
+        /**
+         * Creates a local occupancy metric for a specific node.
+         *
+         * @param node the container to track occupancy for
+         * @param scenario the scenario containing all nodes
+         * @return a metric group containing occupancy and its statistical moments
+         */
         override fun create(node: Container<*>, scenario: Scenario): MetricGroup {
             val raw = Local(node)
             val cis = ContinuousConfidenceIntervals(raw)
             return MetricGroup("Occupancy", node as NodeGroup, raw, cis.moments())
         }
 
+        /**
+         * Creates a global occupancy metric across the entire scenario.
+         *
+         * @param scenario the scenario to create a global metric for
+         * @return a metric group containing global occupancy and its statistical moments
+         */
         override fun create(scenario: Scenario): MetricGroup {
             val raw = Global(scenario)
             val cis = ContinuousConfidenceIntervals(raw)

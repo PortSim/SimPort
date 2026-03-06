@@ -33,9 +33,11 @@ fun LabeledSlider(
 ) {
     Column(modifier = modifier.padding(Dimensions.spacingXs), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Conditionally display value label on the left
             if (valueLabelPosition == ValueLabelPosition.Left) {
                 Text(text = valueLabel, style = MaterialTheme.typography.bodyMedium)
             }
+            // Minimum value label
             Text(
                 text = minLabel,
                 style = MaterialTheme.typography.bodySmall,
@@ -43,6 +45,7 @@ fun LabeledSlider(
                     if (valueLabelPosition == ValueLabelPosition.Left) Modifier.padding(start = Dimensions.spacingSm)
                     else Modifier,
             )
+            // Interactive slider with state callback
             Slider(
                 value = value,
                 onValueChange = onValueChange,
@@ -50,7 +53,9 @@ fun LabeledSlider(
                 steps = steps,
                 modifier = Modifier.weight(1f).padding(horizontal = Dimensions.spacingSm),
             )
+            // Maximum value label
             Text(text = maxLabel, style = MaterialTheme.typography.bodySmall)
+            // Conditionally display value label on the right
             if (valueLabelPosition == ValueLabelPosition.Right) {
                 Text(
                     text = valueLabel,
@@ -59,6 +64,7 @@ fun LabeledSlider(
                 )
             }
         }
+        // Conditionally display value label below
         if (valueLabelPosition == ValueLabelPosition.Below) {
             Text(text = valueLabel, style = MaterialTheme.typography.bodyMedium)
         }

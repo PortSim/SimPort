@@ -9,7 +9,10 @@ import kotlin.time.Instant
  *
  * Is a continuous metric.
  */
-class SampleMean(val raw: InstantaneousMetric) : ContinuousMetric() {
+class SampleMean(
+    /** The underlying instantaneous metric whose sample mean is computed. */
+    val raw: InstantaneousMetric
+) : ContinuousMetric() {
     private var count = 0
     private var sum = 0.0
 

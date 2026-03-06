@@ -13,6 +13,7 @@ sealed class Utilisation : ContinuousMetric() {
 
     override fun reportImpl(previousTime: Instant, currentTime: Instant) = current
 
+    /** Local utilisation metric tracking the fraction of capacity currently in use at a bounded container. */
     class Local(private val container: BoundedContainer<*>) : Utilisation() {
         override val current
             // Bounded containers report their utilisation
@@ -26,6 +27,13 @@ sealed class Utilisation : ContinuousMetric() {
      * nodes. This is how utilisation is supposed to work.
      */
     companion object : MetricFactory<BoundedContainer<*>> {
+        /**
+         * Creates a utilisation metric for a bounded container with optional time unit.
+         *
+         * @param node the bounded container to track utilisation for
+         * @param scenario the scenario containing all nodes
+         * @return a metric group containing utilisation and its statistical moments
+         */
         override fun create(node: BoundedContainer<*>, scenario: Scenario): MetricGroup {
             val raw = Local(node)
             val cis = ContinuousConfidenceIntervals(raw)

@@ -28,24 +28,28 @@ abstract class ConfidenceIntervals(
         batchMeans.onCloseBatch { hasChanged = true }
     }
 
+    /** Continuous metric reporting the mean of batch means. */
     val mean =
         object : ContinuousMetric() {
             override fun reportImpl(previousTime: Instant, currentTime: Instant) =
                 reportIntervals(currentTime)?.mean ?: Double.NaN
         }
 
+    /** Continuous metric reporting the variance of batch means. */
     val variance =
         object : ContinuousMetric() {
             override fun reportImpl(previousTime: Instant, currentTime: Instant) =
                 reportIntervals(currentTime)?.variance ?: Double.NaN
         }
 
+    /** Continuous metric reporting the lower bound of the confidence interval. */
     val lower =
         object : ContinuousMetric() {
             override fun reportImpl(previousTime: Instant, currentTime: Instant) =
                 reportIntervals(currentTime)?.lower ?: Double.NaN
         }
 
+    /** Continuous metric reporting the upper bound of the confidence interval. */
     val upper =
         object : ContinuousMetric() {
             override fun reportImpl(previousTime: Instant, currentTime: Instant) =
@@ -54,10 +58,25 @@ abstract class ConfidenceIntervals(
 
     protected open fun update(currentTime: Instant) {}
 
+    /**
+     * Returns the current number of batches in the batch means.
+     *
+     * @return the number of batches currently maintained
+     */
     fun batchCount() = batchMeans.batchCount()
 
+    /**
+     * Returns the mean across all batch means.
+     *
+     * @return the overall mean value
+     */
     fun mean() = batchMeans.mean()
 
+    /**
+     * Returns the variance of batch means.
+     *
+     * @return the bias-corrected variance across batches
+     */
     fun batchVariance() = batchMeans.batchVariance()
 
     /** Returns a Moment of all the various metrics the CIs report. */
