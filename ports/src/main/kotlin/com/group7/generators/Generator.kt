@@ -10,6 +10,8 @@ import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 import umontreal.ssj.randvar.ExponentialGen
+import umontreal.ssj.randvar.GammaGen
+import umontreal.ssj.randvar.NormalGen
 import umontreal.ssj.rng.MRG32k3a
 
 /**
@@ -115,6 +117,66 @@ object Delays {
             )
         val exp = exponential(1 / mean.toDouble(DurationUnit.SECONDS), DurationUnit.SECONDS)
         return DelayProvider(displayProperty, { exp.nextDelay() })
+    }
+
+    /**
+     * Samples a normal (Gaussian) distribution for the time delay. Negative samples are clamped to zero.
+     *
+     * @param mean Mean delay between events
+     * @param stdDev Standard deviation of the delay
+     * @param unit Optional [DurationUnit] for display formatting; if null, best unit is chosen automatically
+     */
+    fun normal(mean: Duration, stdDev: Duration, unit: DurationUnit? = null): DelayProvider {
+        val stream = MRG32k3a()
+        stream.setSeed(LongArray(6) { RandomContext.nextLong().toInt().toLong() })
+
+        val internalUnit = unit ?: DurationUnit.SECONDS
+        val normalGen = NormalGen(stream, mean.toDouble(internalUnit), stdDev.toDouble(internalUnit))
+        val displayProperty =
+            GroupDisplayProperty(
+                "Normal Delay Provider",
+                FieldDisplayProperty(
+                    "Mean",
+                    unit?.let { "${"%.2f".format(mean.toDouble(it))}${it.suffix}" } ?: mean.toStringWithBestUnit(),
+                ),
+                FieldDisplayProperty(
+                    "Std Dev",
+                    unit?.let { "${"%.2f".format(stdDev.toDouble(it))}${it.suffix}" } ?: stdDev.toStringWithBestUnit(),
+                ),
+            )
+        return DelayProvider(displayProperty) { normalGen.nextDouble().coerceAtLeast(0.0).toDuration(internalUnit) }
+    }
+
+    /**
+     * Samples a gamma distribution for the time delay.
+     *
+     * @param mean Mean delay between events
+     * @param stdDev Standard deviation of the delay
+     * @param unit Optional [DurationUnit] for display formatting; if null, best unit is chosen automatically
+     */
+    fun gamma(mean: Duration, stdDev: Duration, unit: DurationUnit? = null): DelayProvider {
+        val stream = MRG32k3a()
+        stream.setSeed(LongArray(6) { RandomContext.nextLong().toInt().toLong() })
+
+        val internalUnit = unit ?: DurationUnit.SECONDS
+        val meanVal = mean.toDouble(internalUnit)
+        val stdDevVal = stdDev.toDouble(internalUnit)
+        val alpha = (meanVal * meanVal) / (stdDevVal * stdDevVal)
+        val beta = meanVal / (stdDevVal * stdDevVal)
+        val gammaGen = GammaGen(stream, alpha, beta)
+        val displayProperty =
+            GroupDisplayProperty(
+                "Gamma Delay Provider",
+                FieldDisplayProperty(
+                    "Mean",
+                    unit?.let { "${"%.2f".format(meanVal)}${it.suffix}" } ?: mean.toStringWithBestUnit(),
+                ),
+                FieldDisplayProperty(
+                    "Std Dev",
+                    unit?.let { "${"%.2f".format(stdDevVal)}${it.suffix}" } ?: stdDev.toStringWithBestUnit(),
+                ),
+            )
+        return DelayProvider(displayProperty) { gammaGen.nextDouble().toDuration(internalUnit) }
     }
 }
 
