@@ -151,21 +151,21 @@ private fun buildSections(
 
 // -- Export / clipboard utilities --------------------------------------------
 
-private fun csvEscape(value: String): String =
+internal fun csvEscape(value: String): String =
     if (value.any { it == ',' || it == '"' || it == '\n' }) {
         "\"${value.replace("\"", "\"\"")}\""
     } else {
         value
     }
 
-private fun sectionToCsv(section: TableSection): String = buildString {
+internal fun sectionToCsv(section: TableSection): String = buildString {
     appendLine(section.columnHeaders.joinToString(",") { csvEscape(it) })
     for (row in section.rows) {
         appendLine(row.cells.joinToString(",") { csvEscape(it.value) })
     }
 }
 
-private fun allSectionsToCsv(sections: List<TableSection>, grouping: ResultsGrouping): String {
+internal fun allSectionsToCsv(sections: List<TableSection>, grouping: ResultsGrouping): String {
     if (sections.isEmpty()) return ""
     val groupColumnName = grouping.label
     val valueHeaders = sections.first().columnHeaders

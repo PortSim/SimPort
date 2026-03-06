@@ -40,6 +40,7 @@ fun DurationPicker(
             isError = duration == null,
             label = { Text("Duration") },
             modifier = Modifier.widthIn(min = 50.dp),
+            singleLine = true,
         )
 
         // Unit selector dropdown
