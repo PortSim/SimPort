@@ -7,5 +7,4 @@ dependencies {
     dokka(project(":simulator"))
     dokka(project(":visuals"))
     dokka(project(":api"))
-    dokka(project(":demos"))
 }
