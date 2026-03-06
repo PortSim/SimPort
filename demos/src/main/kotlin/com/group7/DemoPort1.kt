@@ -14,6 +14,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.DurationUnit
 
+private class Truck
+
 // Port layout based on figure 8 from the paper "Solving semi-open queuing networks with time-varying arrivals:
 // An application in container terminal landside operations"
 
@@ -35,7 +37,7 @@ fun generatePort(
     averageHandlingTimeAtStack: Duration = 6.minutes,
     numTokens: Int = 30,
     numTrucks: Int? = null,
-): Pair<Scenario, SinkNode<Truck>> {
+): Pair<Scenario, SinkNode<*>> {
     val sink: SinkNode<Truck>
 
     val scenario =
