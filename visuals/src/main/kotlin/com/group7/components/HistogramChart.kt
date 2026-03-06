@@ -44,6 +44,16 @@ internal data class HistogramData(
         if (logScale && value > 0) "%.2f".format(log10(value)) else "%.2f".format(value)
 }
 
+/**
+ * Computes uniform-width histogram bins from one or more dynahist [Histogram]s.
+ *
+ * When [logScale] is enabled and all values are positive, bin boundaries are spaced uniformly in log₁₀ space (so each
+ * bin covers an equal multiplicative range). Otherwise, linear spacing is used. If [requestedBinCount] is null,
+ * Sturges' rule (`⌈log₂(n) + 1⌉`) determines the number of bins.
+ *
+ * Each dynahist bin's midpoint is mapped into the closest output bin, so the result is an approximation whose accuracy
+ * improves with finer dynahist resolution.
+ */
 internal fun computeHistogram(
     histogramsByScenario: Map<String, Histogram>,
     requestedBinCount: Int? = null,
@@ -147,6 +157,12 @@ private fun formatDensityValue(value: Double): String =
         else -> "%.3g".format(value)
     }
 
+/**
+ * Histogram chart for a single instantaneous metric across one or more scenarios.
+ *
+ * Recomputes histogram bins whenever the underlying data changes (tracked via [HistogramsState.latestTimeSeen]).
+ * Supports density normalisation and log-x scaling.
+ */
 @Composable
 fun HistogramChart(
     metricByScenario: ImmutableMap<String, MetricGroup>,
@@ -359,6 +375,13 @@ private fun DrawScope.drawHistogramXAxis(
     }
 }
 
+/**
+ * The core drawing surface for the histogram.
+ *
+ * Computes chart geometry (axis padding, bin pixel widths) from the available space, draws grid lines, bars (with
+ * per-bin z-ordering so shorter bars overlay taller ones), axes with tick labels, and an x-axis title. Pointer drag
+ * interaction highlights a bin and shows a [HistogramTooltip] via [DisplayNear].
+ */
 @Composable
 private fun HistogramCanvas(
     data: HistogramData,

@@ -12,10 +12,12 @@ import com.group7.Dimensions
 import kotlin.math.min
 import kotlinx.coroutines.isActive
 
+/**
+ * Self-contained debug overlay that measures FPS using [withFrameNanos]. Tracks both instantaneous FPS and the minimum
+ * FPS observed within each one-second window.
+ */
 @Composable
 fun DebugPanel() {
-    // Debug state
-
     var minFpsThisSecond by remember { mutableIntStateOf(1000) }
     var fps by remember { mutableIntStateOf(0) }
 

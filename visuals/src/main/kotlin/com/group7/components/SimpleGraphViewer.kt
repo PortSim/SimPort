@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.toIntRect
 import androidx.compose.ui.unit.toRect
 import com.group7.*
 import com.group7.channels.ChannelType
+import com.group7.state.NodeDisplayState
 import com.group7.state.PortDisplayState
 import com.group7.state.ProgressBar
 import com.group7.state.SimulationState
@@ -40,6 +41,13 @@ import kotlin.math.atan2
 import kotlin.time.Instant
 import org.eclipse.elk.graph.ElkNode
 
+/**
+ * Draws a channel-type-specific arrowhead at [end], rotated by [angleDegrees].
+ * - **Push** channels get a filled circle preceded by a vertical bar (piston shape).
+ * - **Pull** channels get a cupped hand shape (concentric arcs with a solid centre).
+ *
+ * Both shapes are drawn inside a rotation transform so they follow the edge direction.
+ */
 fun DrawScope.drawArrowHead(
     end: Offset,
     angleDegrees: Float,
@@ -146,6 +154,10 @@ private fun DrawScope.drawArrow(
     )
 }
 
+/**
+ * Recursively draws all edges contained in [node] and its children, translating into each node's local coordinate frame
+ * before drawing ports, edge paths, and arrowheads.
+ */
 fun DrawScope.drawElkEdges(
     node: ElkNode,
     backgroundColor: Color,
@@ -201,6 +213,7 @@ fun DrawScope.drawElkEdges(
     }
 }
 
+/** Overlay legend panel showing edge type/colour examples and toggles for icons and edge labels. */
 @Composable
 fun GraphLegend(
     modifier: Modifier = Modifier,
@@ -269,8 +282,9 @@ fun LegendToggle(text: String, enabled: Boolean, onClick: () -> Unit) {
     }
 }
 
+/** Renders a single progress bar with a filled fraction and centred duration label. */
 @Composable
-fun ProgressBar(event: ProgressBar, getAnimatableTime: () -> Instant) {
+fun ProgressBarIndicator(event: ProgressBar, getAnimatableTime: () -> Instant) {
     Box(
         Modifier.fillMaxWidth()
             .height(Dimensions.spacingMd)
@@ -293,8 +307,8 @@ fun ProgressBar(event: ProgressBar, getAnimatableTime: () -> Instant) {
 }
 
 /**
- * Detects if the current node is hovered and, if it's smaller than the currently hovered node, sets the hovered node to
- * be this node.
+ * Pointer modifier that tracks which [ElkNode] the cursor is over (hovered), preferring the smallest (most deeply
+ * nested) node. Does not consume events, so it doesn't interfere with panning.
  */
 fun Modifier.exclusiveHover(node: ElkNode, hoveredNode: MutableState<ElkNode?>): Modifier =
     this.pointerInput(node) {
@@ -313,6 +327,99 @@ fun Modifier.exclusiveHover(node: ElkNode, hoveredNode: MutableState<ElkNode?>):
         }
     }
 
+/** Renders the interior content of a leaf or container node: icon, sized text, or container label. */
+@Composable
+private fun ElkNodeContent(
+    node: ElkNode,
+    nodeState: NodeDisplayState,
+    isHovered: Boolean,
+    enableIcons: State<Boolean>,
+) {
+    val metricsString = nodeState.occupancy.toString().let { if (it.isEmpty()) it else "\n$it" }
+    if (node.children.isNotEmpty()) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Transparent), contentAlignment = Alignment.TopStart) {
+            if (node.identifier != null) {
+                Text(text = "${node.identifier}$metricsString", fontSize = 24.sp)
+            }
+        }
+    } else if (enableIcons.value && !isHovered && nodeState.icon != null) {
+        nodeState.icon.content()
+    } else {
+        val nameStr = node.identifier ?: "Unnamed Node"
+        AutoSizedText(
+            text = "$nameStr$metricsString",
+            color = Color.Black,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(Dimensions.spacingXs),
+        )
+    }
+}
+
+/* Progress bars displayed just below a leaf node. Click to toggle between showing all or just the soonest. */
+@Composable
+private fun NodeProgressBars(
+    node: ElkNode,
+    nodeGroup: NodeGroup,
+    simulation: SimulationState,
+    getAnimatableTime: () -> Instant,
+) {
+    var displayAllProgressBars by remember { mutableStateOf(false) }
+    if (node.children.isEmpty()) {
+        val progressBars =
+            simulation.progressBarsState.getProgressBars(nodeGroup).dropWhile { !it.shouldShow(getAnimatableTime()) }
+        Column(
+            Modifier.fillMaxWidth()
+                .absoluteOffset(y = node.height.dp + Dimensions.spacingXs)
+                .wrapContentHeight(align = Alignment.Top, unbounded = true)
+                .clickable(onClick = { displayAllProgressBars = !displayAllProgressBars }),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.spacingXs),
+        ) {
+            if (displayAllProgressBars) {
+                progressBars.sortedBy { it.sequenceNumber }.forEach { ProgressBarIndicator(it, getAnimatableTime) }
+            } else {
+                progressBars.firstOrNull()?.let { ProgressBarIndicator(it, getAnimatableTime) }
+            }
+        }
+    }
+}
+
+/** Throughput labels rendered on top of each edge inside this node's coordinate space. */
+@Composable
+private fun EdgeLabels(
+    node: ElkNode,
+    simulation: SimulationState,
+    layout: ScenarioLayout,
+    getAnimatableTime: () -> Instant,
+) {
+    node.containedEdges.forEach { edge ->
+        edge.labels.forEach { label ->
+            Box(
+                Modifier.width(label.width.toFloat().dp)
+                    .height(label.height.toFloat().dp)
+                    .absoluteOffset(label.x.toFloat().dp, label.y.toFloat().dp)
+                    .border(1.dp, Color.Black)
+                    .background(Color.Transparent),
+                contentAlignment = Alignment.Center,
+            ) {
+                AutoSizedText(
+                    text =
+                        simulation.portDisplayState
+                            .getEdgeState(layout.getChannel(edge))
+                            .transmissionCount
+                            .toRateStringWithBestUnit(getAnimatableTime() - Simulator.START_TIME, dp = 1),
+                    color = Color.Black,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Recursively renders an [ElkNode] and all its children as positioned boxes with hover, click, progress bars, and
+ * optional edge labels. Each node is placed at its ELK-computed coordinates.
+ */
 @Composable
 fun ElkNodes(
     node: ElkNode,
@@ -348,76 +455,14 @@ fun ElkNodes(
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                val metricsString = nodeState.occupancy.toString().let { if (it.isEmpty()) it else "\n$it" }
-                if (node.children.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(Color.Transparent),
-                        contentAlignment = Alignment.TopStart,
-                    ) {
-                        if (node.identifier != null) {
-                            Text(text = "${node.identifier}$metricsString", fontSize = 24.sp)
-                        }
-                    }
-                } else if (enableIcons.value && !isHovered && nodeState.icon != null) {
-                    nodeState.icon.content()
-                } else {
-                    val nameStr = node.identifier ?: "Unnamed Node"
-                    AutoSizedText(
-                        text = "$nameStr$metricsString",
-                        color = Color.Black,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(Dimensions.spacingXs),
-                    )
-                }
+                ElkNodeContent(node, nodeState, isHovered, enableIcons)
             }
 
-            // Progress bars under node
-            var displayAllProgressBars by remember { mutableStateOf(false) }
-            if (node.children.isEmpty()) {
-                val progressBars =
-                    simulation.progressBarsState.getProgressBars(nodeGroup).dropWhile {
-                        !it.shouldShow(getAnimatableTime())
-                    }
-                Column(
-                    Modifier.fillMaxWidth()
-                        .absoluteOffset(y = node.height.dp + Dimensions.spacingXs)
-                        .wrapContentHeight(align = Alignment.Top, unbounded = true)
-                        .clickable(onClick = { displayAllProgressBars = !displayAllProgressBars }),
-                    verticalArrangement = Arrangement.spacedBy(Dimensions.spacingXs),
-                ) {
-                    if (displayAllProgressBars) {
-                        progressBars.sortedBy { it.sequenceNumber }.forEach { ProgressBar(it, getAnimatableTime) }
-                    } else {
-                        progressBars.firstOrNull()?.let { ProgressBar(it, getAnimatableTime) }
-                    }
-                }
-            }
+            NodeProgressBars(node, nodeGroup, simulation, getAnimatableTime)
         }
 
         if (enableEdgeLabels) {
-            node.containedEdges.forEach { edge ->
-                edge.labels.forEach { label ->
-                    Box(
-                        Modifier.width(label.width.toFloat().dp)
-                            .height(label.height.toFloat().dp)
-                            .absoluteOffset(label.x.toFloat().dp, label.y.toFloat().dp)
-                            .border(1.dp, Color.Black)
-                            .background(Color.Transparent),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AutoSizedText(
-                            text =
-                                simulation.portDisplayState
-                                    .getEdgeState(layout.getChannel(edge))
-                                    .transmissionCount
-                                    .toRateStringWithBestUnit(getAnimatableTime() - Simulator.START_TIME, dp = 1),
-                            color = Color.Black,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            }
+            EdgeLabels(node, simulation, layout, getAnimatableTime)
         }
 
         node.children.forEach {
@@ -426,15 +471,16 @@ fun ElkNodes(
     }
 }
 
+/**
+ * Interactive graph viewer for a single simulation.
+ *
+ * Renders the ELK-layout graph inside a [DraggableZoomableBox] with a floating [GraphLegend]. Clicking a node opens a
+ * side panel ([DisplayPropertyPanel]) showing its properties and stack trace.
+ *
+ * @param getAnimatableTime provides the interpolated simulation time (see [SimulatorModel.currentTime])
+ */
 @Composable
-fun SimpleGraphViewer(
-    // name of the simulation
-    simulationName: String,
-    // the data for graphing
-    simulation: SimulationState,
-    // get the current time in a way that animates between simulation timesteps, see SimulationModel getCurrentTime
-    getAnimatableTime: () -> Instant,
-) {
+fun SimpleGraphViewer(simulationName: String, simulation: SimulationState, getAnimatableTime: () -> Instant) {
     key(simulation) {
         // Whether a side panel is open
         val enableIcons = remember { mutableStateOf(true) }
@@ -474,16 +520,10 @@ fun SimpleGraphViewer(
                     { enableEdgeLabels = !enableEdgeLabels },
                 )
             }
-            if (focusedNode != null) {
-                val displayProperty = simulation.portDisplayState.getNodeGroupState(focusedNode!!).displayProperties
+            focusedNode?.let { node ->
+                val displayProperty = simulation.portDisplayState.getNodeGroupState(node).displayProperties
                 Box(modifier = Modifier.width(480.dp).fillMaxHeight()) {
-                    DisplayPropertyPanel(
-                        focusedNode!!,
-                        { focusedNode = null },
-                        displayProperty,
-                        simulation,
-                        simulationName,
-                    )
+                    DisplayPropertyPanel(node, { focusedNode = null }, displayProperty, simulation, simulationName)
                 }
             }
         }

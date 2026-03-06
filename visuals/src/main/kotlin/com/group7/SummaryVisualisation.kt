@@ -27,6 +27,98 @@ private enum class ChartViewMode(val label: String) {
     Histogram("Histogram"),
 }
 
+/**
+ * Segmented button row for selecting the chart view mode (Raw / Average / Histogram). Disabled modes show a tooltip
+ * explaining why they are unavailable.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ViewModeSelector(
+    availableModes: List<ChartViewMode>,
+    modeEnabled: Map<ChartViewMode, Boolean>,
+    viewMode: ChartViewMode,
+    onViewModeChange: (ChartViewMode) -> Unit,
+) {
+    SingleChoiceSegmentedButtonRow {
+        availableModes.forEachIndexed { index, mode ->
+            val enabled = modeEnabled.getValue(mode)
+            val tooltip =
+                when {
+                    enabled -> null
+                    mode == ChartViewMode.Histogram -> "Sample never triggered"
+                    mode == ChartViewMode.Average -> "Convergence not yet reached"
+                    else -> null
+                }
+            val button =
+                @Composable {
+                    SegmentedButton(
+                        selected = viewMode == mode,
+                        onClick = { onViewModeChange(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(index, availableModes.size),
+                        enabled = enabled,
+                        icon = {},
+                    ) {
+                        Text(mode.label)
+                    }
+                }
+            if (tooltip != null) {
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                    tooltip = { PlainTooltip { Text(tooltip) } },
+                    state = rememberTooltipState(),
+                ) {
+                    button()
+                }
+            } else {
+                button()
+            }
+        }
+    }
+}
+
+/** Controls specific to Histogram view mode: bin count slider with auto-reset, probability toggle, and log X toggle. */
+@Composable
+private fun FlowRowScope.HistogramControls(
+    numBins: Int?,
+    onNumBinsChange: (Int?) -> Unit,
+    showDensity: Boolean,
+    onShowDensityChange: (Boolean) -> Unit,
+    logScale: Boolean,
+    onLogScaleChange: (Boolean) -> Unit,
+) {
+    Row(modifier = Modifier.weight(1f).widthIn(min = 250.dp), verticalAlignment = Alignment.CenterVertically) {
+        LabeledSlider(
+            // set slider to 25 (1/4 visually pleasing) for Auto value
+            value = (numBins ?: 25).toFloat(),
+            onValueChange = { onNumBinsChange(it.roundToInt()) },
+            valueRange = 3f..100f,
+            steps = 96,
+            minLabel = "3",
+            maxLabel = "100",
+            valueLabel = "Bins: ${numBins ?: "Auto"}",
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(
+            onClick = { onNumBinsChange(null) },
+            enabled = numBins != null,
+            modifier = Modifier.alpha(if (numBins != null) 1f else 0f),
+        ) {
+            Text("Auto")
+        }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingSm)) {
+        LabeledSwitch("Probability", checked = showDensity, onCheckedChange = onShowDensityChange)
+        LabeledSwitch("Log X", checked = logScale, onCheckedChange = onLogScaleChange)
+    }
+}
+
+/**
+ * Aggregated metrics view for one or more simulations.
+ *
+ * Builds a three-level index (metric → node → simulation) from the simulation data and lets the user select a metric,
+ * node, and scenario subset. Supports three chart modes: Raw time-series, Average (with optional CI bands), and
+ * Histogram (with configurable bins and density scaling).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SummaryVisualisation(simulations: ImmutableMap<String, SimulationState>) {
@@ -65,8 +157,8 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, SimulationState>) {
         remember(metricIndex, selectedMetric) { mutableStateOf(metricIndex.getValue(selectedMetric).keys.first()) }
     val groups = metricIndex.getValue(selectedMetric).getValue(selectedNodeLabel)
     val validScenarios = groups.keys.toPersistentSet()
-    // Persist user's selection across metric/node changes; effectiveScenarios intersects with what's valid.
-    var selectedScenarios by remember { mutableStateOf(validScenarios) }
+    // Reset selection when valid scenarios change (e.g. switching simulator).
+    var selectedScenarios by remember(validScenarios) { mutableStateOf(validScenarios) }
     val effectiveScenarios =
         remember(selectedScenarios, validScenarios) { (selectedScenarios intersect validScenarios).toPersistentSet() }
     val hasRaw = groups.values.any { it.raw != null }
@@ -148,75 +240,20 @@ fun SummaryVisualisation(simulations: ImmutableMap<String, SimulationState>) {
             }
 
             if (availableModes.size > 1) {
-                SingleChoiceSegmentedButtonRow {
-                    availableModes.forEachIndexed { index, mode ->
-                        val enabled = modeEnabled.getValue(mode)
-                        val tooltip =
-                            when {
-                                enabled -> null
-                                mode == ChartViewMode.Histogram -> "Sample never triggered"
-                                mode == ChartViewMode.Average -> "Convergence not yet reached"
-                                else -> null
-                            }
-                        val button =
-                            @Composable {
-                                SegmentedButton(
-                                    selected = viewMode == mode,
-                                    onClick = { viewMode = mode },
-                                    shape = SegmentedButtonDefaults.itemShape(index, availableModes.size),
-                                    enabled = enabled,
-                                    icon = {},
-                                ) {
-                                    Text(mode.label)
-                                }
-                            }
-                        if (tooltip != null) {
-                            TooltipBox(
-                                positionProvider =
-                                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                                tooltip = { PlainTooltip { Text(tooltip) } },
-                                state = rememberTooltipState(),
-                            ) {
-                                button()
-                            }
-                        } else {
-                            button()
-                        }
-                    }
-                }
+                ViewModeSelector(availableModes, modeEnabled, viewMode, onViewModeChange = { viewMode = it })
             }
             if (viewMode == ChartViewMode.Average) {
                 LabeledSwitch("Show CI", checked = showCi, onCheckedChange = { showCi = it })
             }
             if (viewMode == ChartViewMode.Histogram) {
-                Row(
-                    modifier = Modifier.weight(1f).widthIn(min = 250.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    LabeledSlider(
-                        // Place the slider somewhere reasonable if auto is used
-                        // We cannot easily determine where it'll be here since it depends on the values
-                        value = (numBins ?: 25).toFloat(),
-                        onValueChange = { numBins = it.roundToInt() },
-                        valueRange = 3f..100f,
-                        steps = 96,
-                        minLabel = "3",
-                        maxLabel = "100",
-                        valueLabel = "Bins: ${numBins ?: "Auto"}",
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(
-                        onClick = { numBins = null },
-                        enabled = numBins != null,
-                        modifier = Modifier.alpha(if (numBins != null) 1f else 0f),
-                    ) {
-                        Text("Auto")
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingSm)) {
-                    LabeledSwitch("Probability", checked = showDensity, onCheckedChange = { showDensity = it })
-                    LabeledSwitch("Log X", checked = logScale, onCheckedChange = { logScale = it })
-                }
+                HistogramControls(
+                    numBins = numBins,
+                    onNumBinsChange = { numBins = it },
+                    showDensity = showDensity,
+                    onShowDensityChange = { showDensity = it },
+                    logScale = logScale,
+                    onLogScaleChange = { logScale = it },
+                )
             }
         }
 

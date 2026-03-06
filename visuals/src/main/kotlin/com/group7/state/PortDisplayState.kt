@@ -8,6 +8,10 @@ import com.group7.channels.*
 import com.group7.properties.FieldDisplayProperty
 import com.group7.properties.GroupDisplayProperty
 
+/**
+ * Compose-observable state for the graph viewer: per-node occupancy/icons and per-edge open/closed status. Call
+ * [refresh] after each simulation step to push the latest values into snapshot state.
+ */
 class PortDisplayState(scenario: Scenario, iconProvider: IconProvider = IconProvider.defaultProvider()) {
     private val nodesOrderedByBFS = scenario.bfs()
     private val allChannels = nodesOrderedByBFS.flatMap { it.outgoing }
@@ -29,6 +33,7 @@ class PortDisplayState(scenario: Scenario, iconProvider: IconProvider = IconProv
     }
 }
 
+/** Compose-observable state for a single node group (occupancy string + display properties). */
 class NodeDisplayState(private val nodeGroup: NodeGroup, val icon: NodeIcon?) {
     var occupancy by mutableStateOf(nodeGroup.reportOccupants())
         private set
@@ -48,6 +53,7 @@ class NodeDisplayState(private val nodeGroup: NodeGroup, val icon: NodeIcon?) {
     }
 }
 
+/** Compose-observable state for a single edge (push/pull type, open status, transmission count). */
 class EdgeDisplayState(private val channel: OutputChannel<*, *>) {
     val channelType = if (channel.isPush()) ChannelType.Push else ChannelType.Pull
     var openStatus by mutableStateOf(false)

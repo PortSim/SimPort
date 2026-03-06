@@ -7,6 +7,7 @@ import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
+/** Logarithmic speed slider (0.01x – 100x) that maps the slider position through `10^x`. */
 @Composable
 fun PlaybackSpeedSlider(currentSpeed: Float, onSpeedChange: (Float) -> Unit, modifier: Modifier = Modifier) {
     // Convert the actual speed (0.01 - 100) to the slider's internal exponent range (-2 to 2)

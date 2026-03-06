@@ -13,6 +13,13 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Instant
 
+/**
+ * Maintains per-metric dynahist histograms for instantaneous metrics.
+ *
+ * Because histogram updates arrive from the simulation thread, mutations are enqueued via an unbounded [Channel] and
+ * later drained on the UI thread — either continuously by [updateLive] (live mode) or in bulk by [flushUpdates]
+ * (batch/step mode).
+ */
 class HistogramsState(metricsTracker: MetricsTracker) {
     var latestTimeSeen by mutableStateOf(Instant.DISTANT_PAST)
         private set

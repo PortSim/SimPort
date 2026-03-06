@@ -11,6 +11,16 @@ import kotlin.time.Instant
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 
+/**
+ * Drives the simulation with animated playback and manual stepping.
+ *
+ * [run] should be launched once inside a coroutine — it reacts to changes in [isRunning] and [playbackSpeed] via
+ * `snapshotFlow`. Between discrete simulation events, an [Animatable] progress value interpolates 0→1 over `(event
+ * delay / playbackSpeed)` so that [currentTime] advances smoothly.
+ *
+ * [step] executes all events within a given duration on [Dispatchers.Default] without animation, then resumes normal
+ * flow.
+ */
 class SimulatorModel(private val simulator: Simulator) {
     var isRunning by mutableStateOf(false)
         private set
@@ -30,6 +40,7 @@ class SimulatorModel(private val simulator: Simulator) {
     var isStepping: Boolean by mutableStateOf(false)
         private set
 
+    /** Interpolated simulation time — smoothly advances between discrete events during playback. */
     val currentTime
         get() =
             if (nextEventTime != null) {
@@ -39,6 +50,7 @@ class SimulatorModel(private val simulator: Simulator) {
                 currentBaseTime
             }
 
+    /** Time used for progress bar rendering — freezes at the pre-step time while stepping is active. */
     val progressBarsTime
         get() =
             if (isStepping) {
@@ -47,6 +59,7 @@ class SimulatorModel(private val simulator: Simulator) {
                 currentTime
             }
 
+    /** Main playback loop — collect [isRunning]/[playbackSpeed] changes and animate between events. */
     suspend fun run() {
         snapshotFlow { Triple(isRunning, playbackSpeed, runToken) }
             .collectLatest { (isRunning, playbackSpeed) ->
@@ -89,10 +102,12 @@ class SimulatorModel(private val simulator: Simulator) {
         progress.snapTo(0f)
     }
 
+    /** Execute all events within [stepDuration] without animation, on [Dispatchers.Default]. */
     suspend fun step(scope: CoroutineScope) {
         val duration = stepDuration ?: return
         isStepping = true
         runJob?.cancelAndJoin()
+        stepJob?.cancelAndJoin()
         lastTimeBeforeStepping = simulator.currentTime
         // this leads to an exception in run
         updateBaseTime()

@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 
+/** Generic single-selection dropdown backed by an [ExposedDropdownMenuBox]. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> Dropdown(

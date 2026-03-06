@@ -11,6 +11,12 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import com.group7.Dimensions
 import kotlinx.collections.immutable.PersistentSet
 
+/**
+ * A dropdown that allows selecting multiple items via checkboxes, with a "Select All / Deselect All" toggle.
+ *
+ * The text field shows a summary like "Label (3 of 5)". Selection state is managed externally via [selectedOptions] (a
+ * [PersistentSet]) and [onSelectionChange].
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> MultiSelectDropdown(

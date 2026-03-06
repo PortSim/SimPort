@@ -18,6 +18,7 @@ enum class ValueLabelPosition {
     Hidden,
 }
 
+/** A [Slider] with min/max endpoint labels and a configurable value label position. */
 @Composable
 fun LabeledSlider(
     value: Float,

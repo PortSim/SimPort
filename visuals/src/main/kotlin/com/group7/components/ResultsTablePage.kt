@@ -25,6 +25,7 @@ import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.launch
 
@@ -56,6 +57,7 @@ private data class FlatRow(
     val valueCells: List<TableCell>,
 )
 
+/** Flattens all simulation metrics into one row per (simulation, metric, node) combination. */
 private fun buildFlatRows(simulations: ImmutableMap<String, SimulationState>): List<FlatRow> =
     simulations.flatMap { (simName, state) ->
         val nodeNames = assignNodeNames(state.scenario)
@@ -84,6 +86,12 @@ private fun buildFlatRows(simulations: ImmutableMap<String, SimulationState>): L
         }
     }
 
+/**
+ * Groups the flat rows into [TableSection]s based on the [grouping] mode:
+ * - [ResultsGrouping.SIMULATION]: one section per simulation, rows show metric + node.
+ * - [ResultsGrouping.METRIC] with [splitByNode]: one section per "metric — node" combination.
+ * - [ResultsGrouping.METRIC] without split: one section per metric, rows show simulation + node.
+ */
 private fun buildSections(
     simulations: ImmutableMap<String, SimulationState>,
     grouping: ResultsGrouping,
@@ -194,9 +202,129 @@ private fun exportCsvFile(csvContent: String, suggestedFileName: String) {
     }
 }
 
+/** An [IconButton] wrapped in a [TooltipBox] that shows [tooltip] text above the button on hover. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TooltipIconButton(tooltip: String, onClick: () -> Unit, icon: @Composable () -> Unit) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(tooltip) } },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(onClick = onClick, content = icon)
+    }
+}
+
+/** Section title row with copy-to-clipboard and export-to-CSV action buttons. */
+@Composable
+private fun SectionHeader(section: TableSection, onCopy: () -> Unit, onExport: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = section.title, style = MaterialTheme.typography.titleMedium)
+        Row {
+            TooltipIconButton(tooltip = "Copy to clipboard", onClick = onCopy) {
+                Icon(Icons.Default.ContentCopy, contentDescription = "Copy to clipboard")
+            }
+            TooltipIconButton(tooltip = "Export to CSV", onClick = onExport) {
+                Icon(Icons.Default.FileDownload, contentDescription = "Export to CSV")
+            }
+        }
+    }
+}
+
+/** Toolbar with group-by dropdown, filter dropdowns, and an "Export All" button. */
+@Composable
+private fun ResultsToolbar(
+    grouping: ResultsGrouping,
+    onGroupingChange: (ResultsGrouping) -> Unit,
+    splitByNode: Boolean,
+    onSplitByNodeChange: (Boolean) -> Unit,
+    allSimNames: List<String>,
+    selectedSimulations: PersistentSet<String>,
+    onSelectedSimulationsChange: (PersistentSet<String>) -> Unit,
+    allMetricNames: List<String>,
+    selectedMetrics: PersistentSet<String>,
+    onSelectedMetricsChange: (PersistentSet<String>) -> Unit,
+    allNodeNames: List<String>,
+    selectedNodes: PersistentSet<String>,
+    onSelectedNodesChange: (PersistentSet<String>) -> Unit,
+    onExportAll: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.spacingLg, vertical = Dimensions.spacingSm),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingSm),
+        ) {
+            Dropdown(
+                options = ResultsGrouping.entries,
+                selected = grouping,
+                onSelected = onGroupingChange,
+                label = { Text("Group by") },
+                displayText = { it.label },
+            )
+
+            val filterOrder =
+                when (grouping) {
+                    ResultsGrouping.SIMULATION ->
+                        listOf(FilterDropdown.SIMULATIONS, FilterDropdown.METRICS, FilterDropdown.NODES)
+                    ResultsGrouping.METRIC ->
+                        listOf(
+                            FilterDropdown.METRICS,
+                            FilterDropdown.SIMULATIONS,
+                            FilterDropdown.NODES,
+                            FilterDropdown.NODE_SWITCH,
+                        )
+                }
+
+            for (filter in filterOrder) {
+                when (filter) {
+                    FilterDropdown.SIMULATIONS ->
+                        MultiSelectDropdown(
+                            label = "Simulations",
+                            options = allSimNames,
+                            selectedOptions = selectedSimulations,
+                            onSelectionChange = onSelectedSimulationsChange,
+                        )
+                    FilterDropdown.METRICS ->
+                        MultiSelectDropdown(
+                            label = "Metrics",
+                            options = allMetricNames,
+                            selectedOptions = selectedMetrics,
+                            onSelectionChange = onSelectedMetricsChange,
+                        )
+                    FilterDropdown.NODES ->
+                        MultiSelectDropdown(
+                            label = "Nodes",
+                            options = allNodeNames,
+                            selectedOptions = selectedNodes,
+                            onSelectionChange = onSelectedNodesChange,
+                        )
+                    FilterDropdown.NODE_SWITCH ->
+                        LabeledSwitch("Split by node", checked = splitByNode, onCheckedChange = onSplitByNodeChange)
+                }
+            }
+        }
+
+        TextButton(onClick = onExportAll) {
+            Icon(Icons.Default.FileDownload, contentDescription = "Export all to CSV")
+            Spacer(Modifier.width(Dimensions.spacingXs))
+            Text("Export All")
+        }
+    }
+}
+
 /**
- * Results table page. When [showToolbar] is true (multi-simulation), shows the group-by dropdown and a global "Export
- * All" button. When false (single-simulation), shows only the section titles with per-section copy/export buttons.
+ * Full-page results table with optional toolbar for multi-simulation filtering and grouping.
+ *
+ * When [showToolbar] is true (multi-simulation), shows group-by dropdown, filter dropdowns, and a global "Export All"
+ * button. When false (single-simulation), shows only section titles with per-section copy/export buttons.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -234,129 +362,40 @@ fun ResultsTablePage(simulations: ImmutableMap<String, SimulationState>, showToo
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            // Toolbar — only for multi-simulation view
             if (showToolbar) {
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(horizontal = Dimensions.spacingLg, vertical = Dimensions.spacingSm),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingSm),
-                    ) {
-                        Dropdown(
-                            options = ResultsGrouping.entries,
-                            selected = grouping,
-                            onSelected = { grouping = it },
-                            label = { Text("Group by") },
-                            displayText = { it.label },
-                        )
-
-                        val filterOrder =
-                            when (grouping) {
-                                ResultsGrouping.SIMULATION ->
-                                    listOf(FilterDropdown.SIMULATIONS, FilterDropdown.METRICS, FilterDropdown.NODES)
-                                ResultsGrouping.METRIC ->
-                                    listOf(
-                                        FilterDropdown.METRICS,
-                                        FilterDropdown.SIMULATIONS,
-                                        FilterDropdown.NODES,
-                                        FilterDropdown.NODE_SWITCH,
-                                    )
-                            }
-
-                        for (filter in filterOrder) {
-                            when (filter) {
-                                FilterDropdown.SIMULATIONS ->
-                                    MultiSelectDropdown(
-                                        label = "Simulations",
-                                        options = allSimNames,
-                                        selectedOptions = selectedSimulations,
-                                        onSelectionChange = { selectedSimulations = it },
-                                    )
-                                FilterDropdown.METRICS ->
-                                    MultiSelectDropdown(
-                                        label = "Metrics",
-                                        options = allMetricNames,
-                                        selectedOptions = selectedMetrics,
-                                        onSelectionChange = { selectedMetrics = it },
-                                    )
-                                FilterDropdown.NODES ->
-                                    MultiSelectDropdown(
-                                        label = "Nodes",
-                                        options = allNodeNames,
-                                        selectedOptions = selectedNodes,
-                                        onSelectionChange = { selectedNodes = it },
-                                    )
-                                FilterDropdown.NODE_SWITCH ->
-                                    LabeledSwitch(
-                                        "Split by node",
-                                        checked = splitByNode,
-                                        onCheckedChange = { splitByNode = it },
-                                    )
-                            }
-                        }
-                    }
-
-                    TextButton(onClick = { exportCsvFile(allSectionsToCsv(sections, grouping), "results.csv") }) {
-                        Icon(Icons.Default.FileDownload, contentDescription = "Export all to CSV")
-                        Spacer(Modifier.width(Dimensions.spacingXs))
-                        Text("Export All")
-                    }
-                }
+                ResultsToolbar(
+                    grouping = grouping,
+                    onGroupingChange = { grouping = it },
+                    splitByNode = splitByNode,
+                    onSplitByNodeChange = { splitByNode = it },
+                    allSimNames = allSimNames,
+                    selectedSimulations = selectedSimulations,
+                    onSelectedSimulationsChange = { selectedSimulations = it },
+                    allMetricNames = allMetricNames,
+                    selectedMetrics = selectedMetrics,
+                    onSelectedMetricsChange = { selectedMetrics = it },
+                    allNodeNames = allNodeNames,
+                    selectedNodes = selectedNodes,
+                    onSelectedNodesChange = { selectedNodes = it },
+                    onExportAll = { exportCsvFile(allSectionsToCsv(sections, grouping), "results.csv") },
+                )
             }
 
             // Scrollable table content
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 Column(Modifier.fillMaxSize().verticalScroll(scrollState).padding(Dimensions.spacingLg)) {
                     for (section in sections) {
-                        // Section header with action buttons
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(text = section.title, style = MaterialTheme.typography.titleMedium)
-                            Row {
-                                TooltipBox(
-                                    positionProvider =
-                                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                                    tooltip = { PlainTooltip { Text("Copy to clipboard") } },
-                                    state = rememberTooltipState(),
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            copyToClipboard(sectionToCsv(section))
-                                            scope.launch {
-                                                // NECESSARY to avoid queuing toasts if repeat copy clicks
-                                                snackbarHostState.currentSnackbarData?.dismiss()
-                                                snackbarHostState.showSnackbar(
-                                                    "Copied to clipboard",
-                                                    withDismissAction = true,
-                                                )
-                                            }
-                                        }
-                                    ) {
-                                        Icon(Icons.Default.ContentCopy, contentDescription = "Copy to clipboard")
-                                    }
+                        SectionHeader(
+                            section = section,
+                            onCopy = {
+                                copyToClipboard(sectionToCsv(section))
+                                scope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar("Copied to clipboard", withDismissAction = true)
                                 }
-                                TooltipBox(
-                                    positionProvider =
-                                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                                    tooltip = { PlainTooltip { Text("Export to CSV") } },
-                                    state = rememberTooltipState(),
-                                ) {
-                                    IconButton(
-                                        onClick = { exportCsvFile(sectionToCsv(section), "${section.title}.csv") }
-                                    ) {
-                                        Icon(Icons.Default.FileDownload, contentDescription = "Export to CSV")
-                                    }
-                                }
-                            }
-                        }
+                            },
+                            onExport = { exportCsvFile(sectionToCsv(section), "${section.title}.csv") },
+                        )
                         SelectionContainer {
                             MetricsResultsTable(
                                 columnHeaders = section.columnHeaders,
