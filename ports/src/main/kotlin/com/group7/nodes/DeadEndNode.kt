@@ -13,6 +13,7 @@ import com.group7.channels.isPush
 class DeadEndNode<InputT>(label: String, private val inputChannel: InputChannel<InputT, *>) :
     Node(label, listOf(inputChannel), emptyList()) {
 
+    /** Closes the input channel on simulation start, preventing any entities from entering. */
     context(_: Simulator)
     override fun onStart() {
         if (inputChannel.isPush()) {

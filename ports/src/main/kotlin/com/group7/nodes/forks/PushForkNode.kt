@@ -31,6 +31,7 @@ class PushForkNode<T>(
         source.onReceive { emit(it) }
     }
 
+    /** Initializes the policy */
     context(_: Simulator)
     override fun onStart() {
         policy.initialize(source, destinations)

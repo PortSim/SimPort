@@ -36,6 +36,7 @@ class BoundedQueueNode<T>(
         }
     }
 
+    /** Initializes the queue, marking destination ready if there are initial occupants. */
     context(_: Simulator)
     override fun onStart() {
         if (policy.reportOccupancy() > 0) {
@@ -46,9 +47,19 @@ class BoundedQueueNode<T>(
         }
     }
 
+    /**
+     * Returns the current number of entities in the queue.
+     *
+     * @return the current occupancy
+     */
     override val occupants
         get() = policy.reportOccupancy()
 
+    /**
+     * Checks if the [QueuePolicy] supports residence time tracking.
+     *
+     * @return true if residence time is supported, false otherwise
+     */
     override fun supportsResidenceTime() = policy.supportsResidenceTime()
 
     context(_: Simulator)
