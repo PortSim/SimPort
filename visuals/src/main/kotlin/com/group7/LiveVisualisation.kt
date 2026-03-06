@@ -33,6 +33,12 @@ private fun PlaybackVerticalDivider() {
     )
 }
 
+/**
+ * Top-level composable for a live (animated) simulation.
+ *
+ * Creates a [SimulatorModel] to drive playback and renders the simulation via [SimulationTabLayout] with a bottom
+ * playback bar containing play/pause, step, speed, and time display controls.
+ */
 @Composable
 fun LiveVisualisation(
     scenario: Scenario,

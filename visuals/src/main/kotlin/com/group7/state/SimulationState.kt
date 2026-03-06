@@ -6,6 +6,14 @@ import com.group7.Scenario
 import com.group7.metrics.MetricsTracker
 import kotlin.time.Instant
 
+/**
+ * Central state holder for a single simulation run.
+ *
+ * Aggregates the sub-states used by different UI panels (charts, histograms, graph viewer, progress bars). Supports a
+ * batching mode ([beginBatch]/[endBatch]) for bulk stepping: while batching, individual [report] calls only record data
+ * into the tracker without triggering Compose snapshot writes, and [endBatch] flushes everything in one pass to avoid
+ * excessive recompositions.
+ */
 class SimulationState(val scenario: Scenario, iconProvider: IconProvider = IconProvider.defaultProvider()) :
     MetricReporter {
     private var isBatching = false

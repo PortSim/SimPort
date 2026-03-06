@@ -17,7 +17,13 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.toSize
 
-// Calculates the clamped offset to keep a percentage of the inner box always on screen
+/**
+ * Clamps the pan [offset] so that at least [onScreenPercentage] (0–1) of the inner canvas remains visible inside the
+ * outer viewport, in both axes independently.
+ *
+ * When the scaled inner canvas is larger than the outer box the formula constrains how far off-screen the canvas can
+ * slide. When it is smaller, the formula constrains how far the canvas can drift away from the viewport centre.
+ */
 fun clampOffsetToKeepCanvasOnScreen(
     outerBoxSize: Size,
     innerBoxSize: Size,
@@ -42,6 +48,11 @@ fun clampOffsetToKeepCanvasOnScreen(
     return Offset(offset.x.coerceIn(xRange), offset.y.coerceIn(yRange))
 }
 
+/**
+ * A container that supports mouse-wheel zoom (centred on the cursor) and click-drag panning. The [content] is measured
+ * with infinite constraints so it can report its natural size, then rendered with a [graphicsLayer] transform for
+ * smooth zoom/pan without re-layout.
+ */
 @Composable
 fun DraggableZoomableBox(content: @Composable () -> Unit) {
     val percentageOfInnerBoxToKeepInScreen = 0.2f

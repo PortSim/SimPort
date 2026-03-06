@@ -24,6 +24,10 @@ import java.net.ConnectException
 import java.net.URI
 import javax.swing.JOptionPane
 
+/**
+ * Displays the filtered stack trace showing where a node was defined in user code. Each frame is clickable and opens
+ * the source file in IntelliJ via the IDE Remote Control plugin.
+ */
 @Composable
 fun NodeStackTrace(node: NodeGroup, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(Dimensions.spacingXxs)) {
@@ -53,6 +57,7 @@ fun NodeStackTrace(node: NodeGroup, modifier: Modifier = Modifier) {
     }
 }
 
+/** Strips internal frames (DSL, utils, compound) and stops at [buildScenario], leaving only user code. */
 private fun filterStackTrace(stackTrace: List<StackTraceElement>) =
     stackTrace
         .asSequence()
@@ -66,6 +71,7 @@ private val StackTraceElement.isInternal
             className.startsWith("com.group7.utils") ||
             className.startsWith("com.group7.compound")
 
+/** Opens the given source location in IntelliJ via the IDE Remote Control plugin's HTTP API. */
 private fun openSourceInIntelliJ(frame: StackTraceElement) {
     val dir = frame.className.substringBeforeLast(".").replace(".", "/")
     val sourceFile = dir + "/" + frame.fileName

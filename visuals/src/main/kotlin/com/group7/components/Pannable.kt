@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
+/** Scrollable container with both vertical and horizontal scrollbars. */
 @Composable
 fun Pannable(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val verticalScrollState = rememberScrollState()

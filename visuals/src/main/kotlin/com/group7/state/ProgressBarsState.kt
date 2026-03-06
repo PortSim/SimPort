@@ -15,8 +15,14 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
+/**
+ * Tracks active progress bars for delay-queue events across all node groups.
+ *
+ * Progress bars are created on the simulation thread via [HasProgressBars.onCreateProgressBar] callbacks and buffered.
+ * On each [update] call the buffer is flushed into Compose snapshot state and expired bars are removed, all within a
+ * single [Snapshot.withMutableSnapshot] to batch the writes.
+ */
 class ProgressBarsState(val scenario: Scenario) {
-    // latestTime tracks the most up-to-date time progress bars when it updates the UI should refresh
     var latestTimeSeen by mutableStateOf(Instant.DISTANT_PAST)
         private set
 

@@ -16,6 +16,7 @@ import kotlin.time.toDuration
 private val durationUnits =
     listOf(DurationUnit.MILLISECONDS, DurationUnit.SECONDS, DurationUnit.MINUTES, DurationUnit.HOURS, DurationUnit.DAYS)
 
+/** Numeric text field paired with a unit dropdown for entering a [Duration]. Returns `null` on invalid input. */
 @Composable
 fun DurationPicker(duration: Duration?, onDurationChange: (Duration?) -> Unit) {
     var text by remember { mutableStateOf(duration?.toLong(DurationUnit.SECONDS)?.toString() ?: "") }

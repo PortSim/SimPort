@@ -27,6 +27,11 @@ enum class SimulationTab(val label: String) {
     ResultsTable("Results Table"),
 }
 
+/**
+ * Tabbed layout for a single simulation, providing Graph Viewer, Metrics (summary charts), and Results Table tabs. An
+ * optional [bottomBar] slot is used by [LiveVisualisation] to render playback controls beneath the tab content. Press
+ * **D** to toggle the debug FPS panel.
+ */
 @Composable
 fun SimulationTabLayout(
     simulationName: String,

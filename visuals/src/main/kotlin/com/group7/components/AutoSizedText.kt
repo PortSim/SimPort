@@ -15,6 +15,12 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 
+/**
+ * Text that automatically shrinks to fit within its parent's constraints.
+ *
+ * Uses a binary search over font sizes to find the largest size that fits, wrapping at word boundaries when a single
+ * line would overflow. The search range is 1 sp – 120 sp.
+ */
 @Composable
 fun AutoSizedText(
     text: String,
@@ -50,6 +56,11 @@ fun AutoSizedText(
     }
 }
 
+/**
+ * Binary-searches for the largest font size (in px) in [[minFontSize], [maxFontSize]] such that [text], word-wrapped
+ * via [wrapTextAtSpaces], fits within [maxWidthPx]×[maxHeightPx]. Returns the chosen [TextStyle] and the wrapped text
+ * string.
+ */
 private fun findOptimalFontSizeAndLayout(
     text: String,
     textMeasurer: TextMeasurer,

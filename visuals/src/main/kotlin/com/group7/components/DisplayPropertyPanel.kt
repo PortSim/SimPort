@@ -85,6 +85,7 @@ fun GroupDisplayProperty(
     }
 }
 
+/** Side panel showing a node's display properties and its creation-site stack trace. */
 @Composable
 fun DisplayPropertyPanel(
     node: NodeGroup,

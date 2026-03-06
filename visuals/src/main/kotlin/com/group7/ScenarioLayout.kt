@@ -12,6 +12,13 @@ import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.util.ElkGraphUtil
 
+/**
+ * Computes a hierarchical ELK graph layout for the given [scenario].
+ *
+ * Nodes are discovered via BFS, mapped to [ElkNode]s respecting the [NodeGroup] hierarchy, and edges are created for
+ * each [OutputChannel]. The ELK layered algorithm is then executed to produce coordinates that the graph viewer reads
+ * from [elkGraphRoot].
+ */
 class ScenarioLayout(scenario: Scenario, enableEdgeLabels: Boolean) {
     val elkGraphRoot: ElkNode = ElkGraphUtil.createGraph()
 
