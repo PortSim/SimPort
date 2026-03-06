@@ -125,8 +125,10 @@ class AdaptiveBatchMeansTest :
                 val countAfterCollapse = bm.batchCount()
 
                 // Add one sample (partial batch — not enough for new batch)
+                bm.mean() shouldBe (2.5 plusOrMinus 1e-10)
                 bm.add(100.0)
                 bm.batchCount() shouldBe countAfterCollapse
+                bm.mean() shouldBe (2.5 plusOrMinus 1e-10)
             }
         }
 

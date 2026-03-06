@@ -133,8 +133,8 @@ internal class DownsampledContinuousMetricData : MetricData {
         values = sampled
     }
 
-    private companion object {
-        private const val DESIRED_SAMPLES = 5000
+    internal companion object {
+        internal const val DESIRED_SAMPLES = 5000
     }
 }
 
