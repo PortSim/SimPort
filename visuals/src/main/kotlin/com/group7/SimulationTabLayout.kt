@@ -18,6 +18,7 @@ import com.group7.components.DebugPanel
 import com.group7.components.ResultsTablePage
 import com.group7.components.SimpleGraphViewer
 import com.group7.state.SimulationState
+import kotlin.time.DurationUnit
 import kotlin.time.Instant
 import kotlinx.collections.immutable.persistentMapOf
 
@@ -37,8 +38,8 @@ fun SimulationTabLayout(
     simulationName: String,
     simulation: SimulationState,
     showResultsToolbar: Boolean = false,
-    iconProvider: IconProvider?,
     getAnimatableTime: () -> Instant,
+    stepUnit: State<DurationUnit?>,
     // simulation is batched
     bottomBar: @Composable ColumnScope.() -> Unit = {},
 ) {
@@ -70,7 +71,7 @@ fun SimulationTabLayout(
         val simulations = persistentMapOf(simulationName to simulation)
         Box(Modifier.weight(1f).clipToBounds()) {
             when (selectedTab) {
-                SimulationTab.GraphViewer -> SimpleGraphViewer(simulationName, simulation, getAnimatableTime)
+                SimulationTab.GraphViewer -> SimpleGraphViewer(simulationName, simulation, getAnimatableTime, stepUnit)
                 SimulationTab.Metrics -> SummaryVisualisation(simulations)
                 SimulationTab.ResultsTable -> ResultsTablePage(simulations, showToolbar = showResultsToolbar)
             }

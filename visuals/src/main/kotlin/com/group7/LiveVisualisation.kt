@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import com.group7.components.PlaybackSpeedSlider
 import com.group7.state.SimulationState
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlin.time.DurationUnit
 import kotlin.time.toJavaInstant
 import kotlinx.coroutines.launch
 
@@ -45,6 +47,7 @@ fun LiveVisualisation(
     logger: EventLog = EventLog.noop(),
     iconProvider: IconProvider = IconProvider.defaultProvider(),
 ) {
+    val stepUnit = remember { mutableStateOf(DurationUnit.DAYS) }
     val simulation = remember { SimulationState(scenario, iconProvider) }
     val simulator = remember { SimulatorModel(Simulator(logger, scenario, simulation)) }
     val scope = rememberCoroutineScope()
@@ -58,7 +61,7 @@ fun LiveVisualisation(
         "Simulation",
         simulation,
         getAnimatableTime = { simulator.progressBarsTime },
-        iconProvider = iconProvider,
+        stepUnit = stepUnit,
     ) {
         HorizontalDivider()
 
@@ -87,7 +90,12 @@ fun LiveVisualisation(
                 PlaybackVerticalDivider()
 
                 Button(
-                    onClick = { simulator.playPause() },
+                    onClick = {
+                        simulator.playPause()
+                        if (!simulator.isRunning) {
+                            simulation.updateState()
+                        }
+                    },
                     modifier = Modifier.width(100.dp),
                     enabled = !simulator.isStepping,
                 ) {
@@ -130,7 +138,14 @@ fun LiveVisualisation(
                     }
                 }
 
-                DurationPicker(duration = simulator.stepDuration, onDurationChange = { simulator.stepDuration = it })
+                DurationPicker(
+                    duration = simulator.stepDuration,
+                    defaultStepUnit = stepUnit.value,
+                    onDurationChange = { duration, unit ->
+                        simulator.stepDuration = duration
+                        stepUnit.value = unit
+                    },
+                )
             }
         }
     }

@@ -22,13 +22,13 @@ fun runSimulation(
     logger: EventLog = EventLog.noop(),
     iconProvider: IconProvider = IconProvider.defaultProvider(),
 ) {
-    val sampler = SimulationState(scenario)
+    val sampler = SimulationState(scenario, iconProvider)
     val simulator = Simulator(logger, scenario, sampler)
     sampler.beginBatch()
     simulator.runFor(duration)
     sampler.endBatch()
 
-    runVisualisation { StaticVisualisation(sampler, iconProvider = iconProvider) }
+    runVisualisation { StaticVisualisation(sampler) }
 }
 
 /**
@@ -48,13 +48,13 @@ fun runSimulation(
     logger: EventLog = EventLog.noop(),
     iconProvider: IconProvider = IconProvider.defaultProvider(),
 ) {
-    val sampler = SimulationState(scenario)
+    val sampler = SimulationState(scenario, iconProvider)
     val simulator = Simulator(logger, scenario, sampler)
     sampler.beginBatch()
     simulator.runFor(events)
     sampler.endBatch()
 
-    runVisualisation { StaticVisualisation(sampler, iconProvider = iconProvider) }
+    runVisualisation { StaticVisualisation(sampler) }
 }
 
 /**
@@ -78,7 +78,7 @@ fun runSimulations(
         scenarios.entries
             .parallelStream()
             .map { (scenarioName, scenario) ->
-                val sampler = SimulationState(scenario)
+                val sampler = SimulationState(scenario, iconProvider)
                 val simulator = Simulator(logger(scenarioName), scenario, sampler)
                 sampler.beginBatch()
                 simulator.runFor(duration)
@@ -94,7 +94,7 @@ fun runSimulations(
                 )
             )
             .toImmutableMap()
-    runVisualisation { MultiVisualisation(simulations, iconProvider) }
+    runVisualisation { MultiVisualisation(simulations) }
 }
 
 /**

@@ -5,7 +5,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.days
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
 import kotlinx.coroutines.*
@@ -27,7 +27,7 @@ class SimulatorModel(private val simulator: Simulator) {
 
     var playbackSpeed by mutableFloatStateOf(1f)
 
-    var stepDuration by mutableStateOf<Duration?>(1.seconds)
+    var stepDuration by mutableStateOf<Duration?>(1.days)
 
     private var lastTimeBeforeStepping = simulator.currentTime
     private var currentBaseTime by mutableStateOf(simulator.currentTime)

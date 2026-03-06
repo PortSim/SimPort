@@ -40,16 +40,20 @@ class SimulationState(val scenario: Scenario, iconProvider: IconProvider = IconP
         }
     }
 
+    fun updateState() {
+        chartsState.update(lastUpdateTime, true)
+        portDisplayState.refresh()
+        progressBarsState.update(lastUpdateTime)
+        histogramsState.update(lastUpdateTime)
+    }
+
     fun beginBatch() {
         isBatching = true
     }
 
     fun endBatch() {
         isBatching = false
-        chartsState.update(lastUpdateTime, true)
-        portDisplayState.refresh()
-        progressBarsState.update(lastUpdateTime)
-        histogramsState.update(lastUpdateTime)
+        updateState()
     }
 
     suspend fun updateLive() {
