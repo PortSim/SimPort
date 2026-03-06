@@ -7,6 +7,9 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.group7.demos.demoPolicySweep
+import com.group7.visuals.generated.resources.Res
+import com.group7.visuals.generated.resources.craneIcon
+import org.jetbrains.compose.resources.painterResource
 
 internal fun main() {
     if (true) {
@@ -22,6 +25,7 @@ fun runVisualisation(body: @Composable () -> Unit) {
             onCloseRequest = ::exitApplication,
             title = "SimPort",
             state = rememberWindowState(placement = WindowPlacement.Maximized),
+            icon = painterResource(Res.drawable.craneIcon),
         ) {
             SimPortTheme { body() }
         }
