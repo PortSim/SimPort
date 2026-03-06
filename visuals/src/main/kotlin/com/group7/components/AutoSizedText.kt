@@ -77,7 +77,7 @@ private fun findOptimalFontSizeAndLayout(
     var bestStyle: TextStyle? = null
     var bestLayout = text
 
-    // Binary search for the optimal font size
+    // Binary search for the optimal font size that fits in max bounds
     var low = minFontSize
     var high = maxFontSize
 
@@ -85,11 +85,13 @@ private fun findOptimalFontSizeAndLayout(
         val mid = (low + high) / 2
         val fontSize = with(density) { mid.toSp() }
         val gapInSp = with(density) { lineGap.toSp() }
+        // Create test style with current font size
         val testStyle = style.copy(fontSize = fontSize, lineHeight = (fontSize.value + gapInSp.value).sp)
         if (bestStyle == null) {
             bestStyle = testStyle
         }
 
+        // Wrap text at current font size and measure result
         val layout = wrapTextAtSpaces(words, textMeasurer, testStyle, maxWidthPx)
         val measured =
             textMeasurer.measure(
@@ -98,6 +100,7 @@ private fun findOptimalFontSizeAndLayout(
                 constraints = Constraints(maxWidth = Int.MAX_VALUE), // No wrapping by measurer
             )
 
+        // If text fits, try a larger font; otherwise try smaller
         if (measured.size.width <= maxWidthPx && measured.size.height <= maxHeightPx) {
             low = mid
             bestStyle = testStyle
@@ -110,6 +113,13 @@ private fun findOptimalFontSizeAndLayout(
     return bestStyle!! to bestLayout
 }
 
+/**
+ * Wraps text at word boundaries to fit within [maxWidthPx].
+ *
+ * Greedily fits words onto lines, breaking to a new line when a word wouldn't fit.
+ *
+ * @return text with newlines inserted at word boundaries
+ */
 private fun wrapTextAtSpaces(
     words: List<String>,
     textMeasurer: TextMeasurer,
@@ -122,13 +132,16 @@ private fun wrapTextAtSpaces(
     var currentLine = StringBuilder()
 
     for (word in words) {
+        // Try adding next word to current line
         val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
         val measured =
             textMeasurer.measure(text = testLine, style = style, constraints = Constraints(maxWidth = Int.MAX_VALUE))
 
         if (measured.size.width <= maxWidthPx) {
+            // Word fits, keep building current line
             currentLine = StringBuilder(testLine)
         } else {
+            // Word doesn't fit, save current line and start new one with this word
             if (currentLine.isNotEmpty()) {
                 lines.add(currentLine.toString())
             }
@@ -136,6 +149,7 @@ private fun wrapTextAtSpaces(
         }
     }
 
+    // Add final line if not empty
     if (currentLine.isNotEmpty()) {
         lines.add(currentLine.toString())
     }

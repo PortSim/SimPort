@@ -27,9 +27,11 @@ fun <T> MultiSelectDropdown(
     optionLabel: (T) -> String = { it.toString() },
     modifier: Modifier = Modifier,
 ) {
+    // Track whether dropdown menu is open
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier) {
+        // Display read-only text field showing selection count summary
         OutlinedTextField(
             value = "$label (${selectedOptions.size} of ${options.size})",
             onValueChange = {},
@@ -50,7 +52,7 @@ fun <T> MultiSelectDropdown(
         )
 
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            // Select All / Deselect All toggle
+            // Select All / Deselect All toggle at the top of menu
             val allSelected = selectedOptions.size == options.size
             DropdownMenuItem(
                 text = {
@@ -58,6 +60,7 @@ fun <T> MultiSelectDropdown(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingSm),
                     ) {
+                        // Checkbox shows all-selected state
                         Checkbox(checked = allSelected, onCheckedChange = null)
                         Text(
                             if (allSelected) "Deselect all" else "Select all",
@@ -66,6 +69,7 @@ fun <T> MultiSelectDropdown(
                     }
                 },
                 onClick = {
+                    // Toggle between select all and deselect all
                     onSelectionChange(
                         if (allSelected) {
                             selectedOptions.removeAll(selectedOptions)
@@ -77,6 +81,7 @@ fun <T> MultiSelectDropdown(
             )
             HorizontalDivider()
 
+            // Render individual option items with checkboxes
             options.forEach { option ->
                 val isSelected = option in selectedOptions
                 DropdownMenuItem(

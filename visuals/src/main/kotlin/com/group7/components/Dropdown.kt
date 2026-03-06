@@ -17,8 +17,10 @@ fun <T> Dropdown(
     label: @Composable (() -> Unit)? = null,
     displayText: (T) -> String = { it?.toString() ?: "Select..." },
 ) {
+    // Track dropdown open/closed state
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier) {
+        // Display current selection in read-only text field
         OutlinedTextField(
             value = displayText(selected),
             onValueChange = {},
@@ -38,11 +40,14 @@ fun <T> Dropdown(
                     .pointerHoverIcon(PointerIcon.Default, overrideDescendants = true),
         )
 
+        // Dropdown menu with list of options
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            // Render each option as a selectable menu item
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(displayText(option)) },
                     onClick = {
+                        // Notify parent of selection and close menu
                         onSelected(option)
                         expanded = false
                     },

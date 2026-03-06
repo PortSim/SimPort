@@ -43,6 +43,7 @@ fun SimulationTabLayout(
     // simulation is batched
     bottomBar: @Composable ColumnScope.() -> Unit = {},
 ) {
+    // Track which tab is currently selected and debug panel visibility
     var selectedTab by remember { mutableStateOf(SimulationTab.GraphViewer) }
     var showDebug by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
@@ -50,6 +51,7 @@ fun SimulationTabLayout(
 
     Column(
         Modifier.fillMaxSize().focusRequester(focusRequester).focusable().onKeyEvent { event ->
+            // Handle keyboard shortcut: Press D to toggle debug FPS panel
             if (event.key == Key.D && event.type == KeyEventType.KeyUp) {
                 showDebug = !showDebug
                 true
@@ -58,16 +60,19 @@ fun SimulationTabLayout(
             }
         }
     ) {
+        // Display debug panel if enabled
         if (showDebug) {
             DebugPanel()
         }
 
+        // Tab row for switching between Graph Viewer, Metrics, and Results Table
         SecondaryTabRow(selectedTabIndex = selectedTab.ordinal) {
             SimulationTab.entries.forEach { tab ->
                 Tab(selected = selectedTab == tab, onClick = { selectedTab = tab }, text = { Text(tab.label) })
             }
         }
 
+        // Display content for the selected tab
         val simulations = persistentMapOf(simulationName to simulation)
         Box(Modifier.weight(1f).clipToBounds()) {
             when (selectedTab) {
@@ -76,7 +81,7 @@ fun SimulationTabLayout(
                 SimulationTab.ResultsTable -> ResultsTablePage(simulations, showToolbar = showResultsToolbar)
             }
         }
-        // For live visualisation playback controls
+        // Render bottom bar slot (used by LiveVisualisation for playback controls)
         bottomBar()
     }
 }

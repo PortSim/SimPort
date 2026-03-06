@@ -63,6 +63,7 @@ sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) :
         totalDurations.remove(obj)
     }
 
+    /** Local residence time metric tracking time objects spend in a single container. */
     class Local(private val container: Container<*>, scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) :
         ResidenceTime(scenario, unit) {
         init {
@@ -80,7 +81,7 @@ sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) :
         override fun neverEntered(obj: Any?) = "Object $obj never entered $container!"
     }
 
-    // Global counts total time across all nodes from source -> output sink
+    /** Global residence time metric tracking total time objects spend across all containers from source to sink. */
     class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : ResidenceTime(scenario, unit) {
         init {
             for (source in scenario.every<Source<*>>()) {
@@ -108,8 +109,23 @@ sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) :
      * when thet object leaves the simulation).
      */
     companion object : MetricFactory<Container<*>>, GlobalMetricFactory {
+        /**
+         * Creates a local residence time metric for a specific node (uses default time unit of seconds).
+         *
+         * @param node the container to track residence time for
+         * @param scenario the scenario containing all nodes
+         * @return a metric group containing residence times and statistical moments, or null if node doesn't support residence time
+         */
         override fun create(node: Container<*>, scenario: Scenario) = create(node, scenario, DurationUnit.SECONDS)
 
+        /**
+         * Creates a local residence time metric for a specific node with optional time unit.
+         *
+         * @param node the container to track residence time for
+         * @param scenario the scenario containing all nodes
+         * @param unit the time unit for durations (default: seconds)
+         * @return a metric group containing residence times and statistical moments, or null if node doesn't support residence time
+         */
         fun create(node: Container<*>, scenario: Scenario, unit: DurationUnit): MetricGroup? {
             if (!node.supportsResidenceTime()) {
                 return null
@@ -119,8 +135,21 @@ sealed class ResidenceTime(scenario: Scenario, private val unit: DurationUnit) :
             return MetricGroup("Residence Time (${unit.suffix})", node as NodeGroup, raw, cis.moments())
         }
 
+        /**
+         * Creates a global residence time metric across the entire scenario (uses default time unit of seconds).
+         *
+         * @param scenario the scenario to create a global metric for
+         * @return a metric group containing global residence times and statistical moments
+         */
         override fun create(scenario: Scenario) = create(scenario, DurationUnit.SECONDS)
 
+        /**
+         * Creates a global residence time metric across the entire scenario with optional time unit.
+         *
+         * @param scenario the scenario to create a global metric for
+         * @param unit the time unit for durations (default: seconds)
+         * @return a metric group containing global residence times and statistical moments
+         */
         fun create(scenario: Scenario, unit: DurationUnit): MetricGroup {
             val raw = Global(scenario, unit)
             val cis = InstantaneousConfidenceIntervals(raw)

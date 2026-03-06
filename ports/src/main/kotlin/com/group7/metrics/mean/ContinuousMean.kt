@@ -6,7 +6,10 @@ import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
 /** Time-weighted mean of a continuous metric, from start of simulation. */
-class ContinuousMean(val raw: ContinuousMetric) : ContinuousMetric() {
+class ContinuousMean(
+    /** The underlying continuous metric whose time-weighted mean is computed. */
+    val raw: ContinuousMetric
+) : ContinuousMetric() {
     private var timeSum = 0.0
     private var totalDuration = Duration.ZERO
 

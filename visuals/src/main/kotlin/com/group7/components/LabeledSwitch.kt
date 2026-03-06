@@ -14,7 +14,9 @@ import androidx.compose.ui.graphics.Color
 @Composable
 fun LabeledSwitch(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: Boolean = true) {
     Row(verticalAlignment = Alignment.CenterVertically) {
+        // Display label with conditional color based on enabled state
         Text(label, style = MaterialTheme.typography.labelSmall, color = if (enabled) Color.Gray else Color.LightGray)
+        // Render switch at 60% scale to fit compact toolbars, with state callback
         Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled, modifier = Modifier.scale(0.6f))
     }
 }

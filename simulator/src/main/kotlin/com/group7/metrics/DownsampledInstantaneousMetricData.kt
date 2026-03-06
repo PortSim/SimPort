@@ -5,8 +5,12 @@ import kotlin.time.Instant
 import kotlinx.collections.immutable.toPersistentList
 
 /**
- * Downsamples to maintain [DESIRED_SAMPLES] samples. This is visually lossy but the scatter plots are only useful to
- * see general patterns. Importantly, every sample has an equal chance of being preserved, via reservoir sampling.
+ * Downsamples instantaneous metric data using reservoir sampling.
+ *
+ * For instantaneous metrics, this implementation maintains approximately [DESIRED_SAMPLES] samples
+ * using Algorithm R (standard reservoir sampling). While this is visually lossy, scatter plots are
+ * primarily used to identify general patterns. Every sample has an equal probability of being preserved,
+ * providing uniform and unbiased sampling across the entire time series.
  */
 class DownsampledInstantaneousMetricData : MetricData {
     private var totalSamplesSeen = 0L
@@ -21,8 +25,14 @@ class DownsampledInstantaneousMetricData : MetricData {
         get() = sortedSamples.asSequence().map { MetricValue(it.time, it.value) }.toPersistentList()
 
     /**
-     * Data class requires a unique ID tie-breaker so identical timestamps don't accidentally overwrite each other in
-     * the TreeSet.
+     * A single metric sample at a specific point in time.
+     *
+     * The sequence ID serves as a tie-breaker for samples with identical timestamps, ensuring
+     * they are treated as distinct in the sorted set and don't accidentally overwrite each other.
+     *
+     * @property sequenceId unique identifier assigning this sample a position in the overall sequence
+     * @property time the simulation time at which this sample was recorded
+     * @property value the numeric value of the metric at this time
      */
     data class Sample(val sequenceId: Long, val time: Instant, val value: Double) : Comparable<Sample> {
         override fun compareTo(other: Sample): Int {
@@ -32,6 +42,16 @@ class DownsampledInstantaneousMetricData : MetricData {
         }
     }
 
+    /**
+     * Adds a new metric value using reservoir sampling (Algorithm R).
+     *
+     * For the first [DESIRED_SAMPLES] values, all are stored. Afterward, each subsequent value has
+     * a [DESIRED_SAMPLES] / [totalSamplesSeen] probability of being included, with older samples
+     * having equal probability of being evicted.
+     *
+     * @param currentTime the simulation time at which the value was recorded
+     * @param value the numeric value of the metric
+     */
     override fun add(currentTime: Instant, value: Double) {
         val currentId = totalSamplesSeen
         val newSample = Sample(currentId, currentTime, value)
@@ -62,6 +82,9 @@ class DownsampledInstantaneousMetricData : MetricData {
         }
     }
 
+    /**
+     * Target number of samples to maintain during downsampling.
+     */
     internal companion object {
         internal const val DESIRED_SAMPLES = 5000
     }

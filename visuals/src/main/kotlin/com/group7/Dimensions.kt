@@ -3,6 +3,7 @@ package com.group7
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** Centralized design system constants for UI layout, spacing, and typography. */
 object Dimensions {
     val controlBarHeight = 48.dp
     val playbackDividerHeight = 32.dp

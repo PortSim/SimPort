@@ -22,16 +22,20 @@ private object SimPickerDimensions {
 
 @Composable
 fun IndividualStaticSimulationPicker(simulations: ImmutableMap<String, SimulationState>) {
+    // Get sorted list of simulation names for consistent ordering
     val simulationNames = simulations.keys.sorted()
+    // Track currently selected simulation tab
     var simulationTab by remember { mutableStateOf(0) }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Display the selected simulation visualization
         Box(modifier = Modifier.weight(1f)) {
             StaticVisualisation(simulations.getValue(simulationNames[simulationTab]), simulationNames[simulationTab])
         }
 
         HorizontalDivider()
 
+        // Render picker bar to switch between simulations
         SimulationPickerBar(
             simulations = simulationNames,
             selectedIndex = simulationTab,
@@ -42,11 +46,13 @@ fun IndividualStaticSimulationPicker(simulations: ImmutableMap<String, Simulatio
 
 @Composable
 private fun SimulationPickerBar(simulations: List<String>, selectedIndex: Int, onSelectionChange: (Int) -> Unit) {
+    // Control bar for selecting between multiple simulations
     Surface(tonalElevation = SimPickerDimensions.surfaceElevation) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().height(Dimensions.controlBarHeight),
         ) {
+            // Dropdown menu for quick simulation selection
             SimulationDropdownMenu(
                 simulations = simulations,
                 selectedIndex = selectedIndex,
@@ -55,6 +61,7 @@ private fun SimulationPickerBar(simulations: List<String>, selectedIndex: Int, o
 
             PickerVerticalDivider()
 
+            // Chip row for visual browsing of all simulations
             SimulationChipRow(
                 simulations = simulations,
                 selectedIndex = selectedIndex,
@@ -67,22 +74,27 @@ private fun SimulationPickerBar(simulations: List<String>, selectedIndex: Int, o
 
 @Composable
 private fun SimulationDropdownMenu(simulations: List<String>, selectedIndex: Int, onSelectionChange: (Int) -> Unit) {
+    // Track dropdown open/closed state
     var menuExpanded by remember { mutableStateOf(false) }
 
     Box {
+        // Menu button with hamburger icon
         TextButton(onClick = { menuExpanded = true }) {
             Icon(Icons.Default.Menu, contentDescription = "Select simulation")
             Spacer(Modifier.width(Dimensions.spacingXs))
             Text("Simulation")
         }
+        // Dropdown menu showing all available simulations
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             simulations.forEachIndexed { index, simulation ->
                 DropdownMenuItem(
                     text = { Text(simulation) },
                     onClick = {
+                        // Switch to selected simulation and close menu
                         onSelectionChange(index)
                         menuExpanded = false
                     },
+                    // Show checkmark next to currently selected simulation
                     leadingIcon =
                         if (selectedIndex == index) {
                             { Icon(Icons.Default.Check, contentDescription = null) }

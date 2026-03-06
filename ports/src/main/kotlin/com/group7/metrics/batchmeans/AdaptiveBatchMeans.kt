@@ -7,10 +7,18 @@ import com.group7.utils.andThen
  * - storing data into up to `2 * targetBatches` batches, and report the mean of each of these
  * - when `2 * targetBatches` is reached, squash pairs of batches into one batch to get `targetBatches` batches.
  */
-abstract class AdaptiveBatchMeans(val targetBatches: Int) {
+abstract class AdaptiveBatchMeans(
+    /** Target number of batches to maintain after collapsing. */
+    val targetBatches: Int
+) {
     private val batchMeans: MutableList<Double> = ArrayList(targetBatches * 2)
     private var closeBatchCallback: (() -> Unit)? = null
 
+    /**
+     * Registers a callback to be invoked each time a batch is closed/finalized.
+     *
+     * @param callback function to invoke when a batch completes
+     */
     fun onCloseBatch(callback: () -> Unit) {
         closeBatchCallback = closeBatchCallback.andThen(callback)
     }
@@ -21,13 +29,29 @@ abstract class AdaptiveBatchMeans(val targetBatches: Int) {
         return collapseBatchesIfNeeded()
     }
 
-    /** Get current number of batches */
+    /**
+     * Returns the current number of batches.
+     *
+     * @return the number of batches currently maintained
+     */
     fun batchCount() = batchMeans.size
 
-    /** Get current overall mean */
+    /**
+     * Returns the current overall mean across all batch means.
+     *
+     * @return the average of all current batch means
+     */
     fun mean() = batchMeans.average()
 
-    /** Get current variance. Requires at least 2 batches */
+    /**
+     * Returns the current variance of batch means.
+     *
+     * This represents the variance across batches, which is used for confidence interval calculations.
+     * Requires at least 2 batches to compute.
+     *
+     * @return the bias-corrected variance of batch means
+     * @throws IllegalArgumentException if fewer than 2 batches are available
+     */
     fun batchVariance(): Double {
         val b = batchMeans.size
         require(b >= 2)

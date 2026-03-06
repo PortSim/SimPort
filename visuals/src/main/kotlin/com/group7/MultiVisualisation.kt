@@ -14,18 +14,20 @@ import com.group7.components.ResultsTablePage
 import com.group7.state.SimulationState
 import kotlinx.collections.immutable.ImmutableMap
 
-/** MultiVisualisation displays multiple completed simulations. */
+/** MultiVisualisation displays multiple completed simulations with comparison views. */
 @Composable
 fun MultiVisualisation(simulations: ImmutableMap<String, SimulationState>) {
-
+    // Track top-level tab selection: Individual simulations or Summary
     var topTab by remember { mutableStateOf(0) }
 
     Column {
+        // Primary tab row with two main views
         PrimaryTabRow(selectedTabIndex = topTab) {
             Tab(selected = topTab == 0, onClick = { topTab = 0 }, text = { Text("Individual simulations") })
             Tab(selected = topTab == 1, onClick = { topTab = 1 }, text = { Text("Summary") })
         }
 
+        // Display content for the selected top-level tab
         Box(Modifier.weight(1f).clipToBounds()) {
             when (topTab) {
                 0 -> IndividualStaticSimulationPicker(simulations)
@@ -37,14 +39,17 @@ fun MultiVisualisation(simulations: ImmutableMap<String, SimulationState>) {
 
 @Composable
 private fun SummarySubPage(simulations: ImmutableMap<String, SimulationState>) {
+    // Track sub-tab selection: Metrics Chart or Results Table
     var subTab by remember { mutableStateOf(0) }
 
     Column(Modifier.fillMaxSize()) {
+        // Secondary tab row for summary view options
         SecondaryTabRow(selectedTabIndex = subTab) {
             Tab(selected = subTab == 0, onClick = { subTab = 0 }, text = { Text("Metrics Chart") })
             Tab(selected = subTab == 1, onClick = { subTab = 1 }, text = { Text("Results Table") })
         }
 
+        // Display content for the selected sub-tab
         Box(Modifier.weight(1f).clipToBounds()) {
             when (subTab) {
                 0 -> SummaryVisualisation(simulations)
