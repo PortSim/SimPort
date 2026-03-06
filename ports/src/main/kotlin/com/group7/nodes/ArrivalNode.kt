@@ -35,6 +35,7 @@ class ArrivalNode<OutputT>(
         (label: String, delay: Duration) -> Unit)? =
         null
 
+    /** Initializes the arrival node by scheduling the first arrival. */
     context(_: Simulator)
     override fun onStart() {
         scheduleNext()
@@ -55,6 +56,11 @@ class ArrivalNode<OutputT>(
         }
     }
 
+    /**
+     * Registers a callback to be invoked when an entity is emitted.
+     *
+     * @param callback the function to invoke with the emitted entity
+     */
     override fun onEmit(
         callback:
             context(Simulator)
@@ -63,8 +69,18 @@ class ArrivalNode<OutputT>(
         emitCallback = emitCallback.andThen(callback)
     }
 
+    /**
+     * Provides display properties from the [Generator].
+     *
+     * @return a list containing the generator's display property
+     */
     override fun properties() = listOf(generator.displayProperty)
 
+    /**
+     * Registers a callback to be invoked when a progress bar should be displayed.
+     *
+     * @param callback the function to invoke with label and delay information
+     */
     override fun onCreateProgressBar(
         callback:
             context(Simulator)

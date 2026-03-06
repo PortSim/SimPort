@@ -30,6 +30,7 @@ class PullJoinNode<T>(
         destination.onPull { this.takeFromSource() }
     }
 
+    /** Initializes the policy */
     context(_: Simulator)
     override fun onStart() {
         policy.initialize(sources, destination)

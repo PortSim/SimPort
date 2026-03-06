@@ -31,6 +31,11 @@ sealed class DefaultSinkNode<InputT>(label: String, source: PushInputChannel<Inp
         }
     }
 
+    /**
+     * Sink nodes do not support leaving callbacks (entities reaching sinks do not leave).
+     *
+     * @param callback ignored
+     */
     override fun onLeave(
         callback:
             context(Simulator)

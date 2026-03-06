@@ -14,7 +14,7 @@ class PriorityQueuePolicy<T : Any>(
     initialContents: Collection<T> = emptyList(),
     private val comparator: Comparator<T>,
 ) : QueuePolicy<T> {
-    val pq =
+    private val pq =
         PriorityQueue<T>(initialContents.size.coerceAtLeast(1), comparator.reversed()).apply { addAll(initialContents) }
 
     override val contents

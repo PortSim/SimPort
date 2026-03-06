@@ -28,9 +28,20 @@ abstract class PassthroughNode<InputT, OutputT, ChannelT : ChannelType<ChannelT>
         context(Simulator)
         () -> Unit
 
+    /**
+     * Checks if this node is ready to process an entity.
+     *
+     * @return true if the node can process entities, false otherwise
+     */
     context(_: Simulator)
     abstract fun isReady(): Boolean
 
+    /**
+     * Processes an input entity and produces an output entity.
+     *
+     * @param input the input entity to process
+     * @return the processed output entity
+     */
     context(_: Simulator)
     abstract fun process(input: InputT): OutputT
 
@@ -45,6 +56,7 @@ abstract class PassthroughNode<InputT, OutputT, ChannelT : ChannelType<ChannelT>
             }
     }
 
+    /** Initializes readiness state on simulation start. */
     context(_: Simulator)
     override fun onStart() {
         updateReadiness()

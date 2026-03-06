@@ -5,6 +5,17 @@ import java.util.stream.Collectors
 import kotlin.time.Duration
 import kotlinx.collections.immutable.toImmutableMap
 
+/**
+ * Runs a single simulation for a specified duration and displays the results.
+ *
+ * The simulation is executed until the specified duration of simulation time has elapsed, then the final state is
+ * displayed with a static visualization.
+ *
+ * @param scenario the [Scenario] to simulate
+ * @param duration the simulation time to run for
+ * @param logger the [EventLog] for recording simulation events (default: no-op)
+ * @param iconProvider the [IconProvider] for custom node icons (default: default provider)
+ */
 fun runSimulation(
     scenario: Scenario,
     duration: Duration,
@@ -20,6 +31,17 @@ fun runSimulation(
     runVisualisation { StaticVisualisation(sampler, iconProvider = iconProvider) }
 }
 
+/**
+ * Runs a single simulation for a specified number of events and displays the results.
+ *
+ * The simulation is executed until the specified number of events have been processed, then the final state is
+ * displayed with a static visualization.
+ *
+ * @param scenario the [Scenario] to simulate
+ * @param events the number of events to process
+ * @param logger the [EventLog] for recording simulation events (default: no-op)
+ * @param iconProvider the [IconProvider] for custom node icons (default: default provider)
+ */
 fun runSimulation(
     scenario: Scenario,
     events: Int,
@@ -35,6 +57,17 @@ fun runSimulation(
     runVisualisation { StaticVisualisation(sampler, iconProvider = iconProvider) }
 }
 
+/**
+ * Runs multiple simulations in parallel and displays comparative results.
+ *
+ * Each [Scenario] is simulated for the specified duration in parallel, then all results are displayed together in a
+ * multi-simulation visualization for comparison.
+ *
+ * @param scenarios a map of scenario names to [Scenario] objects to simulate
+ * @param duration the simulation time to run each scenario for
+ * @param logger a factory function to create an [EventLog] for each scenario (default: no-op)
+ * @param iconProvider the [IconProvider] for custom node icons (default: default provider)
+ */
 fun runSimulations(
     scenarios: Map<String, Scenario>,
     duration: Duration,
@@ -64,6 +97,16 @@ fun runSimulations(
     runVisualisation { MultiVisualisation(simulations, iconProvider) }
 }
 
+/**
+ * Runs a simulation in real-time and displays it with a live visualization.
+ *
+ * Unlike the static simulation runners, this allows the simulation to be stepped and visualized interactively as it
+ * progresses.
+ *
+ * @param scenario the [Scenario] to simulate
+ * @param logger the [EventLog] for recording simulation events (default: no-op)
+ * @param iconProvider the [IconProvider] for custom node icons (default: default provider)
+ */
 fun runLiveSimulation(
     scenario: Scenario,
     logger: EventLog = EventLog.noop(),

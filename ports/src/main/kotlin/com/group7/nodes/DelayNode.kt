@@ -50,8 +50,18 @@ class DelayNode<T>(
         }
     }
 
+    /**
+     * Provides display properties from the [DelayProvider].
+     *
+     * @return a list containing the delay provider's display property
+     */
     override fun properties() = listOf(delayProvider.displayProperty)
 
+    /**
+     * Registers a callback to be invoked when a progress bar should be displayed.
+     *
+     * @param callback the function to invoke with label and delay information
+     */
     override fun onCreateProgressBar(
         callback:
             context(Simulator)

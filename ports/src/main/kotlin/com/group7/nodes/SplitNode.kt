@@ -45,9 +45,20 @@ class SplitNode<InputT, MainOutputT, SideOutputT, ChannelT : ChannelType<Channel
         sideDestination.whenClosed { updateReadiness() }
     }
 
+    /**
+     * The node is ready only when the side destination is open.
+     *
+     * @return true if the side destination is open, false otherwise
+     */
     context(_: Simulator)
     override fun isReady() = sideDestination.isOpen()
 
+    /**
+     * Splits an input entity into main and side outputs using the provided splitter function.
+     *
+     * @param input the entity to split
+     * @return the main output entity
+     */
     context(_: Simulator)
     override fun process(input: InputT): MainOutputT {
         val (main, side) = splitter(input)
@@ -56,6 +67,11 @@ class SplitNode<InputT, MainOutputT, SideOutputT, ChannelT : ChannelType<Channel
         return main
     }
 
+    /**
+     * Registers a callback to be invoked when an entity is split.
+     *
+     * @param callback the function to invoke with input, main output, and side output
+     */
     override fun onSplit(
         callback:
             context(Simulator)

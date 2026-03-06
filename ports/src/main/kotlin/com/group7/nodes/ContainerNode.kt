@@ -30,6 +30,11 @@ abstract class ContainerNode<T>(
         (T) -> Unit)? =
         null
 
+    /**
+     * Registers a callback to be invoked when an entity enters this container.
+     *
+     * @param callback the function to invoke with the entering entity
+     */
     override fun onEnter(
         callback:
             context(Simulator)
@@ -38,6 +43,11 @@ abstract class ContainerNode<T>(
         enterCallback = enterCallback.andThen(callback)
     }
 
+    /**
+     * Registers a callback to be invoked when an entity leaves this container.
+     *
+     * @param callback the function to invoke with the leaving entity
+     */
     override fun onLeave(
         callback:
             context(Simulator)

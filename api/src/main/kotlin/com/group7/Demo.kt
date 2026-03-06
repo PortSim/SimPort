@@ -8,6 +8,12 @@ import com.group7.metrics.ResponseTime
 import com.group7.utils.thenSubnetwork
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * Example demonstration scenario for the simulation.
+ *
+ * This demonstrates a complex queueing network with arrivals, branching (fork), parallel processing in subnetworks, and
+ * merging (join). Metrics are collected to track occupancy and response times.
+ */
 internal fun main() {
     val scenario =
         buildScenario {

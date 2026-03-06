@@ -34,11 +34,22 @@ class ServiceNode<T>(
         (label: String, delay: Duration) -> Unit)? =
         null
 
+    /** The total number of parallel servers in this service node. */
     override val capacity: Int = numServers
 
+    /**
+     * Whether at least one server is currently busy serving an entity.
+     *
+     * @return true if any server is occupied, false if all servers are idle
+     */
     override val isServing: Boolean
         get() = occupants > 0
 
+    /**
+     * The current number of entities being served.
+     *
+     * @return the current number of occupied servers
+     */
     override var occupants: Int = 0
         private set
 
@@ -66,8 +77,18 @@ class ServiceNode<T>(
         destination.send(obj)
     }
 
+    /**
+     * Provides display properties from the [DelayProvider].
+     *
+     * @return combined properties from the service interface and delay provider
+     */
     override fun properties() = super<Service>.properties() + delayProvider.displayProperty
 
+    /**
+     * Registers a callback to be invoked when a progress bar should be displayed.
+     *
+     * @param callback the function to invoke with label and delay information
+     */
     override fun onCreateProgressBar(
         callback:
             context(Simulator)

@@ -45,9 +45,20 @@ class MatchNode<MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT
         sideSource.whenNotReady { updateReadiness() }
     }
 
+    /**
+     * The node is ready only when the side source has data available.
+     *
+     * @return true if the side source is ready, false otherwise
+     */
     context(_: Simulator)
     override fun isReady() = sideSource.isReady()
 
+    /**
+     * Combines a main input entity with a side input entity using the provided combiner function.
+     *
+     * @param input the main input entity
+     * @return the combined output entity
+     */
     context(_: Simulator)
     override fun process(input: MainInputT): OutputT {
         val sideInput = sideSource.receive()
@@ -56,6 +67,11 @@ class MatchNode<MainInputT, SideInputT, OutputT, ChannelT : ChannelType<ChannelT
         return result
     }
 
+    /**
+     * Registers a callback to be invoked when entities are matched and combined.
+     *
+     * @param callback the function to invoke with main input, side input, and combined output
+     */
     override fun onMatch(
         callback:
             context(Simulator)
