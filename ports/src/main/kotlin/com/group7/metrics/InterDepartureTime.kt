@@ -3,6 +3,7 @@ package com.group7.metrics
 import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.Simulator
+import com.group7.metrics.confidence.InstantaneousConfidenceIntervals
 import com.group7.properties.Container
 import com.group7.properties.OutputSink
 import com.group7.utils.suffix
@@ -33,7 +34,7 @@ sealed class InterDepartureTime(private val unit: DurationUnit) : InstantaneousM
     class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : InterDepartureTime(unit) {
         init {
             // Notify when any object entering an output sink
-            for (sink in scenario.allNodeGroups.asSequence().filterIsInstance<OutputSink<*>>()) {
+            for (sink in scenario.every<OutputSink<*>>()) {
                 sink.onEnter { notifySeen() }
             }
         }

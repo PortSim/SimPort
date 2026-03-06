@@ -1,5 +1,6 @@
-package com.group7.metrics
+package com.group7.metrics.mean
 
+import com.group7.metrics.ContinuousMetric
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.Instant

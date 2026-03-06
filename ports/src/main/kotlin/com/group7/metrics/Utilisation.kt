@@ -2,6 +2,7 @@ package com.group7.metrics
 
 import com.group7.NodeGroup
 import com.group7.Scenario
+import com.group7.metrics.confidence.ContinuousConfidenceIntervals
 import com.group7.properties.BoundedContainer
 import kotlin.time.Instant
 

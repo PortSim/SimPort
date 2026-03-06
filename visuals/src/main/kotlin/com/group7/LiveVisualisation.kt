@@ -43,12 +43,15 @@ fun LiveVisualisation(
     val simulator = remember { SimulatorModel(Simulator(logger, scenario, simulation)) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { simulator.run() }
+    LaunchedEffect(Unit) {
+        launch { simulator.run() }
+        launch { simulation.updateLive() }
+    }
 
     SimulationTabLayout(
         "Simulation",
         simulation,
-        getAnimatableTime = { simulator.currentTime },
+        getAnimatableTime = { simulator.progressBarsTime },
         iconProvider = iconProvider,
     ) {
         HorizontalDivider()

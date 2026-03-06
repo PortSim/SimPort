@@ -1,4 +1,7 @@
-package com.group7.metrics
+package com.group7.metrics.steady
+
+import com.group7.metrics.InstantaneousMetric
+import com.group7.metrics.mean.SampleMean
 
 /**
  * A steady state detector for instantaneous metrics, using R5SteadyStateDetector

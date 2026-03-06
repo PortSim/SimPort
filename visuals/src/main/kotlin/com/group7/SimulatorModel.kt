@@ -4,10 +4,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
-import kotlin.math.roundToInt
-import kotlin.math.roundToLong
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit
 import kotlin.time.Instant
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
@@ -20,8 +19,9 @@ class SimulatorModel(private val simulator: Simulator) {
 
     var stepDuration by mutableStateOf<Duration?>(1.seconds)
 
-    private var currentBaseTime by mutableLongStateOf(simulator.currentTime.toEpochMilliseconds())
-    private var nextEventTime by mutableStateOf<Long?>(null)
+    private var lastTimeBeforeStepping = simulator.currentTime
+    private var currentBaseTime by mutableStateOf(simulator.currentTime)
+    private var nextEventTime by mutableStateOf<Instant?>(null)
     private val progress = Animatable(0f)
     private var stepJob by mutableStateOf<Job?>(null)
     private var runToken by mutableIntStateOf(0)
@@ -32,11 +32,20 @@ class SimulatorModel(private val simulator: Simulator) {
 
     val currentTime
         get() =
-            Instant.fromEpochMilliseconds(
-                currentBaseTime +
-                    (nextEventTime?.let { nextTime -> ((nextTime - currentBaseTime) * progress.value).roundToLong() }
-                        ?: 0L)
-            )
+            if (nextEventTime != null) {
+                val stepDuration = nextEventTime!! - currentBaseTime
+                currentBaseTime + stepDuration * progress.value.toDouble()
+            } else {
+                currentBaseTime
+            }
+
+    val progressBarsTime
+        get() =
+            if (isStepping) {
+                lastTimeBeforeStepping
+            } else {
+                currentTime
+            }
 
     suspend fun run() {
         snapshotFlow { Triple(isRunning, playbackSpeed, runToken) }
@@ -46,16 +55,20 @@ class SimulatorModel(private val simulator: Simulator) {
                     coroutineScope {
                         runJob = launch {
                             while (!simulator.isFinished) {
-                                nextEventTime = simulator.nextEventTime!!.toEpochMilliseconds()
-                                val delay = ((nextEventTime!! - currentBaseTime) / playbackSpeed).roundToInt()
+                                nextEventTime = simulator.nextEventTime!!
+                                val delay = ((nextEventTime!! - currentBaseTime) / playbackSpeed.toDouble())
                                 progress.snapTo(0f)
                                 progress.animateTo(
                                     1f,
-                                    animationSpec = tween(durationMillis = delay, easing = LinearEasing),
+                                    animationSpec =
+                                        tween(
+                                            durationMillis = delay.toDouble(DurationUnit.MILLISECONDS).toInt(),
+                                            easing = LinearEasing,
+                                        ),
                                 )
                                 simulator.nextStep()
                                 nextEventTime = null
-                                currentBaseTime = simulator.currentTime.toEpochMilliseconds()
+                                currentBaseTime = simulator.currentTime
                             }
                             this@SimulatorModel.isRunning = false
                         }
@@ -71,7 +84,7 @@ class SimulatorModel(private val simulator: Simulator) {
     }
 
     suspend fun updateBaseTime() {
-        currentBaseTime = currentTime.toEpochMilliseconds()
+        currentBaseTime = currentTime
         nextEventTime = null
         progress.snapTo(0f)
     }
@@ -80,9 +93,10 @@ class SimulatorModel(private val simulator: Simulator) {
         val duration = stepDuration ?: return
         isStepping = true
         runJob?.cancelAndJoin()
+        lastTimeBeforeStepping = simulator.currentTime
         // this leads to an exception in run
         updateBaseTime()
-        val endTime = Instant.fromEpochMilliseconds(currentBaseTime) + duration
+        val endTime = currentBaseTime + duration
         scope
             .launch(Dispatchers.Default) {
                 try {
@@ -92,9 +106,9 @@ class SimulatorModel(private val simulator: Simulator) {
                         }
                         currentCoroutineContext().ensureActive()
                         simulator.nextStep()
-                        currentBaseTime = simulator.currentTime.toEpochMilliseconds()
+                        currentBaseTime = simulator.currentTime
                     }
-                    currentBaseTime = endTime.toEpochMilliseconds()
+                    currentBaseTime = endTime
                 } finally {
                     if (!simulator.isFinished) {
                         runToken++

@@ -1,8 +1,5 @@
 package com.group7.properties
 
-import com.group7.DisplayProperty
-import com.group7.FieldDisplayProperty
-import com.group7.HasDisplayProperties
 import com.group7.Simulator
 
 interface Container<out T> {

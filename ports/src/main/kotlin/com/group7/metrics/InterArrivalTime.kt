@@ -3,6 +3,7 @@ package com.group7.metrics
 import com.group7.NodeGroup
 import com.group7.Scenario
 import com.group7.Simulator
+import com.group7.metrics.confidence.InstantaneousConfidenceIntervals
 import com.group7.properties.Container
 import com.group7.properties.Source
 import com.group7.utils.suffix
@@ -33,7 +34,7 @@ sealed class InterArrivalTime(private val unit: DurationUnit) : InstantaneousMet
     class Global(scenario: Scenario, unit: DurationUnit = DurationUnit.SECONDS) : InterArrivalTime(unit) {
         init {
             // Notify when any object leaves a source
-            for (source in scenario.allNodeGroups.asSequence().filterIsInstance<Source<*>>()) {
+            for (source in scenario.every<Source<*>>()) {
                 source.onEmit { notifySeen() }
             }
         }

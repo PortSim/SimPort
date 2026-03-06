@@ -3,7 +3,7 @@ package com.group7.nodes
 import com.group7.Simulator
 import com.group7.channels.*
 import com.group7.generators.DelayProvider
-import com.group7.properties.DisplayProgressBars
+import com.group7.properties.HasProgressBars
 import com.group7.properties.Service
 import com.group7.utils.andThen
 import kotlin.time.Duration
@@ -27,7 +27,7 @@ class ServiceNode<T>(
     private val destination: PushOutputChannel<T>,
     private val delayProvider: DelayProvider,
     numServers: Int,
-) : ContainerNode<T>(label, listOf(source), listOf(destination)), Service<T>, DisplayProgressBars {
+) : ContainerNode<T>(label, listOf(source), listOf(destination)), Service<T>, HasProgressBars {
 
     private var createProgressBarCallback:
         (context(Simulator)

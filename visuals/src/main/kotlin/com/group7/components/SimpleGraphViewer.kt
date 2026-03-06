@@ -31,8 +31,8 @@ import androidx.compose.ui.unit.toIntRect
 import androidx.compose.ui.unit.toRect
 import com.group7.*
 import com.group7.channels.ChannelType
-import com.group7.properties.ProgressBar
 import com.group7.state.PortDisplayState
+import com.group7.state.ProgressBar
 import com.group7.state.SimulationState
 import com.group7.utils.toRateStringWithBestUnit
 import com.group7.utils.toStringWithBestUnit
@@ -202,7 +202,13 @@ fun DrawScope.drawElkEdges(
 }
 
 @Composable
-fun GraphLegend(modifier: Modifier = Modifier, enableIcons: Boolean, onToggleIcons: () -> Unit) {
+fun GraphLegend(
+    modifier: Modifier = Modifier,
+    enableIcons: Boolean,
+    onToggleIcons: () -> Unit,
+    enableEdgeLabels: Boolean,
+    onToggleEdgeLabels: () -> Unit,
+) {
     Box(
         modifier =
             modifier
@@ -222,14 +228,7 @@ fun GraphLegend(modifier: Modifier = Modifier, enableIcons: Boolean, onToggleIco
             Text("Legend", fontWeight = FontWeight.Bold, fontSize = Dimensions.fontSizeSmall)
 
             LegendToggle("Node Icons", enableIcons, onToggleIcons)
-
-            val onBackgroundColor = MaterialTheme.colorScheme.onBackground
-            LegendItem("Average Throughput") {
-                val cornerPercentage = 0.05f
-                val offset = (size * cornerPercentage).let { Offset(it.width, it.height) }
-                val rectSize = size * (1 - cornerPercentage * 2.0f)
-                drawRect(onBackgroundColor, offset, rectSize, style = Stroke(Dimensions.borderWidthThin.toPx()))
-            }
+            LegendToggle("Average Throughput", enableEdgeLabels, onToggleEdgeLabels)
 
             val backgroundColor = MaterialTheme.colorScheme.background
             fun DrawScope.legendDrawEdge(channelType: ChannelType<*>, ready: Boolean) {
@@ -282,7 +281,7 @@ fun ProgressBar(event: ProgressBar, getAnimatableTime: () -> Instant) {
     ) {
         Box(
             modifier =
-                Modifier.fillMaxWidth(1.0f - event.percentageRemaining(getAnimatableTime()).toFloat())
+                Modifier.fillMaxWidth(event.proportionCompleted(getAnimatableTime()))
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.primary)
         )
@@ -323,12 +322,14 @@ fun ElkNodes(
     hoveredNode: MutableState<ElkNode?>,
     getAnimatableTime: () -> Instant,
     enableIcons: State<Boolean>,
+    enableEdgeLabels: Boolean,
 ) {
     Box(
         modifier =
             Modifier.wrapContentSize(unbounded = true)
                 .absoluteOffset(node.x.dp, node.y.dp)
-                .requiredSize(node.width.dp, node.height.dp),
+                .requiredSize(node.width.dp, node.height.dp)
+                .border(Dimensions.borderWidthThin, MaterialTheme.colorScheme.onBackground),
         contentAlignment = Alignment.TopStart,
     ) {
         if (node.parent != null) {
@@ -337,7 +338,6 @@ fun ElkNodes(
             val isHovered = hoveredNode.value == node
             Box(
                 Modifier.fillMaxSize()
-                    .border(Dimensions.borderWidthThin, MaterialTheme.colorScheme.onBackground)
                     .background(if (isHovered) Color.LightGray.copy(alpha = 0.5f) else Color.Transparent)
                     .exclusiveHover(node, hoveredNode)
                     .clickable(
@@ -375,8 +375,8 @@ fun ElkNodes(
             var displayAllProgressBars by remember { mutableStateOf(false) }
             if (node.children.isEmpty()) {
                 val progressBars =
-                    simulation.progressBarsState.getProgressBars(nodeGroup).filter {
-                        it.shouldShow(getAnimatableTime())
+                    simulation.progressBarsState.getProgressBars(nodeGroup).dropWhile {
+                        !it.shouldShow(getAnimatableTime())
                     }
                 Column(
                     Modifier.fillMaxWidth()
@@ -386,40 +386,42 @@ fun ElkNodes(
                     verticalArrangement = Arrangement.spacedBy(Dimensions.spacingXs),
                 ) {
                     if (displayAllProgressBars) {
-                        progressBars.sortedBy { it.endTime }.forEach { ProgressBar(it, getAnimatableTime) }
+                        progressBars.sortedBy { it.sequenceNumber }.forEach { ProgressBar(it, getAnimatableTime) }
                     } else {
-                        progressBars.minByOrNull { it.endTime }?.let { ProgressBar(it, getAnimatableTime) }
+                        progressBars.firstOrNull()?.let { ProgressBar(it, getAnimatableTime) }
                     }
                 }
             }
         }
 
-        node.containedEdges.forEach { edge ->
-            edge.labels.forEach { label ->
-                Box(
-                    Modifier.width(label.width.toFloat().dp)
-                        .height(label.height.toFloat().dp)
-                        .absoluteOffset(label.x.toFloat().dp, label.y.toFloat().dp)
-                        .border(1.dp, Color.Black)
-                        .background(Color.Transparent),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AutoSizedText(
-                        text =
-                            simulation.portDisplayState
-                                .getEdgeState(layout.getChannel(edge))
-                                .transmissionCount
-                                .toRateStringWithBestUnit(getAnimatableTime() - Simulator.START_TIME, dp = 1),
-                        color = Color.Black,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+        if (enableEdgeLabels) {
+            node.containedEdges.forEach { edge ->
+                edge.labels.forEach { label ->
+                    Box(
+                        Modifier.width(label.width.toFloat().dp)
+                            .height(label.height.toFloat().dp)
+                            .absoluteOffset(label.x.toFloat().dp, label.y.toFloat().dp)
+                            .border(1.dp, Color.Black)
+                            .background(Color.Transparent),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AutoSizedText(
+                            text =
+                                simulation.portDisplayState
+                                    .getEdgeState(layout.getChannel(edge))
+                                    .transmissionCount
+                                    .toRateStringWithBestUnit(getAnimatableTime() - Simulator.START_TIME, dp = 1),
+                            color = Color.Black,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
         }
 
         node.children.forEach {
-            ElkNodes(it, simulation, layout, onClickNode, hoveredNode, getAnimatableTime, enableIcons)
+            ElkNodes(it, simulation, layout, onClickNode, hoveredNode, getAnimatableTime, enableIcons, enableEdgeLabels)
         }
     }
 }
@@ -436,8 +438,9 @@ fun SimpleGraphViewer(
     key(simulation) {
         // Whether a side panel is open
         val enableIcons = remember { mutableStateOf(true) }
+        var enableEdgeLabels by remember { mutableStateOf(true) }
         var focusedNode by remember { mutableStateOf<NodeGroup?>(null) }
-        val scenarioLayout = remember { ScenarioLayout(simulation.scenario) }
+        val scenarioLayout = remember(enableEdgeLabels) { ScenarioLayout(simulation.scenario, enableEdgeLabels) }
 
         Row(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
@@ -460,12 +463,15 @@ fun SimpleGraphViewer(
                         hoveredNode,
                         getAnimatableTime,
                         enableIcons,
+                        enableEdgeLabels,
                     )
                 }
                 GraphLegend(
                     modifier = Modifier.align(Alignment.BottomEnd),
                     enableIcons.value,
                     { enableIcons.value = !enableIcons.value },
+                    enableEdgeLabels,
+                    { enableEdgeLabels = !enableEdgeLabels },
                 )
             }
             if (focusedNode != null) {

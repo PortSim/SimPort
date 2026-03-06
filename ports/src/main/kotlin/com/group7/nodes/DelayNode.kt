@@ -7,7 +7,7 @@ import com.group7.channels.onReceive
 import com.group7.channels.send
 import com.group7.generators.DelayProvider
 import com.group7.properties.Delay
-import com.group7.properties.DisplayProgressBars
+import com.group7.properties.HasProgressBars
 import com.group7.utils.andThen
 import kotlin.time.Duration
 
@@ -27,7 +27,7 @@ class DelayNode<T>(
     source: PushInputChannel<T>,
     destination: PushOutputChannel<T>,
     private val delayProvider: DelayProvider,
-) : ContainerNode<T>(label, listOf(source), listOf(destination)), Delay<T>, DisplayProgressBars {
+) : ContainerNode<T>(label, listOf(source), listOf(destination)), Delay<T>, HasProgressBars {
     private var createProgressBarCallback:
         (context(Simulator)
         (label: String, delay: Duration) -> Unit)? =

@@ -1,6 +1,9 @@
-package com.group7.metrics
+package com.group7.metrics.confidence
 
+import com.group7.metrics.InstantaneousMetric
 import com.group7.metrics.batchmeans.AdaptiveSampleBatchMeans
+import com.group7.metrics.steady.R5Instantaneous
+import com.group7.metrics.steady.SteadyStateDetector
 
 /** Confidence intervals for instantaneous metrics, using adaptive batch means. */
 class InstantaneousConfidenceIntervals(

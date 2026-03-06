@@ -1,4 +1,4 @@
-package com.group7
+package com.group7.properties
 
 /**
  * Interface for objects that can provide display properties for UI rendering.

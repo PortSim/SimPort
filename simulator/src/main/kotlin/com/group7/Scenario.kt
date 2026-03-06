@@ -20,6 +20,8 @@ class Scenario(val sources: List<SourceNode>) {
     /** All node groups (both individual nodes and grouped nodes) in the scenario. */
     val allNodeGroups by lazy(::walk)
 
+    inline fun <reified T> every() = allNodeGroups.asSequence().filterIsInstance<T>()
+
     /**
      * Registers a metric with this scenario.
      *

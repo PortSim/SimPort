@@ -1,6 +1,8 @@
-package com.group7.metrics
+package com.group7.metrics.confidence
 
+import com.group7.metrics.RateMetric
 import com.group7.metrics.batchmeans.AdaptiveRateBatchMeans
+import com.group7.metrics.steady.SteadyStateDetector
 
 /** Confidence intervals for rate metrics, using rate batch means. */
 class RateConfidenceIntervals(

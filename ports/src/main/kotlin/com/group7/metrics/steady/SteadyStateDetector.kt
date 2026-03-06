@@ -1,4 +1,4 @@
-package com.group7.metrics
+package com.group7.metrics.steady
 
 import kotlin.time.Instant
 

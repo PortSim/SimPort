@@ -10,7 +10,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.group7.*
+import com.group7.NodeGroup
+import com.group7.properties.DoubleDisplayProperty
+import com.group7.properties.FieldDisplayProperty
+import com.group7.properties.GroupDisplayProperty
+import com.group7.properties.TextDisplayProperty
 import com.group7.state.SimulationState
 
 @Composable
@@ -64,8 +68,6 @@ fun GroupDisplayProperty(
                         key(property) {
                             when (property) {
                                 is GroupDisplayProperty -> GroupDisplayProperty(property, metricsPanel, simulationName)
-
-                                is MetricGroupDisplayProperty -> {} // Possible future feature of small graphs
                                 is FieldDisplayProperty -> PropertyLine(property.fieldName, property.value)
                                 is DoubleDisplayProperty ->
                                     PropertyLine(

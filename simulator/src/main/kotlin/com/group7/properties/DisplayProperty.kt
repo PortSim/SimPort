@@ -1,6 +1,4 @@
-package com.group7
-
-import com.group7.metrics.MetricGroup
+package com.group7.properties
 
 /**
  * Base interface for properties that can be displayed in the user interface.
@@ -32,24 +30,7 @@ class GroupDisplayProperty(val name: String, val list: List<DisplayProperty>) : 
      * @param properties variable arguments of child properties
      */
     constructor(name: String, vararg properties: DisplayProperty) : this(name, properties.toList())
-
-    /**
-     * Adds a child property to this group.
-     *
-     * @param other the child [DisplayProperty] to add
-     * @return a new [GroupDisplayProperty] with the child added
-     */
-    fun addChild(other: DisplayProperty): GroupDisplayProperty {
-        return GroupDisplayProperty(name, list + other)
-    }
 }
-
-/**
- * A display property that references a [MetricGroup] for display.
- *
- * @property metricGroup the [MetricGroup] to display
- */
-class MetricGroupDisplayProperty(val metricGroup: MetricGroup) : DisplayProperty
 
 /**
  * A display property that shows a line of text in the UI sidepanel.
