@@ -8,9 +8,11 @@ import com.group7.properties.BoundedContainer
 import com.group7.properties.Queue
 
 /**
- * A queue with a maximum capacity. Receives entities through a push channel and outputs through a pull channel. When
- * the queue reaches capacity, the input channel closes to prevent further arrivals. Uses the provided [QueuePolicy] to
- * order entities (defaults to FIFO).
+ * A queue with a maximum capacity. Receives entities through a push channel and outputs through a pull channel.
+ *
+ * When the queue reaches capacity, the input channel closes to prevent further arrivals.
+ *
+ * Uses the provided [QueuePolicy] to order entities (defaults to FIFO).
  *
  * @param T the type of entities in the queue
  * @param label the name of this node
