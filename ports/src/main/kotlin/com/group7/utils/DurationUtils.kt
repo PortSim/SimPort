@@ -5,6 +5,11 @@ import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
+/*
+Various useful Duration and DurationUnit items
+ */
+
+/** Provides the string suffix of this DurationUnit */
 val DurationUnit.suffix
     get() =
         when (this) {
@@ -28,6 +33,11 @@ private val durationUnits =
         DurationUnit.NANOSECONDS,
     )
 
+/**
+ * Converts duration to the string with the closest and most appropriate unit
+ *
+ * @param dp number of decimal points to display the duration
+ */
 fun Duration.toStringWithBestUnit(dp: Int = 4): String {
     val formatter = DecimalFormat("#." + "#".repeat(dp))
     val unit =
@@ -38,6 +48,12 @@ fun Duration.toStringWithBestUnit(dp: Int = 4): String {
     return "${formatter.format(this.toDouble(unit))}${unit.suffix}"
 }
 
+/**
+ * Converts to a rate with appropriate units
+ *
+ * @param duration time elapsed to obtain this number of events
+ * @param dp number of decimal points to display the rate
+ */
 fun Number.toRateStringWithBestUnit(duration: Duration, dp: Int = 4): String {
     if (duration == Duration.ZERO) {
         return "0/d"
