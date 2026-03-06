@@ -6,7 +6,6 @@ import com.group7.dsl.*
 import com.group7.generators.Delays
 import com.group7.generators.Generators
 import com.group7.metrics.*
-import com.group7.metrics.confidence.InstantaneousConfidenceIntervals
 import com.group7.policies.fork.ForkPolicy
 import com.group7.policies.generic_fj.RandomPolicy
 import com.group7.policies.generic_fj.RoundRobinPolicy
@@ -15,10 +14,8 @@ import com.group7.policies.queue.FIFOQueuePolicy
 import com.group7.policies.queue.QueuePolicy
 import com.group7.policies.queue.RandomQueuePolicy
 import com.group7.properties.Queue
-import com.group7.properties.Sink
 import com.group7.utils.thenSubnetwork
 import java.util.*
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
@@ -253,9 +250,9 @@ private class BySizeForkPolicy : ForkPolicy<Vehicle> {
     }
 }
 
-private class CO2Metric(scenario: Scenario) : InstantaneousMetric() {
+private class CO2Metric(scenario: Scenario) : ContinuousMetric() {
     private val entryTimes = mutableMapOf<Vehicle, Instant>()
-    private val totalDurations = mutableMapOf<Vehicle, Duration>().withDefault { Duration.ZERO }
+    private var totalEmissions = 0.0
 
     init {
         for (queue in scenario.every<Queue<*>>()) {
@@ -270,24 +267,16 @@ private class CO2Metric(scenario: Scenario) : InstantaneousMetric() {
                 }
                 val entryTime = entryTimes.remove(obj) ?: return@onLeave
                 val elapsed = contextOf<Simulator>().currentTime - entryTime
-                totalDurations[obj] = totalDurations.getValue(obj) + elapsed
-            }
-        }
-
-        for (sink in scenario.every<Sink<*>>()) {
-            sink.onEnter { obj ->
-                val totalDuration = totalDurations.remove(obj) ?: return@onEnter
-                obj as Vehicle
-                notify(contextOf<Simulator>().currentTime, totalDuration.toDouble(DurationUnit.HOURS) * obj.co2PerHour)
+                totalEmissions += elapsed.toDouble(DurationUnit.HOURS) * obj.co2PerHour
             }
         }
     }
 
+    override fun reportImpl(previousTime: Instant, currentTime: Instant) = totalEmissions
+
     companion object : GlobalMetricFactory {
         override fun create(scenario: Scenario): MetricGroup {
-            val raw = CO2Metric(scenario)
-            val cis = InstantaneousConfidenceIntervals(raw)
-            return MetricGroup("Idle CO2 emitted (kg)", null, raw, cis.moments())
+            return MetricGroup("Idle CO2 emitted (kg)", null, CO2Metric(scenario), null)
         }
     }
 }
