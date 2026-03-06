@@ -8,6 +8,9 @@ Detailed documentation (including a user guide and examples) is available
 at [simport.xhirp.com](http://simport.xhirp.com), and API docs
 at [portsim.github.io/SimPort/](https://portsim.github.io/SimPort/).
 
+A template repository which depends on this project is
+at [github.com/PortSim/SimPort-Template](https://github.com/PortSim/SimPort-Template).
+
 ## 🚀 Features
 
 - Design ports in-code with out clean domain specific language
