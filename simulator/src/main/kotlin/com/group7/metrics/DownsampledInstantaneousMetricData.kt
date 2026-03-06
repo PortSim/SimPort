@@ -5,9 +5,8 @@ import kotlin.time.Instant
 import kotlinx.collections.immutable.toPersistentList
 
 /**
- * Downsamples to maintain [DESIRED_SAMPLES] samples. This is visually lossy but the scatter plots are only useful
- * to see general patterns.
- * Importantly, every sample has an equal chance of being preserved, via reservoir sampling.
+ * Downsamples to maintain [DESIRED_SAMPLES] samples. This is visually lossy but the scatter plots are only useful to
+ * see general patterns. Importantly, every sample has an equal chance of being preserved, via reservoir sampling.
  */
 class DownsampledInstantaneousMetricData : MetricData {
     private var totalSamplesSeen = 0L
