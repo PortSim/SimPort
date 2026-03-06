@@ -4,6 +4,10 @@ import com.group7.NodeGroup
 import com.group7.channels.InputChannel
 import com.group7.channels.OutputChannel
 
+/**
+ * Walks downstream from this OutputChannel, and returns a sequence of the following [NodeGroup] instances that exist
+ * downstream of this channel.
+ */
 fun OutputChannel<*, *>.walkDownstream(): Sequence<NodeGroup> = sequence {
     var current = this@walkDownstream
     while (true) {
@@ -27,6 +31,10 @@ fun OutputChannel<*, *>.walkDownstream(): Sequence<NodeGroup> = sequence {
     }
 }
 
+/**
+ * Walks upstream from this InputChannel, and returns a sequence of the following [NodeGroup] instances that exist
+ * upstream of this channel.
+ */
 fun InputChannel<*, *>.walkUpstream(): Sequence<NodeGroup> = sequence {
     var current = this@walkUpstream
     while (true) {
@@ -50,6 +58,11 @@ fun InputChannel<*, *>.walkUpstream(): Sequence<NodeGroup> = sequence {
     }
 }
 
+/**
+ * Returns whether this `NodeGroup` wholely contains `other` NodeGroup
+ *
+ * @param other NodeGroup potentially contained within this NodeGroup
+ */
 private tailrec operator fun NodeGroup?.contains(other: NodeGroup?): Boolean =
     when {
         this == other || this == null -> true
