@@ -1,9 +1,13 @@
 package com.group7.metrics
 
+import com.group7.Simulator
+import com.group7.metrics.DownsampledContinuousMetricData.Companion.DESIRED_SAMPLES
 import kotlin.math.abs
+import kotlin.time.DurationUnit
 import kotlin.time.Instant
 import kotlinx.collections.immutable.persistentListOf
 
+/** Downsamples to maintain [DESIRED_SAMPLES] samples while preserving visual features, using the LTTB algorithm. */
 internal class DownsampledContinuousMetricData : MetricData {
     private val buckets = Array(DESIRED_SAMPLES - 2) { mutableListOf<MetricValue>() }
     private var lastSkippedSample: Instant? = null
@@ -39,8 +43,8 @@ internal class DownsampledContinuousMetricData : MetricData {
     }
 
     private fun downsampleTimeLTTB() {
-        val startT = values.first().time.toEpochMilliseconds().toDouble()
-        val endT = lastValue.time.toEpochMilliseconds().toDouble()
+        val startT = values.first().time.elapsedTime()
+        val endT = lastValue.time.elapsedTime()
 
         // Safety check for zero-duration data
         if (startT == endT) return
@@ -52,7 +56,7 @@ internal class DownsampledContinuousMetricData : MetricData {
         // Distribute inner points into their respective time buckets
         for ((i, value) in values.withIndex()) {
             if (i == 0 || i == values.lastIndex) continue
-            val t = value.time.toEpochMilliseconds().toDouble()
+            val t = value.time.elapsedTime()
             var bucketIdx = ((t - startT) / bucketWidth).toInt()
 
             // Clamp bounds just in case of floating point inaccuracies
@@ -89,25 +93,25 @@ internal class DownsampledContinuousMetricData : MetricData {
             if (nextAvgBucketIdx < numBuckets) {
                 val nextBucket = buckets[nextAvgBucketIdx]
                 for (p in nextBucket) {
-                    avgX += p.time.toEpochMilliseconds().toDouble()
+                    avgX += p.time.elapsedTime()
                     avgY += p.value
                 }
                 avgX /= nextBucket.size
                 avgY /= nextBucket.size
             } else {
                 // No next bucket available, use the final data point
-                avgX = lastValue.time.toEpochMilliseconds().toDouble()
+                avgX = lastValue.time.elapsedTime()
                 avgY = lastValue.value
             }
 
             // 3. Find the point in the CURRENT time bucket that creates the largest triangle
-            val pointAx = a.time.toEpochMilliseconds().toDouble()
+            val pointAx = a.time.elapsedTime()
             val pointAy = a.value
             var maxArea = -1.0
             var bestPoint = bucket.first()
 
             for (p in bucket) {
-                val pointBx = p.time.toEpochMilliseconds().toDouble()
+                val pointBx = p.time.elapsedTime()
                 val pointBy = p.value
 
                 // Standard LTTB Area calculation
@@ -133,3 +137,10 @@ internal class DownsampledContinuousMetricData : MetricData {
         private const val DESIRED_SAMPLES = 5000
     }
 }
+
+/**
+ * Returns the elapsed time since the simulation began, in milliseconds. This is more precise than using epoch
+ * milliseconds, since that wastes a lot of mantissa bits to represent the time between the epoch and the simulator
+ * start.
+ */
+private fun Instant.elapsedTime() = (this - Simulator.START_TIME).toDouble(DurationUnit.MILLISECONDS)
