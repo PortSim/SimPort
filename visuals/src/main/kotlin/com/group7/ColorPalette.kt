@@ -2,6 +2,15 @@ package com.group7
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Generates distinct colors for charting, preferring a predefined palette and falling back to HSL generation.
+ *
+ * For small counts (≤ palette size), uses hand-picked colors. For larger counts, generates evenly-spaced
+ * HSL colors around the color wheel.
+ *
+ * @param count the number of distinct colors to generate
+ * @return a list of [count] colors
+ */
 fun generateDistinctColors(count: Int): List<Color> {
     if (count == 0) return emptyList()
     if (count <= DefaultColorPalette.chartColors.size) {
@@ -10,6 +19,11 @@ fun generateDistinctColors(count: Int): List<Color> {
     return List(count) { i -> Color.hsl(hue = i * 360f / count, saturation = 0.5f, lightness = 0.55f) }
 }
 
+/**
+ * A 9-step color scale from darkest (_1) to lightest (_9).
+ *
+ * Used to provide semantic color variations (e.g., grays, reds, greens) with consistent contrast.
+ */
 class ColorScale(
     val _1: Color,
     val _2: Color,
@@ -22,6 +36,11 @@ class ColorScale(
     val _9: Color,
 )
 
+/**
+ * Complete color palette for the application.
+ *
+ * Includes semantic color scales and a curated list of colors for charts.
+ */
 class ColorPalette(
     val grays: ColorScale,
     val primaries: ColorScale,

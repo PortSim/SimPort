@@ -42,6 +42,7 @@ private fun ViewModeSelector(
     SingleChoiceSegmentedButtonRow {
         availableModes.forEachIndexed { index, mode ->
             val enabled = modeEnabled.getValue(mode)
+            // Determine why a mode is disabled and show appropriate tooltip
             val tooltip =
                 when {
                     enabled -> null
@@ -51,6 +52,7 @@ private fun ViewModeSelector(
                 }
             val button =
                 @Composable {
+                    // Segmented button with proper shape (rounded corners on ends, straight in middle)
                     SegmentedButton(
                         selected = viewMode == mode,
                         onClick = { onViewModeChange(mode) },
@@ -61,6 +63,7 @@ private fun ViewModeSelector(
                         Text(mode.label)
                     }
                 }
+            // Wrap button in tooltip if there's a reason it's disabled
             if (tooltip != null) {
                 TooltipBox(
                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
@@ -86,9 +89,10 @@ private fun FlowRowScope.HistogramControls(
     logScale: Boolean,
     onLogScaleChange: (Boolean) -> Unit,
 ) {
+    // Bin count control with slider and auto-reset button
     Row(modifier = Modifier.weight(1f).widthIn(min = 250.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Slider for adjusting bin count (3-100), uses 25 as visual default for "Auto"
         LabeledSlider(
-            // set slider to 25 (1/4 visually pleasing) for Auto value
             value = (numBins ?: 25).toFloat(),
             onValueChange = { onNumBinsChange(it.roundToInt()) },
             valueRange = 3f..100f,
@@ -98,6 +102,7 @@ private fun FlowRowScope.HistogramControls(
             valueLabel = "Bins: ${numBins ?: "Auto"}",
             modifier = Modifier.weight(1f),
         )
+        // Button to reset to auto bin calculation (only visible when manually set)
         TextButton(
             onClick = { onNumBinsChange(null) },
             enabled = numBins != null,
@@ -106,8 +111,11 @@ private fun FlowRowScope.HistogramControls(
             Text("Auto")
         }
     }
+    // Toggles for histogram display options
     Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.spacingSm)) {
+        // Toggle between count and probability density display
         LabeledSwitch("Probability", checked = showDensity, onCheckedChange = onShowDensityChange)
+        // Toggle logarithmic X-axis scale
         LabeledSwitch("Log X", checked = logScale, onCheckedChange = onLogScaleChange)
     }
 }

@@ -23,14 +23,17 @@ fun DurationPicker(
     defaultStepUnit: DurationUnit = DurationUnit.DAYS,
     onDurationChange: (Duration?, DurationUnit) -> Unit,
 ) {
+    // Track selected time unit and numeric input text
     var unit by remember { mutableStateOf(defaultStepUnit) }
     var text by remember { mutableStateOf(duration?.toLong(unit)?.toString() ?: "") }
 
     Row {
+        // Numeric input field for duration value
         OutlinedTextField(
             value = text,
             onValueChange = { new ->
                 text = new
+                // Parse numeric value and convert to selected unit
                 onDurationChange(new.toLongOrNull()?.toDuration(unit), unit)
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -39,11 +42,13 @@ fun DurationPicker(
             modifier = Modifier.widthIn(min = 50.dp),
         )
 
+        // Unit selector dropdown
         Dropdown(
             options = durationUnits,
             selected = unit,
             onSelected = {
                 unit = it
+                // Reparse text with new unit when unit changes
                 onDurationChange(text.toLongOrNull()?.toDuration(it), unit)
             },
             label = { Text("Unit") },
