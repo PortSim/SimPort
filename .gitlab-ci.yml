@@ -40,16 +40,3 @@ test:
     paths:
       - build
       - .gradle
-      
-generate_dokka:
-  stage: docs
-  script:
-    - ./gradlew dokkaGenerateHtml
-    - mkdir -p public
-    - cp -r build/dokka/* public/
-  artifacts:
-    paths:
-      - public
-  dependencies:
-    - build
-    - test
